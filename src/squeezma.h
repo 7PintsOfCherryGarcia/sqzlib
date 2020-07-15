@@ -32,6 +32,12 @@ unsigned char seq_dec_table[128] = {
 };
 
 
+typedef struct {
+    void *codebuff;
+    size_t codesize;
+} sqzcodeblock_t;
+
+
 //squeezma main struct
 typedef struct {
     uint8_t *seqbuffer;
@@ -45,13 +51,8 @@ typedef struct {
     char endflag;        //Indicate a sequece has not completely been read into a buffer
     size_t toread;       //Size of sequence still needed to be read
     size_t prevlen;      //Size of sequence currently being read
+    sqzcodeblock_t *codeblk; //Sequence encoding buffer
 } sqzfastx_t;
-
-
-typedef struct {
-    void *codebuff;
-    size_t codesize;
-} sqzcodeblock_t;
 
 
 typedef struct {
@@ -154,3 +155,6 @@ char sqz_loadfasta(sqzfastx_t *sqz, kseq_t *seq);
 
 
 char sqz_loadfastq(sqzfastx_t *sqz, kseq_t *seq);
+
+
+sqzcodeblock_t *sqz_codeblkinit(size_t size);

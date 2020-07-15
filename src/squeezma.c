@@ -156,12 +156,12 @@ size_t loopencode(const unsigned char *str, uint32_t strlen, uint8_t *cmpbuff)
 {
     const unsigned char *lstop = str;         //Track position within sequence
 	  const unsigned char *nptr = str + strlen; //End of string
-	  uint32_t nn;                     //Number of Ns
-    unsigned char wn;                //127 N block. 1 bit flag 7 bit count
-	  const unsigned char *npos;                      //Track positions where N occurs
-	  uint32_t blocklen = 0;           //Length of segment before first N
-    uint64_t code;                   //2 bit encoded sequence
-    size_t wbytes = 0;               //Number of bytes written
+	  uint32_t nn;                              //Number of Ns
+    unsigned char wn;                         //127 N block. 1 bit flag 7 bit count
+	  const unsigned char *npos;                //Track positions where N occurs
+	  uint32_t blocklen = 0;                    //Length of segment before first N
+    uint64_t code;                            //2 bit encoded sequence
+    size_t wbytes = 0;                        //Number of bytes written
     //Write sequence length
     memcpy(cmpbuff + wbytes, &strlen, sizeof(uint32_t));
     wbytes += sizeof(uint32_t);
@@ -172,14 +172,12 @@ size_t loopencode(const unsigned char *str, uint32_t strlen, uint8_t *cmpbuff)
 	      if (*npos) {
             //Determine block length up to found N
             blocklen = npos - lstop;
-            //fprintf(stderr, "Writting block of length: %u\n", blocklen);
+            //Determine number of consecutive Ns until next base
             nn = 0;
-            //Determine number of consecutive ends until next base
 	          while ( seq_nt4_table[*npos] == 4) {
 	              nn++;
 		            npos++;
 	          }
-            //fprintf(stderr, "found %u N bases\n", nn);
             //Write block length [blen]
             memcpy(cmpbuff + wbytes, &blocklen, sizeof(uint32_t));
             wbytes += sizeof(uint32_t);
@@ -349,6 +347,12 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
     sqz->endflag = 0;
     sqz->toread = 0;
     sqz->prevlen = 0;
+    sqz->codeblk = sqz_codeblkinit(LOAD_SIZE);
+    if (!sqz->codeblk) {
+        fprintf(stderr, "[squeezma ERROR] Memory error\n");
+        free(sqz);
+        return NULL;
+    }
     //Get file format
     char fmt = sqz_getformat(filename);
     switch (fmt) {
@@ -407,6 +411,19 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
 }
 
 
+sqzcodeblock_t *sqz_codeblkinit(size_t size)
+{
+    sqzcodeblock_t *blk = malloc(sizeof(sqzcodeblock_t));
+    if (!blk) return NULL;
+    blk->codebuff = malloc(size);
+    if (!blk->codebuff) {
+        free(blk);
+        return NULL;
+    }
+    return blk;
+}
+
+
 void sqz_kill(sqzfastx_t *sqz)
 {
     free(sqz->seqbuffer);
@@ -442,6 +459,7 @@ int sqz_encodencompress(sqzfastx_t *sqz, size_t sqzsize)
         seq = (char *)sqz->seqbuffer + k;
         seqread = *seqlen < sqzsize - k?*seqlen + 1:sqzsize - k;
         k += seqread;
+        //encode sequence
     }
 
     if (seqread < *seqlen) {
@@ -452,7 +470,6 @@ int sqz_encodencompress(sqzfastx_t *sqz, size_t sqzsize)
         //Indicate length of sequence still needing loading
         sqz->prevlen = *seqlen;
     }
-
     if (k != sqzsize) {
         fprintf(stderr, "[ERROR] Unloading buffer\n");
         return 0;
@@ -533,6 +550,96 @@ char sqz_loadfasta(sqzfastx_t *sqz, kseq_t *seq)
             offset += lenbytes;
             //Copy sequence content plus terminating null byte
             memcpy(sqz->seqbuffer + offset, seq->seq.s, seq->seq.l + 1);
+            offset += seq->seq.l + 1;
+        }
+    }
+    sqz->n = n;
+    sqz_encodencompress(sqz, offset);
+    return 1;
+}
+
+
+char sqz_loadfastq(sqzfastx_t *sqz, kseq_t *seq)
+{
+    //TODO
+    /*
+        In future pthread implementation, an sqzfastx array will be used. With number of
+        elements equal to the number of threads being used.
+    */
+    size_t bleftover;
+    size_t remaining;
+    size_t offset = 0;
+    size_t lenbytes = sizeof(seq->seq.l);
+    size_t n = 0;
+    int l;
+    //Loop over sequences and load data into sqzfastx_t struct
+    while ((l = kseq_read(seq)) >= 0) {
+        n++;
+        //process data until seqbuffer can't hold more data
+        if (offset + seq->seq.l + 1 + lenbytes > LOAD_SIZE) {
+            //Compute hom much buffer is available
+            bleftover = LOAD_SIZE - offset;
+            //Copy sequence length data
+            memcpy(sqz->seqbuffer + offset, &(seq->seq.l), lenbytes);
+            offset += lenbytes;
+            bleftover -= lenbytes;
+            //Copy as much seq data as we can fit in remaining buffer
+            memcpy(sqz->seqbuffer + offset, seq->seq.s, bleftover);
+            memcpy(sqz->qualbuffer + offset, seq->qual.s, bleftover);
+            //offset += bleftover;
+            sqz->n = n;
+            //if (LOAD_SIZE != offset) {
+            //    fprintf(stderr, "ERROR offest LOAD_SIZE\n");
+            //    return 0;
+            //}
+            //Compress, buffer is guranteed to be full
+            sqz_encodencompress(sqz, LOAD_SIZE);
+            offset = 0;
+            //Continue filling buffer with rest of sequence
+            while ( bleftover != seq->seq.l + 1) {
+                //Compute how much sequence remains
+                remaining = seq->seq.l + 1 - bleftover;
+                //buffer can be completely filled with current sequence
+                if (remaining >= LOAD_SIZE) {
+                    memcpy(sqz->seqbuffer + offset,
+                           seq->seq.s + bleftover,
+                           LOAD_SIZE);
+                    memcpy(sqz->qualbuffer + offset,
+                           seq->qual.s + bleftover,
+                           LOAD_SIZE);
+                    sqz->n = 0;
+                    //compress
+                    sqz_encodencompress(sqz, LOAD_SIZE);
+                    bleftover += LOAD_SIZE;
+                    offset = 0;
+                }
+                //Rest of sequence can go into buffer
+                else {
+                    memcpy(sqz->seqbuffer + offset,
+                           seq->seq.s + bleftover,
+                           remaining);
+                    memcpy(sqz->qualbuffer + offset,
+                           seq->qual.s + bleftover,
+                           remaining);
+                    bleftover += remaining;
+                    offset += remaining;
+                    sqz->n = 0;
+                    sqz_encodencompress(sqz, remaining);
+                    offset = 0;
+                    //Indicate a sequence block must be closed
+                }
+            }
+            //Current data block is finished. Buffers should be finilized and compressed
+            n = 0;
+        }
+        //copy sequence data into buffers
+        else {
+            //Copy sequence length data
+            memcpy(sqz->seqbuffer + offset, &(seq->seq.l), lenbytes);
+            offset += lenbytes;
+            //Copy sequence content plus terminating null byte
+            memcpy(sqz->seqbuffer + offset, seq->seq.s, seq->seq.l + 1);
+            memcpy(sqz->qualbuffer + offset, seq->qual.s, seq->seq.l + 1);
             offset += seq->seq.l + 1;
         }
     }

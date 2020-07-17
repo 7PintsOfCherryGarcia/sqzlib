@@ -2,7 +2,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 #define LOAD_SIZE 16*1024
-#define CHUNK 4*16384
+#define CHUNK 16384
 #define TWO_BIT_MASK (3)
 #define NEND (128)
 
@@ -34,7 +34,6 @@ unsigned char seq_dec_table[128] = {
 
 typedef struct {
     uint8_t *codebuff;
-    size_t codesize;
     size_t offset;
 } sqzcodeblock_t;
 
@@ -46,7 +45,6 @@ typedef struct {
     uint8_t *namebuffer;
     size_t  namelen;
     uint8_t *qualbuffer;
-    size_t  quallen;
     char fmt;
     size_t n;
     char endflag;        //Indicate a sequece has not completely been read into a buffer
@@ -56,11 +54,11 @@ typedef struct {
 } sqzfastx_t;
 
 
-//typedef struct {
-//    uint8_t *cmpbuff;
-//    size_t cmpsize;
-//    FILE *outfile;
-//} sqzcmpblock_t;
+typedef struct {
+    void   *cmpbuff;
+    size_t cmpsize;
+    FILE   *outfile;
+} sqzcmpblock_t;
 
 
 //djb2 http://www.cse.yorku.ca/~oz/hash.html

@@ -1,7 +1,7 @@
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
 
-#define LOAD_SIZE 8*1024*1024
+#define LOAD_SIZE 16*1024
 #define CHUNK 4*16384
 #define TWO_BIT_MASK (3)
 #define NEND (128)
@@ -33,8 +33,9 @@ unsigned char seq_dec_table[128] = {
 
 
 typedef struct {
-    void *codebuff;
+    uint8_t *codebuff;
     size_t codesize;
+    size_t offset;
 } sqzcodeblock_t;
 
 
@@ -55,11 +56,11 @@ typedef struct {
 } sqzfastx_t;
 
 
-typedef struct {
-    void *cmpbuff;
-    size_t cmpsize;
-    FILE *outfile;
-} sqzcmpblock_t;
+//typedef struct {
+//    uint8_t *cmpbuff;
+//    size_t cmpsize;
+//    FILE *outfile;
+//} sqzcmpblock_t;
 
 
 //djb2 http://www.cse.yorku.ca/~oz/hash.html
@@ -98,6 +99,7 @@ strchrnul() in GNU
 const unsigned char *findn(const unsigned char *strseq);
 
 /*
+  //TODO update function documentation to reflect change of input arguments
     Sequence compression loop
     This function takes a sequence and encodes it via 2 bit enconding for bases
     AaCcGgTt and runlength encoding for N. The following format is used to store the
@@ -130,7 +132,7 @@ const unsigned char *findn(const unsigned char *strseq);
             If there is sequence to be encoded (trailing bases after last occurance of N)
                 11.Encode sequence as in 6
 */
-size_t loopencode(const unsigned char *str, uint32_t strlen, uint8_t *cmpbuff);
+size_t sqz_loopencode(const unsigned char *str, uint32_t strlen, sqzcodeblock_t *codeblk);
 
 
 unsigned char writens(unsigned char numn, char *decoded);
@@ -158,3 +160,6 @@ char sqz_loadfastq(sqzfastx_t *sqz, kseq_t *seq);
 
 
 sqzcodeblock_t *sqz_codeblkinit(size_t size);
+
+
+int sqz_cmpnflush(sqzfastx_t *sqz);

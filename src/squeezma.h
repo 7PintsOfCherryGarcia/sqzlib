@@ -130,7 +130,7 @@ const unsigned char *findn(const unsigned char *strseq);
             If there is sequence to be encoded (trailing bases after last occurance of N)
                 11.Encode sequence as in 6
 */
-size_t sqz_loopencode(const unsigned char *str, uint32_t strlen, sqzcodeblock_t *codeblk);
+size_t sqz_seqencode(const unsigned char *str, uint32_t strlen, sqzcodeblock_t *codeblk);
 
 
 unsigned char writens(unsigned char numn, char *decoded);

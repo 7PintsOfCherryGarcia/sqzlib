@@ -6,7 +6,7 @@ INC=-Ilibs
 LIB=-lz
 
 PROG=sqz
-OBJS= squeezma.o
+OBJS= squeezma.o sqz_seqencode.o sqz_qualencode.o
 
 .PHONY:all clean
 .SUFFIXES:.c .o

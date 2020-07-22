@@ -6,7 +6,6 @@
 
 #include "squeezma.h"
 
-
 uint64_t djb2(char *str)
 {
     uint64_t hash = 5381;
@@ -142,177 +141,11 @@ size_t zlibpunch(void *cmpbuff, size_t cmplen, uint8_t *dest, size_t destlen)
 }
 
 
-const unsigned char *findn(const unsigned char *strseq)
-{
-    do {
-    }
-    while(seq_nt4_table[*(++strseq)] < 4);
-    return strseq;
-}
-
-
 int sqz_cmpnflush(sqzfastx_t *sqz)
 {
     fprintf(stderr, "Code buffer size: %lu\n", sqz->codeblk->offset);
     sqz->codeblk->offset = 0;
     return 1;
-}
-
-
-//TODO control for cmpbuff length
-size_t sqz_loopencode(const unsigned char *str, uint32_t strlen, sqzcodeblock_t *codeblk)
-{
-    //Set coding buffer to the next unused position in the block
-    uint8_t *cmpbuff = codeblk->codebuff + codeblk->offset;
-    const unsigned char *lstop = str;         //Track position within sequence
-	  const unsigned char *nptr = str + strlen; //End of string
-	  uint32_t nn;                              //Number of Ns
-    unsigned char wn;                         //127 N block. 1 bit flag 7 bit count
-	  const unsigned char *npos;                //Track positions where N occurs
-	  uint32_t blocklen = 0;                    //Length of segment before first N
-    uint64_t code;                            //2 bit encoded sequence
-    size_t wbytes = 0;                        //Number of bytes written
-    //Write sequence length
-    memcpy(cmpbuff + wbytes, &strlen, sizeof(uint32_t));
-    wbytes += sizeof(uint32_t);
-    //Search for stretches of Ns
-    do {
-        //Get position of first non ACGTacgt base
-	      npos = findn(lstop);
-	      if (*npos) {
-            //Determine block length up to found N
-            blocklen = npos - lstop;
-            //Determine number of consecutive Ns until next base
-            nn = 0;
-	          while ( seq_nt4_table[*npos] == 4) {
-	              nn++;
-		            npos++;
-	          }
-            //Write block length [blen]
-            memcpy(cmpbuff + wbytes, &blocklen, sizeof(uint32_t));
-            wbytes += sizeof(uint32_t);
-            //Loop over sequence block in chunks of 32 bases
-            for (uint32_t i = 0; i < blocklen; i+=32) {
-                //Encode 32mer or what is left of sequence block
-                code = bit2encode(lstop + i, ((i+32) <= blocklen)?32:blocklen-i);
-                memcpy(cmpbuff + wbytes, &code, sizeof(uint64_t));
-                wbytes += sizeof(uint64_t);
-            }
-            //Loop over Ns in chunks of 127
-            for (uint32_t i = 0; i < nn; i +=127) {
-                //Encode 127 Ns or what is left
-                wn = ((i+127) <= nn)?127:nn-i;
-                //Set first bit if last N block before next base
-                if (i+127 >= nn) wn = wn | NEND;
-                memcpy(cmpbuff + wbytes, &wn, 1);
-                wbytes++;
-            }
-            //Trace next base after sequence of Ns
-            lstop = npos;
-	      }
-    } while (*npos);
-    //Detect and encode trailing bases
-    blocklen = nptr - lstop;
-    if (blocklen) {
-        memcpy(cmpbuff + wbytes, &blocklen, sizeof(uint32_t));
-        wbytes += sizeof(uint32_t);
-        for (uint32_t i = 0; i < blocklen; i+=32) {
-            code = bit2encode(lstop + i, ((i+32) <= blocklen)?32:blocklen-i);
-            memcpy(cmpbuff + wbytes, &code, sizeof(uint64_t));
-            wbytes += sizeof(uint64_t);
-        }
-    }
-    //Move offset by number of bytes written
-    codeblk->offset += wbytes;
-    return wbytes;
-}
-
-
-unsigned char writens(unsigned char numn, char *decoded)
-{
-    unsigned char nwritten = 0;
-    while (numn-- > 0) {
-        decoded[numn] = 'N';
-        nwritten++;
-    }
-    return nwritten;
-}
-
-
-size_t loopdecode(const uint8_t *buff)
-{
-    uint32_t strlen;
-    char *seqpos;
-    uint32_t blocklen;
-    const uint64_t *mer;
-    unsigned char merlen;
-    uint32_t blockidx;
-    const unsigned char *nstr;
-    size_t bytes = 0;
-    uint32_t decoded = 0;
-    char *seqstr;
-    //Get sequence length of current block
-    memcpy(&strlen, buff, sizeof(uint32_t));
-    bytes += sizeof(uint32_t);
-    //Allocate memory for current sequence
-    seqstr = malloc(strlen + 1);
-    if (!seqstr) {
-        fprintf(stderr, "MEM ERROR\n");
-    }
-    uint32_t strlen2 = strlen;
-    seqpos = seqstr;
-    //Decode for as long as there are bases to decode
-    while (strlen > 0) {
-        //Get block length
-        memcpy(&blocklen, buff + bytes, sizeof(uint32_t));
-        bytes += sizeof(uint32_t);
-        //Get starting porition of 64bit integers
-        mer = (uint64_t*)(buff + bytes);
-        //Track block position
-        blockidx = 0;
-        //Loop over blocks
-        //fprintf(stderr, "DECODING block of length: %u\n", blocklen);
-        for (uint32_t i = 0; i < blocklen; i+=32) {
-            //Blocks code 32mers except last block which may code a shorter kmer
-            merlen = ((i+32) <= blocklen)?32:blocklen - i;
-            decoded += bit2decode(mer + blockidx, seqpos, merlen);
-            //Keep traked of amount of decoded data: 64bit per mer
-            bytes += sizeof(uint64_t);
-            //Move sequence pointer by abount of bases decoded (32 except last mer)
-            seqpos += merlen;
-            //Track next block to decompress
-            blockidx++;
-        }
-        //TODO make sure decoded bases equals block length
-        //Update amount of data left to decompress
-        strlen -= blocklen;
-        //strlen is != 0 when blocks are followed by an Nblock
-        if (strlen) {
-            //Read nbyte
-            nstr = buff + bytes;
-            bytes++;
-            while (1) {
-                unsigned char numn = *nstr & ~(1<<7);
-                //fprintf(stderr, "N value of: %u\n", numn);
-                decoded += writens(*nstr & ~(1<<7), seqpos);
-                seqpos += numn;
-                strlen-= numn;
-                if (*nstr & 128)
-                    break;
-                nstr++;
-                bytes++;
-            }
-        }
-    }
-    fprintf(stderr, "djb2 of seq: %lu\n", djb2(seqstr));
-
-    FILE *raw = fopen("decomseq", "wb");
-    fwrite(seqstr, 1, strlen2+1, raw);
-    fclose(raw);
-
-
-    free(seqstr);
-    return strlen;
 }
 
 
@@ -457,13 +290,14 @@ int sqz_encodencompress(sqzfastx_t *sqz, size_t sqzsize)
     size_t lenbytes = sizeof(size_t);
     size_t k = 0;
     size_t n = 0;
+    //Check if reading leftover sequence
     if (sqz->endflag) {
         seqlen = &(sqz->prevlen);
         seq = (unsigned char *)sqz->seqbuffer + k;
         qual = (unsigned char *)sqz->qualbuffer + k;
         //encode sequence
-        size_t num = sqz_loopencode(seq, sqzsize, sqz->codeblk);
-        //do something with que qualities
+        size_t num = sqz_seqencode(seq, sqzsize, sqz->codeblk);
+        //do something with the qualities
         //If this happens the buffer will only contain data from the sequence being read
         k = sqzsize;
         //Update how much sequence has been read
@@ -484,7 +318,7 @@ int sqz_encodencompress(sqzfastx_t *sqz, size_t sqzsize)
         //fprintf(stderr, "In sequence: %lu read %lu len %lu\n", n, seqread, *seqlen);
         k += seqread;
         //encode sequence
-        size_t num = sqz_loopencode(seq, seqread, sqz->codeblk);
+        size_t num = sqz_seqencode(seq, seqread, sqz->codeblk);
         //do something with the qualities
     }
     //Indicate if there is more sequence to read
@@ -629,9 +463,6 @@ char sqz_loadfastq(sqzfastx_t *sqz, kseq_t *seq)
             remaining = seq->seq.l + 1 - remaining;
             //Continue filling buffer until there is no mre sequence to fill
             while ( remaining != 0) {
-                fprintf(stderr,
-                        "Continue with filling: seq len - %lu prevloaded %lu rem - %lu\n",
-                        seq->seq.l, bleftover, remaining);
                 //buffer can be completely filled with current sequence
                 if (remaining >= LOAD_SIZE) {
                     memcpy(sqz->seqbuffer + offset,
@@ -681,10 +512,8 @@ char sqz_loadfastq(sqzfastx_t *sqz, kseq_t *seq)
         }
     }
     if (n != 0) {
-        fprintf(stderr, "On exit n == %lu offset == %lu\n", n, offset);
         sqz->n = n;
         sqz_encodencompress(sqz, offset);
-        fprintf(stderr, "Data ready for compression and flushing\n");
         if(!sqz_cmpnflush(sqz)) return 0;
     }
     return 1;
@@ -697,7 +526,7 @@ int sqz_main(const char *filename)
     //Initialize data structures
     gzFile fp = gzopen(filename, "r");
     if (!fp) return ret;
-    kseq_t *seq = kseq_init(fp); 
+    kseq_t *seq = kseq_init(fp);
     if (!seq) {
         gzclose(fp);
         return ret;

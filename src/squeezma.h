@@ -47,9 +47,9 @@ typedef struct {
     uint8_t *qualbuffer;
     char fmt;
     size_t n;
-    char endflag;        //Indicate a sequece has not completely been read into a buffer
-    size_t toread;       //Size of sequence still needed to be read
-    size_t prevlen;      //Size of sequence currently being read
+    char endflag;            //Sequece has not completely been read into a buffer flag
+    size_t toread;           //Size of sequence still needed to be read
+    size_t prevlen;          //Size of sequence currently being read
     sqzcodeblock_t *codeblk; //Sequence encoding buffer
 } sqzfastx_t;
 

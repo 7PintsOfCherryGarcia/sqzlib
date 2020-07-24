@@ -5,6 +5,33 @@
 #include "sqz_data.h"
 #include "sqz_seqencode.h"
 
+
+unsigned char bit2decode(const uint64_t *mer, char *decoded, uint32_t len)
+{
+    unsigned char byte;
+    unsigned char nbase = 0;
+    uint64_t code = *mer;
+    --len;
+    do {
+        byte = code & TWO_BIT_MASK;
+        decoded[len] = seq_dec_table[byte];
+        nbase += 1;
+        code >>= 2;
+    } while (len-- != 0);
+    return nbase;
+}
+
+
+uint64_t bit2encode(const unsigned char *str, uint32_t strlen)
+{
+    uint64_t result = 0;
+    for (uint32_t i = 0; i < strlen; i++) {
+        result = (result << 2) | seq_nt4_table[str[i]];
+    }
+    return result;
+}
+
+
 size_t sqz_seqencode(const unsigned char *str, uint32_t strlen, sqzcodeblock_t *codeblk)
 {
     //TODO control for cmpbuff length

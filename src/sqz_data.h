@@ -30,20 +30,7 @@ typedef struct {
 } sqzcodeblock_t;
 
 
-//squeezma main struct
-typedef struct {
-    uint8_t *seqbuffer;
-    size_t  seqlen;
-    uint8_t *namebuffer;
-    size_t  namelen;
-    uint8_t *qualbuffer;
-    char fmt;
-    size_t n;
-    char endflag;            //Sequece has not completely been read into a buffer flag
-    size_t toread;           //Size of sequence still needed to be read
-    size_t prevlen;          //Size of sequence currently being read
-    sqzcodeblock_t *codeblk; //Sequence encoding buffer
-} sqzfastx_t;
+
 
 
 typedef struct {

@@ -1,2 +1,4 @@
 
-int sqz_main(const char *filename);
+
+
+int sqz_compress(const char *filename);

@@ -78,7 +78,10 @@ char sqz_getformat(const char *filename)
     char ret = 0;
     gzFile fp = gzopen(filename, "r");
     //ERROR
-    if (!fp) return ret;
+    if (!fp) {
+        fprintf(stderr, "[libsqz: ERROR] Failed to open file: %s\n", filename);
+        return ret;
+    }
     kseq_t *seq = kseq_init(fp);
     //ERROR
     if (!seq) {
@@ -88,7 +91,7 @@ char sqz_getformat(const char *filename)
     int l = kseq_read(seq);
     //ERROR
     if (l < 0) {
-        fprintf(stderr, "[squeezma ERROR] sequence file format not recognized\n");
+        fprintf(stderr, "[libsqz: ERROR] sequence file format not recognized\n");
         goto exit;
     }
     //FASTQ

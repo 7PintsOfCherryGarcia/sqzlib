@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include "sqz.h"
+#include <zlib.h>
 #include "squeezmalib.h"
-
+#include "sqz.h"
 
 
 int main(int argc, char *argv[]) {
@@ -31,10 +31,12 @@ int sqz_compress(const char *filename)
         //if (!sqz_fasta(sqz, seq)) goto exit;
         break;
     case 2:
-        if (!sqz_squeezefastq(sqz)) goto exit;
+        if (!sqz_squeezefastq(sqz)) {
+            fprintf(stderr, "[sqz ERROR: COMPRESS] Failed to compress data.\n");
+            goto exit;
+        }
         break;
     }
-
     ret = 1;
     exit:
         sqz_kill(sqz);
@@ -42,3 +44,19 @@ int sqz_compress(const char *filename)
 }
 
 
+/*
+  Loads fastq data to buffer and compresses it with deflate
+*/
+int sqz_squeezefastq(sqzfastx_t *sqz)
+{
+    size_t batchsize = 0;
+    size_t numseqs = 0;
+    fprintf(stderr, "^^%s\n", sqz->filename);
+    while ( (batchsize = sqz_loadfastq(sqz)) > 0 ) {
+        fprintf(stderr,
+                "%lu loaded bytes batch size %lu.\n",
+                batchsize, sqz->n);
+        numseqs += sqz->n;
+    }
+    return 0;
+}

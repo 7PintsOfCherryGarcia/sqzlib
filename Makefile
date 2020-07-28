@@ -8,8 +8,8 @@ LIB= -L.
 LIBS= -lz
 
 PROG=libsqz sqz
-OBJS=sqz_init.o
-SOBJS=sqz_initS.o
+OBJS=sqz_init.o sqz_kseq.o
+SOBJS=sqz_initS.o sqz_kseqS.o
 
 .PHONY:all clean
 .SUFFIXES:.c .o

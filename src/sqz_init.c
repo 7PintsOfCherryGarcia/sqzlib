@@ -14,7 +14,8 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
     sqz->filename = filename;
     sqz->n = 0;
     sqz->endflag = 0;
-    sqz->toread = 0;
+    sqz->rem =     0;
+    sqz->toread =  0;
     sqz->prevlen = 0;
     //Get file format
     char fmt = sqz_getformat(filename);

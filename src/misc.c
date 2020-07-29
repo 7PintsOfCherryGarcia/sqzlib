@@ -265,10 +265,6 @@ char sqz_loadfasta(sqzfastx_t *sqz, kseq_t *seq)
 }
 
 
-
-
-
-
 /*
   Returns length of block up to first null byte
 */

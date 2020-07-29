@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-int sqz_compress(const char *filename)
+char sqz_compress(const char *filename)
 {
     int ret = 0;
     //Initialize data main sqz data structure
@@ -47,16 +47,19 @@ int sqz_compress(const char *filename)
 /*
   Loads fastq data to buffer and compresses it with deflate
 */
-int sqz_squeezefastq(sqzfastx_t *sqz)
+char sqz_squeezefastq(sqzfastx_t *sqz)
 {
     size_t batchsize = 0;
     size_t numseqs = 0;
-    fprintf(stderr, "^^%s\n", sqz->filename);
+    int i = 0;
     while ( (batchsize = sqz_loadfastq(sqz)) > 0 ) {
-        fprintf(stderr,
-                "%lu loaded bytes batch size %lu.\n",
-                batchsize, sqz->n);
+        i++;
+        fprintf(stderr, "^%lu loaded bytes batch size %lu.\n", batchsize, sqz->n);
         numseqs += sqz->n;
+        if (!sqz->endflag)
+            fprintf(stderr, "Data ready for compression and flushing\n");
+        if ( i == 10 )break;
     }
-    return 0;
+    fprintf(stderr, "processed %lu seqs\n", numseqs);
+    return 1;
 }

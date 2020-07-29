@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define LOAD_SIZE 16*1024*1024 //4 Mebibit
+#define LOAD_SIZE 16*1024
 
 typedef struct  kseq_t kseq_t;
 
@@ -22,6 +22,7 @@ typedef struct {
     char       fmt;
     size_t     n;
     char       endflag;  //Sequece has not completely been read into a buffer flag
+    size_t     rem;      //Length of sequence remaining to be read
     size_t     toread;   //Size of sequence still needed to be read
     size_t     prevlen;  //Size of sequence currently being read
 } sqzfastx_t;

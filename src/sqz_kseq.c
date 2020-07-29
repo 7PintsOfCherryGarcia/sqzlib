@@ -66,8 +66,15 @@ char sqz_kseqinit(sqzfastx_t *sqz)
 
 size_t sqz_loadfastq(sqzfastx_t *sqz)
 {
+    fprintf(stderr, "endflag: %d remaining: %lu\n", sqz->endflag, sqz->rem);
+    if (!sqz->endflag) return sqz_newblock(sqz);
+    return sqz_endblock(sqz);
+}
+
+
+size_t sqz_newblock(sqzfastx_t *sqz)
+{
     size_t bleftover;
-    size_t remaining;
     size_t offset = 0;
     size_t lenbytes = sizeof(sqz->seq->seq.l);
     size_t n = 0;
@@ -84,7 +91,6 @@ size_t sqz_loadfastq(sqzfastx_t *sqz)
             //Compute how much buffer is available
             bleftover = LOAD_SIZE - offset;
             //Copy sequence length data
-            fprintf(stderr, "Blockof size: %lu\n", n);
             memcpy(sqz->seqbuffer + offset, &(sqz->seq->seq.l), lenbytes);
             offset += lenbytes;
             bleftover -= lenbytes;
@@ -93,62 +99,16 @@ size_t sqz_loadfastq(sqzfastx_t *sqz)
             There are two option: as much sequence as leftover buffer, or the
             entire sequence
             */
-            remaining = bleftover<sqz->seq->seq.l?bleftover:sqz->seq->seq.l + 1;
+            sqz->rem = bleftover<sqz->seq->seq.l?bleftover:sqz->seq->seq.l + 1;
             //Copy as much seq data as we can fit in remaining buffer
-            memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, remaining);
-            memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, remaining);
-            offset += remaining;
+            memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, sqz->rem);
+            memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, sqz->rem);
+            offset += sqz->rem;
             sqz->n = n;
+            sqz->rem = sqz->seq->seq.l + 1 - sqz->rem;
+            if (sqz->rem != 0) sqz->endflag = 1;
             return offset;
-            //Encode
-            //sqz_encodencompress(sqz, offset);
-            //offset = 0;
-            //Keep track of how much sequence has been loaded
-            //bleftover = remaining;
-            //Compute how much sequence is left to load
-            //remaining = seq->seq.l + 1 - remaining;
-            //Continue filling buffer until there is no more sequence to fill
-            /*
-            while ( remaining != 0) {
-                //buffer can be completely filled with current sequence
-                if (remaining >= LOAD_SIZE) {
-                    memcpy(sqz->seqbuffer + offset,
-                           seq->seq.s + bleftover,
-                           LOAD_SIZE);
-                    memcpy(sqz->qualbuffer + offset,
-                           seq->qual.s + bleftover,
-                           LOAD_SIZE);
-                    sqz->n = 0;
-                    //compress
-                    sqz_encodencompress(sqz, LOAD_SIZE);
-                    bleftover += LOAD_SIZE;
-                    offset = 0;
-                    remaining -= LOAD_SIZE;
-                }
-                //Rest of sequence can go into buffer
-                else {
-                    memcpy(sqz->seqbuffer + offset,
-                           seq->seq.s + bleftover,
-                           remaining);
-                    memcpy(sqz->qualbuffer + offset,
-                           seq->qual.s + bleftover,
-                           remaining);
-                    bleftover += remaining;
-                    offset += remaining;
-                    sqz->n = 0;
-                    sqz_encodencompress(sqz, remaining);
-                    offset = 0;
-                    remaining = 0;
-                }
-            }
-            */
-            /*
-            Current data block is finished. Buffers should be finilized and
-            compressed
-            */
-            //fprintf(stderr, "Data ready for compression and flushing\n");
-            //if(!sqz_cmpnflush(sqz)) return 0;
-            //n = 0;
+
         }
         //copy sequence data into buffers
         else {
@@ -168,6 +128,35 @@ size_t sqz_loadfastq(sqzfastx_t *sqz)
     //    if(!sqz_cmpnflush(sqz)) return 0;
     }
     return offset;
+}
+
+
+size_t sqz_endblock(sqzfastx_t *sqz)
+{
+    size_t lsize;
+    //buffer can be completely filled with current sequence
+    if (sqz->rem >= LOAD_SIZE) {
+        memcpy(sqz->seqbuffer,
+               sqz->seq->seq.s + (sqz->seq->seq.l + 1 - sqz->rem),
+               LOAD_SIZE);
+        memcpy(sqz->qualbuffer,
+               sqz->seq->qual.s + (sqz->seq->qual.l + 1 - sqz->rem),
+               LOAD_SIZE);
+        sqz->rem -= LOAD_SIZE;
+        lsize = LOAD_SIZE;
+        return lsize;
+    }
+    //Rest of sequence can go into buffer
+    memcpy(sqz->seqbuffer,
+           sqz->seq->seq.s + (sqz->seq->seq.l + 1 - sqz->rem),
+           sqz->rem);
+    memcpy(sqz->qualbuffer,
+           sqz->seq->qual.s + (sqz->seq->seq.l + 1 - sqz->rem),
+           sqz->rem);
+    lsize = sqz->rem;
+    sqz->endflag = 0;
+    sqz->rem = 0;
+    return lsize;
 }
 
 

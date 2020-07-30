@@ -6,26 +6,31 @@
 
 typedef struct  kseq_t kseq_t;
 
+
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
   reading sequencing data into.
 */
 typedef struct {
+    //file members
     const char *filename;
     gzFile     fp;
+    //data members
+    size_t     offset;
     kseq_t     *seq;
     uint8_t    *seqbuffer;
-    size_t     seqlen;
+    uint8_t    *qualbuffer;
     uint8_t    *namebuffer;
     size_t     namelen;
-    uint8_t    *qualbuffer;
-    char       fmt;
     size_t     n;
-    char       endflag;  //Sequece has not completely been read into a buffer flag
-    size_t     rem;      //Length of sequence remaining to be read
-    size_t     toread;   //Size of sequence still needed to be read
-    size_t     prevlen;  //Size of sequence currently being read
+    //flags
+    char       fmt;
+    char       endflag; //Sequece has not completely been read into a buffer flag
+    //miscelaneous
+    size_t     rem;     //Length of sequence remaining to be read
+    size_t     toread;  //Size of sequence still needed to be read
+    size_t     prevlen; //Size of sequence currently being read
 } sqzfastx_t;
 
 

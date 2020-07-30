@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <zlib.h>
 #include "klib/kseq.h"
+
 KSEQ_INIT(gzFile, gzread)
 #include "sqz_kseq.h"
 
@@ -66,7 +67,6 @@ char sqz_kseqinit(sqzfastx_t *sqz)
 
 size_t sqz_loadfastq(sqzfastx_t *sqz)
 {
-    fprintf(stderr, "endflag: %d remaining: %lu\n", sqz->endflag, sqz->rem);
     if (!sqz->endflag) return sqz_newblock(sqz);
     return sqz_endblock(sqz);
 }
@@ -107,8 +107,8 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             sqz->n = n;
             sqz->rem = sqz->seq->seq.l + 1 - sqz->rem;
             if (sqz->rem != 0) sqz->endflag = 1;
+            sqz->offset = offset;
             return offset;
-
         }
         //copy sequence data into buffers
         else {
@@ -127,6 +127,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
     //    sqz_encodencompress(sqz, offset);
     //    if(!sqz_cmpnflush(sqz)) return 0;
     }
+    sqz->offset = offset;
     return offset;
 }
 
@@ -143,7 +144,9 @@ size_t sqz_endblock(sqzfastx_t *sqz)
                sqz->seq->qual.s + (sqz->seq->qual.l + 1 - sqz->rem),
                LOAD_SIZE);
         sqz->rem -= LOAD_SIZE;
+        sqz->n = 0;
         lsize = LOAD_SIZE;
+        sqz->offset = LOAD_SIZE;
         return lsize;
     }
     //Rest of sequence can go into buffer
@@ -154,8 +157,10 @@ size_t sqz_endblock(sqzfastx_t *sqz)
            sqz->seq->qual.s + (sqz->seq->seq.l + 1 - sqz->rem),
            sqz->rem);
     lsize = sqz->rem;
+    sqz->n = 0;
     sqz->endflag = 0;
     sqz->rem = 0;
+    sqz->offset = lsize;
     return lsize;
 }
 

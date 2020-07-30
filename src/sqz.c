@@ -52,13 +52,22 @@ char sqz_squeezefastq(sqzfastx_t *sqz)
     size_t batchsize = 0;
     size_t numseqs = 0;
     int i = 0;
+    sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
+    if (!blk) {
+        return 0;
+    }
     while ( (batchsize = sqz_loadfastq(sqz)) > 0 ) {
         i++;
-        fprintf(stderr, "^%lu loaded bytes batch size %lu.\n", batchsize, sqz->n);
+        fprintf(stderr, "^%lu %lu loaded bytes batch size %lu.\n",
+                batchsize, sqz->offset, sqz->n);
+        if (!sqz_encode(sqz, blk)) {
+            fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
+            //break;
+        }
         numseqs += sqz->n;
         if (!sqz->endflag)
             fprintf(stderr, "Data ready for compression and flushing\n");
-        if ( i == 10 )break;
+        if ( i == 2 ) break;
     }
     fprintf(stderr, "processed %lu seqs\n", numseqs);
     return 1;

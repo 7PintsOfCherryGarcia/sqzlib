@@ -13,6 +13,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
     }
     sqz->filename = filename;
     sqz->n = 0;
+    sqz->offset  = 0;
     sqz->endflag = 0;
     sqz->rem =     0;
     sqz->toread =  0;
@@ -43,7 +44,6 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
                 return NULL;
             }
             sqz->seqbuffer[LOAD_SIZE] = 0;
-            sqz->seqlen = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,
@@ -71,7 +71,6 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
                 return NULL;
             }
             sqz->seqbuffer[LOAD_SIZE] = 0;
-            sqz->seqlen = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,

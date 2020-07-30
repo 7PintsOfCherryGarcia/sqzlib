@@ -2,22 +2,24 @@ CC=gcc
 CFLAGS= -Wall -g -std=c11 -pedantic
 CSHFLAG= -shared
 
-SRC= src
+SRCDIR= src
 INC= -Ilibs
 LIB= -L.
 LIBS= -lz
 
 PROG=libsqz sqz
-OBJS=sqz_init.o sqz_kseq.o
-SOBJS=sqz_initS.o sqz_kseqS.o
+SRC=sqz_kseq.c sqz_init.c sqz_coding.c
+OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
+SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
+#SOBJS=sqz_initS.o sqz_kseqS.o sqz_codingS.o
 
 .PHONY:all clean
 .SUFFIXES:.c .o
 
-%.o:$(SRC)/%.c
-	$(CC) -c $(CFLAGS) $(INC) $< -o $@
+%.o:%.c
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
-%S.o:$(SRC)/%.c
+%S.o:%.c
 	$(CC) -c -fPIC $(CFLAGS) $(INC) $< -o $@
 
 all:$(PROG)
@@ -27,10 +29,10 @@ libsqz:$(OBJS) $(SOBJS)
 	$(CC) $(CSHFLAG) $(SOBJS) -o $@.so
 
 sqz:
-	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRC)/sqz.c libsqz.a $(LIBS)
+	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c libsqz.a $(LIBS)
 
 clean:
-	rm -rf sqz *.o
+	rm -rf sqz $(SRCDIR)/*.o
 
 
 # makedepend line not in use in current compilation enviroanment

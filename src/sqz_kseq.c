@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <zlib.h>
 #include "klib/kseq.h"
-
 KSEQ_INIT(gzFile, gzread)
+#define KLIB
 #include "sqz_kseq.h"
 
 
@@ -78,7 +78,6 @@ size_t sqz_newblock(sqzfastx_t *sqz)
     size_t offset = 0;
     size_t lenbytes = sizeof(sqz->seq->seq.l);
     size_t n = 0;
-    //int l;
     //Loop over sequences and load data into sqzfastx_t struct
     while ( kseq_read(sqz->seq) >= 0) {
         n++;
@@ -106,6 +105,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             offset += sqz->rem;
             sqz->n = n;
             sqz->rem = sqz->seq->seq.l + 1 - sqz->rem;
+            //Set flag to indicate there is more sequence to load
             if (sqz->rem != 0) sqz->endflag = 1;
             sqz->offset = offset;
             return offset;
@@ -122,11 +122,9 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             offset += sqz->seq->seq.l + 1;
         }
     }
-    if (n != 0) {
+    sqz->n = 0;
+    if (n != 0)
         sqz->n = n;
-    //    sqz_encodencompress(sqz, offset);
-    //    if(!sqz_cmpnflush(sqz)) return 0;
-    }
     sqz->offset = offset;
     return offset;
 }

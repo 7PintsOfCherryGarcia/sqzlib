@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define LOAD_SIZE 16*1024
+#define LOAD_SIZE 64*1024
 
 typedef struct  kseq_t kseq_t;
 
@@ -35,7 +35,7 @@ typedef struct {
 
 typedef struct {
     uint8_t *codebuff;
-    size_t  offset;
+    size_t  blksize;
     char    newblk;
 } sqzblock_t;
 
@@ -80,3 +80,6 @@ sqzblock_t *sqz_sqzblkinit(size_t size);
 
 
 char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+void sqz_blkdestroy(sqzblock_t *blk);

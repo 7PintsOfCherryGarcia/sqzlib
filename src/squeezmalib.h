@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <zlib.h>
 
 #define LOAD_SIZE 64*1024
 
@@ -35,9 +36,13 @@ typedef struct {
 
 
 typedef struct {
+    //Code data buffer
     uint8_t *codebuff;
     size_t  blksize;
     char    newblk;
+    //Compression members
+    uint8_t *cmpbuff;
+    size_t cmpsize;
 } sqzblock_t;
 
 
@@ -87,3 +92,6 @@ void sqz_blkdestroy(sqzblock_t *blk);
 
 
 size_t sqz_deflate(sqzblock_t *blk, int level);
+
+
+char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp);

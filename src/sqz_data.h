@@ -43,8 +43,6 @@ typedef struct {
     size_t  blksize;
     char    newblk;
     //Compression members
-    FILE *cmpfp;
-    //Compressed data buffer
     uint8_t *cmpbuff;
     size_t cmpsize;
 } sqzblock_t;

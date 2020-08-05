@@ -123,7 +123,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             offset += sqz->seq->seq.l + 1;
         }
     }
-    sqz->n = 0;
+    //sqz->n = 0;
     if (n != 0)
         sqz->n = n;
     sqz->offset = offset;
@@ -143,7 +143,7 @@ size_t sqz_endblock(sqzfastx_t *sqz)
                sqz->seq->qual.s + (sqz->seq->qual.l + 1 - sqz->rem),
                LOAD_SIZE);
         sqz->rem -= LOAD_SIZE;
-        sqz->n = 0;
+        //sqz->n = 0;
         lsize = LOAD_SIZE;
         sqz->offset = LOAD_SIZE;
         return lsize;
@@ -156,7 +156,7 @@ size_t sqz_endblock(sqzfastx_t *sqz)
            sqz->seq->qual.s + (sqz->seq->seq.l + 1 - sqz->rem),
            sqz->rem);
     lsize = sqz->rem;
-    sqz->n = 0;
+    //sqz->n = 0;
     sqz->endflag = 0;
     sqz->rem = 0;
     sqz->offset = lsize;

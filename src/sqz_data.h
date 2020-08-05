@@ -2,6 +2,8 @@
 
 #define NEND (128)
 
+#define CHUNK 131072
+
 #ifndef KLIB
 #define kseq_t struct kseq_t
 #endif
@@ -24,6 +26,7 @@ typedef struct {
     uint8_t    *namebuffer;
     size_t     namelen;
     size_t     n;
+    size_t     bases;
     //flags
     char       fmt;
     char       endflag; //Sequece has not completely been read into a buffer flag
@@ -35,9 +38,15 @@ typedef struct {
 
 
 typedef struct {
+    //Code data buffer
     uint8_t *codebuff;
     size_t  blksize;
     char    newblk;
+    //Compression members
+    FILE *cmpfp;
+    //Compressed data buffer
+    uint8_t *cmpbuff;
+    size_t cmpsize;
 } sqzblock_t;
 
 

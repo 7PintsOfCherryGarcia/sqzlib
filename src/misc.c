@@ -8,7 +8,11 @@ uint64_t djb2(char *str)
 }
 
 
-size_t sqz_zlibsqueez(void *seq, size_t seqlength, uint8_t *dest, size_t destlen, int level)
+size_t sqz_zlibsqueez(void *seq,
+                      size_t seqlength,
+                      uint8_t *dest,
+                      size_t destlen,
+                      int level)
 {
     int ret;
     size_t wbytes = 0;
@@ -22,7 +26,7 @@ size_t sqz_zlibsqueez(void *seq, size_t seqlength, uint8_t *dest, size_t destlen
     ret = deflateInit(&strm, level);
     if (ret != Z_OK) {
         fprintf(stderr, "Some other error\n");
-        return (uint32_t)ret;
+        return (size_t)ret;
     }
     //Main compression loop
     strm.avail_in = seqlength;
@@ -33,12 +37,13 @@ size_t sqz_zlibsqueez(void *seq, size_t seqlength, uint8_t *dest, size_t destlen
         ret = deflate(&strm, Z_FINISH);    /* no bad return value */
         if ( ret == Z_STREAM_ERROR ) {
             fprintf(stderr, "Some error\n");
-            return (uint32_t)ret;  /* state not clobbered */
+            return (size_t)ret;  /* state not clobbered */
         }
         //check there is enough space in buffer
         have = CHUNK - strm.avail_out;
         if ( (wbytes + have) > destlen) {
-            fprintf(stderr, "Compression error %lu %lu %lu\n",wbytes, have, destlen);
+            fprintf(stderr,
+                    "Compression error %lu %lu %lu\n",wbytes, have, destlen);
             ret = Z_ERRNO;
             break;
         }

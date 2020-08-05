@@ -8,8 +8,8 @@
 
 char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-    fprintf(stderr, "|||%u\n", LOAD_SIZE);
     if (blk->newblk) {
+        fprintf(stderr, "[sqzlib INFO]: New block - %lu sequences.\n", sqz->n);
         return sqz_headblk(sqz, blk);
     }
     else {
@@ -21,7 +21,7 @@ char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk)
 char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t *seq = NULL;
-    //char *qual = NULL;
+    uint8_t *qual = NULL;
     size_t *seqlen = NULL;
     size_t seqread;
     size_t lenbytes = sizeof(size_t);
@@ -35,15 +35,15 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
         //Extract length of sequences in buffer
         seqlen = (size_t *)(sqz->seqbuffer + k);
         k += lenbytes;
-        seq = sqz->seqbuffer + k;
-        //qual = (char *)sqz->qualbuffer + k;
+        seq =  sqz->seqbuffer + k;
+        qual = sqz->qualbuffer + k;
         //Determine how much sequence is contained in the buffer
         seqread = *seqlen < (sqzsize - k)?*seqlen + 1:sqzsize - k;
         k += seqread;
         //encode sequence
         sqz_seqencode(seq, seqread, blk);
         //do something with the qualities
-        //sqz_qualencode(qual, qualbuff);
+        sqz_qualencode(qual, seqread, blk);
     }
     //Indicate if there is more sequence to read
     if (seqread < *seqlen) {
@@ -55,7 +55,7 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
         sqz->prevlen = *seqlen;
     }
     if (k != sqzsize) {
-        fprintf(stderr, "[ERROR] Unloading buffer\n");
+        fprintf(stderr, "[sqzlib ERROR]: Unloading buffer\n");
         return 0;
     }
     return 1;
@@ -64,15 +64,15 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
 char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-    fprintf(stderr, "|| from seqlen %lu\n", sqz->prevlen);
+    fprintf(stderr, "In tail\n");
     //Check if reading leftover sequence
     size_t *seqlen = &(sqz->prevlen);
-    uint8_t *seq = sqz->seqbuffer;
-    //char *qual = (char *)sqz->qualbuffer;
+    uint8_t *seq =  sqz->seqbuffer;
+    uint8_t *qual = sqz->qualbuffer;
     //encode sequence
     sqz_seqencode(seq, sqz->offset, blk);
     //encode quality
-    //sqz_qualencode(qual, qualbuff);
+    sqz_qualencode(qual, sqz->offset, blk);
     //Update how much sequence has been read
     sqz->toread += sqz->offset;
     blk->newblk = 1;
@@ -81,8 +81,6 @@ char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         fprintf(stderr, "More seq please!! %lu %lu\n",
                 sqz->toread, sqz->prevlen);
         blk->newblk = 0;
-        //Indicate length of sequence still needing loading
-        //sqz->prevlen = *seqlen;
     }
     return 1;
 }
@@ -95,12 +93,12 @@ void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk)
     //Track position in sequence
     const uint8_t *lstop = seq;
 	  const uint8_t *nptr = seq + seqlen; //End of string
-	  size_t nn;                     //Number of Ns
-    unsigned char wn;                //127 N block. 1 bit flag 7 bit count
-	  const uint8_t *npos;       //Track positions where N occurs
-	  size_t blen = 0;                 //Length of segment before first N
-    uint64_t code;                   //2 bit encoded sequence
-    size_t wbytes = 0;               //Number of bytes used to encode
+	  size_t nn;                          //Number of Ns
+    unsigned char wn;                   //127 N block. 1 bit flag 7 bit count
+	  const uint8_t *npos;                //Track positions where N occurs
+	  size_t blen = 0;                    //Length of segment before first N
+    uint64_t code;                      //2 bit encoded sequence
+    size_t wbytes = 0;                  //Number of bytes used to encode
     //Write sequence length
     memcpy(codebuff + wbytes, &seqlen, sizeof(size_t));
     wbytes += sizeof(size_t);
@@ -160,14 +158,15 @@ void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk)
 }
 
 
-size_t sqz_qualencode(const unsigned char *strqual, uint8_t *codebuff)
+size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *blk)
 {
+    uint8_t *codebuff = blk->codebuff + blk->blksize;
     size_t bytes = 0;
-    unsigned char q = sqz_8binqual(*strqual);
-    unsigned char  c = 0;
-    unsigned char code = 0;
-    while(*strqual) {
-        if ( sqz_8binqual(*(strqual+1)) == q) {
+    uint8_t q = sqz_8binqual(*qual);
+    uint8_t c = 0;
+    uint8_t code = 0;
+    while(*qual) {
+        if ( sqz_8binqual(*(qual+1)) == q) {
             c++;
             if (c == 31) {
                 //Encode
@@ -177,26 +176,27 @@ size_t sqz_qualencode(const unsigned char *strqual, uint8_t *codebuff)
                 bytes += 1;
                 c = 0;
                 code = 0;
-                q = sqz_8binqual(*(++strqual));
+                q = sqz_8binqual(*(++qual));
             }
-            strqual++;
+            qual++;
             continue;
         }
         //Encode
         code = code | q;
         code = code | c;
         memcpy(codebuff + bytes, &code, 1);
-        strqual++;
-        q = sqz_8binqual(*strqual);
+        qual++;
+        q = sqz_8binqual(*qual);
         c = 0;
         bytes += 1;
         code = 0;
     }
+    blk->blksize += bytes;
     return bytes;
 }
 
 
-unsigned char sqz_8binqual(char q)
+uint8_t sqz_8binqual(uint8_t q)
 {
     if (q >= 73) return 7<<5;
     if ( (q < 73) && (q >= 68) ) return 6<<5;
@@ -232,7 +232,8 @@ sqzblock_t *sqz_sqzblkinit(size_t size)
 {
     sqzblock_t *blk = malloc(sizeof(sqzblock_t));
     if (!blk) return NULL;
-    blk->codebuff = malloc(size);
+    //Code buffer array
+    blk->codebuff = malloc(2*size);
     if (!blk->codebuff) {
         fprintf(stderr, "[libsqz ERROR]: memory error.\n");
         free(blk);
@@ -240,12 +241,24 @@ sqzblock_t *sqz_sqzblkinit(size_t size)
     }
     blk->blksize = 0;
     blk->newblk = 1;
+    //Compression buffer array
+    blk->cmpbuff = malloc(2*size);
+    if (!blk->cmpbuff) {
+        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
+        free(blk->codebuff);
+        free(blk);
+        return NULL;
+    }
+    blk->cmpsize = 2*size;
     return blk;
 }
 
 
 void sqz_blkdestroy(sqzblock_t *blk)
 {
-    free(blk->codebuff);
-    free(blk);
+    if (blk) {
+        free(blk->codebuff);
+        free(blk->cmpbuff);
+        free(blk);
+    }
 }

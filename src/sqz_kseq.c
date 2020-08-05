@@ -80,6 +80,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
     size_t n = 0;
     //Loop over sequences and load data into sqzfastx_t struct
     while ( kseq_read(sqz->seq) >= 0) {
+        sqz->bases += sqz->seq->seq.l;
         n++;
         /*
           When a buffer is filled (Can't hold the entire kseq sequence + the

@@ -23,6 +23,7 @@ typedef struct {
     uint8_t    *namebuffer;
     size_t     namelen;
     size_t     n;
+    size_t     bases;
     //flags
     char       fmt;
     char       endflag; //Sequece has not completely been read into a buffer flag
@@ -83,3 +84,6 @@ char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 void sqz_blkdestroy(sqzblock_t *blk);
+
+
+size_t sqz_deflate(sqzblock_t *blk, int level);

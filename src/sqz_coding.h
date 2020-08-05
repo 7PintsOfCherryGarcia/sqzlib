@@ -22,10 +22,10 @@ char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
 void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk);
 
 
-size_t sqz_qualencode(const unsigned char *strqual, uint8_t *codebuff);
+size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *codebuff);
 
 
-unsigned char sqz_8binqual(char q);
+uint8_t sqz_8binqual(uint8_t q);
 
 
 const uint8_t *sqz_findn(const uint8_t *seq);

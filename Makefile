@@ -8,10 +8,9 @@ LIB= -L.
 LIBS= -lz
 
 PROG=libsqz sqz
-SRC=sqz_kseq.c sqz_init.c sqz_coding.c
+SRC=sqz_kseq.c sqz_init.c sqz_coding.c sqz_zlib.c
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
-#SOBJS=sqz_initS.o sqz_kseqS.o sqz_codingS.o
 
 .PHONY:all clean
 .SUFFIXES:.c .o
@@ -30,6 +29,8 @@ libsqz:$(OBJS) $(SOBJS)
 
 sqz:
 	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c libsqz.a $(LIBS)
+
+build:clean libsqz sqz
 
 clean:
 	rm -rf sqz $(SRCDIR)/*.o

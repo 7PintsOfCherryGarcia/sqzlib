@@ -12,7 +12,8 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
         return NULL;
     }
     sqz->filename = filename;
-    sqz->n = 0;
+    sqz->n =       0;
+    sqz->bases =   0;
     sqz->offset  = 0;
     sqz->endflag = 0;
     sqz->rem =     0;
@@ -32,14 +33,14 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
             break;
         //fasta
         case 1:
-            fprintf(stderr, "[squeezma INFO] Detected FASTA format\n");
+            fprintf(stderr, "[sqzlib INFO]: Detected FASTA format\n");
             sqz->fmt = fmt;
             //No need for quality buffer
             sqz->qualbuffer = NULL;
             sqz->seqbuffer = malloc(LOAD_SIZE + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,
-                        "[squeezma ERROR] Failed to allocate sequence buffer\n");
+                        "[sqzlib ERROR]: Failed to allocate sequence buffer\n");
                 free(sqz);
                 return NULL;
             }
@@ -47,22 +48,23 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,
-                        "[squeezma ERROR] Failed to allocate name buffer\n");
+                        "[sqzlib ERROR] Failed to allocate name buffer\n");
                 free(sqz);
                 return NULL;
             }
             sqz->namelen = 0;
             break;
         case 2:
-            fprintf(stderr, "[squeezma INFO] Detected FASTQ format\n");
+            fprintf(stderr, "[sqzlib INFO]: Detected FASTQ format.\n");
             sqz->fmt = fmt;
-            sqz->qualbuffer = malloc(LOAD_SIZE);
+            sqz->qualbuffer = malloc(LOAD_SIZE + 1);
             if (!sqz->qualbuffer) {
                 fprintf(stderr,
-                        "[squeezma ERROR] Failed to allocate quality buffer\n");
+                        "[sqzlib ERROR] Failed to allocate quality buffer\n");
                 free(sqz);
                 return NULL;
             }
+            sqz->qualbuffer[LOAD_SIZE] = 0;
             sqz->seqbuffer = malloc(LOAD_SIZE + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,

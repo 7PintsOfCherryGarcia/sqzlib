@@ -8,7 +8,7 @@ LIB= -L.
 LIBS= -lz
 
 PROG=libsqz sqz
-SRC=sqz_kseq.c sqz_init.c sqz_coding.c sqz_zlib.c
+SRC=sqz_kseq.c sqz_init.c sqz_coding.c sqz_zlib.c sqz_cmp.c sqz_dcp.c
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
 

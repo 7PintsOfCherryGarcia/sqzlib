@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <zlib.h>
 
-#define LOAD_SIZE 64*1024
+#define LOAD_SIZE 16*1024*1024
 
 typedef struct  kseq_t kseq_t;
 
@@ -95,3 +95,12 @@ size_t sqz_deflate(sqzblock_t *blk, int level);
 
 
 char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp);
+
+
+char sqz_filetail(size_t numseqs, FILE *ofp);
+
+
+char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
+
+
+sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize);

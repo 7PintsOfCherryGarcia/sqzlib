@@ -64,7 +64,6 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
 char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-    fprintf(stderr, "In tail\n");
     //Check if reading leftover sequence
     size_t *seqlen = &(sqz->prevlen);
     uint8_t *seq =  sqz->seqbuffer;

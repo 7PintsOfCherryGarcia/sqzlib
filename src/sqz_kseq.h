@@ -21,3 +21,6 @@ size_t sqz_endblock(sqzfastx_t *sqz);
 
 
 void sqz_kill(sqzfastx_t *sqz);
+
+
+char sqz_checksqz(const char *buf);

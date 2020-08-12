@@ -9,14 +9,17 @@ KSEQ_INIT(gzFile, gzread)
 char sqz_getformat(const char *filename)
 {
     char ret = 0;
+    if (sqz_checksqz(filename)) {
+            fprintf(stderr, "sqz format");
+            ret = 3;
+            goto exit;
+    }
     gzFile fp = gzopen(filename, "r");
-    //ERROR
     if (!fp) {
         fprintf(stderr, "[libsqz: ERROR] Failed to open file: %s\n", filename);
         return ret;
     }
     kseq_t *seq = kseq_init(fp);
-    //ERROR
     if (!seq) {
         gzclose(fp);
         return ret;
@@ -131,6 +134,9 @@ size_t sqz_newblock(sqzfastx_t *sqz)
 }
 
 
+/*
+Keep loading pending sequence
+*/
 size_t sqz_endblock(sqzfastx_t *sqz)
 {
     size_t lsize;
@@ -143,7 +149,6 @@ size_t sqz_endblock(sqzfastx_t *sqz)
                sqz->seq->qual.s + (sqz->seq->qual.l + 1 - sqz->rem),
                LOAD_SIZE);
         sqz->rem -= LOAD_SIZE;
-        //sqz->n = 0;
         lsize = LOAD_SIZE;
         sqz->offset = LOAD_SIZE;
         return lsize;
@@ -156,7 +161,6 @@ size_t sqz_endblock(sqzfastx_t *sqz)
            sqz->seq->qual.s + (sqz->seq->seq.l + 1 - sqz->rem),
            sqz->rem);
     lsize = sqz->rem;
-    //sqz->n = 0;
     sqz->endflag = 0;
     sqz->rem = 0;
     sqz->offset = lsize;
@@ -174,4 +178,15 @@ void sqz_kill(sqzfastx_t *sqz)
         if (sqz->fmt == 2) free(sqz->qualbuffer);
         free(sqz);
     }
+}
+
+
+char sqz_checksqz(const char *filename)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return 0;
+    uint64_t header;
+    fread(&header, 1, 8, fp);
+    fprintf(stderr, "%lu\n", header);
+    return 0;
 }

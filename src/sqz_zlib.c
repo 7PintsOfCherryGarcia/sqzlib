@@ -51,9 +51,15 @@ char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp)
     size_t bytes = sizeof(size_t);
     size_t wbytes = 0;
     fprintf(stderr, "[sqzlib INFO]: Dumping block.\n");
+    //Write uncompressed number of bytes in block
     wbytes += fwrite(&(blk->blksize), bytes, 1, ofp);
+    //Write compressed number of bytes in block
     wbytes += fwrite(&(size), bytes, 1, ofp);
+    //Write block
     wbytes += fwrite(blk->cmpbuff, 1, size, ofp);
     if (wbytes != size+2) return 0;
     return 1;
 }
+
+
+

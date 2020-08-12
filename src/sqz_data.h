@@ -1,4 +1,7 @@
-#define LOAD_SIZE 64*1024
+#include <zlib.h>
+#include <stdint.h>
+
+#define LOAD_SIZE 16*1024*1024
 
 #define NEND (128)
 

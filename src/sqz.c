@@ -133,7 +133,7 @@ char sqz_decompress(const char *filename, const char *outname)
     //Read head and tail
     sqzfastx_t *sqz = sqz_sqzinit(filename, LOAD_SIZE);
     if (!sqz) {
-        fprintf(stderr, "[sqz ERROR: INIT] Failed to start data structures.\n");
+        fprintf(stderr, "[sqz ERROR]: Failed to start data structures.\n");
         goto exit;
     }
 

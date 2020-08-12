@@ -3,13 +3,16 @@
 
 #define LOAD_SIZE 16*1024*1024
 
-#define NEND (128)
+#define NEND 128
 
 #define CHUNK 131072
+
+#define MAGIC 151324677
 
 #ifndef KLIB
 #define kseq_t struct kseq_t
 #endif
+
 
 
 /*

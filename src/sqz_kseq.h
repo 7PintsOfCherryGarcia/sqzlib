@@ -5,7 +5,7 @@
 #include "sqz_data.h"
 
 
-char sqz_getformat(const char *filename);
+unsigned char sqz_getformat(const char *filename);
 
 
 char sqz_kseqinit(sqzfastx_t *sqz);
@@ -23,4 +23,4 @@ size_t sqz_endblock(sqzfastx_t *sqz);
 void sqz_kill(sqzfastx_t *sqz);
 
 
-char sqz_checksqz(const char *buf);
+unsigned char sqz_checksqz(const char *buf);

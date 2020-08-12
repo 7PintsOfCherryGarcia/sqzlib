@@ -20,13 +20,13 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
     sqz->toread =  0;
     sqz->prevlen = 0;
     //Get file format
-    char fmt = sqz_getformat(filename);
+    unsigned char fmt = sqz_getformat(filename);
     //Initialize kseq objects
     if (!sqz_kseqinit(sqz)) {
         free(sqz);
         return NULL;
     }
-    switch (fmt) {
+    switch (fmt & 7) {
         case 0:
             free(sqz);
             sqz = NULL;
@@ -81,6 +81,16 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
                 return NULL;
             }
             sqz->namelen = 0;
+            break;
+        case 5:
+            free(sqz);
+            sqz = NULL;
+            fprintf(stderr, "[sqzlib INFO]: File %s is already sqz encoded.\n", filename);
+            break;
+        case 6:
+            free(sqz);
+            sqz = NULL;
+            fprintf(stderr, "[sqzlib INFO]: File %s is already sqz encoded.\n", filename);
             break;
     }
     return sqz;

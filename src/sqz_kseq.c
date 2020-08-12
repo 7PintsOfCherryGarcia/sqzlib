@@ -6,13 +6,11 @@ KSEQ_INIT(gzFile, gzread)
 #include "sqz_kseq.h"
 
 
-char sqz_getformat(const char *filename)
+unsigned char sqz_getformat(const char *filename)
 {
-    char ret = 0;
-    if (sqz_checksqz(filename)) {
-            fprintf(stderr, "sqz format");
-            ret = 3;
-            goto exit;
+    unsigned char ret = 0;
+    if ( (ret = sqz_checksqz(filename)) ) {
+        return ret;
     }
     gzFile fp = gzopen(filename, "r");
     if (!fp) {
@@ -181,12 +179,24 @@ void sqz_kill(sqzfastx_t *sqz)
 }
 
 
-char sqz_checksqz(const char *filename)
+unsigned char sqz_checksqz(const char *filename)
 {
     FILE *fp = fopen(filename, "rb");
     if (!fp) return 0;
-    uint64_t header;
-    fread(&header, 1, 8, fp);
-    fprintf(stderr, "%lu\n", header);
-    return 0;
+    uint32_t magic;
+    unsigned char fmt = 0;
+    char sqz;
+    //Read magic
+    fread(&magic, 1, 4, fp);
+    if (MAGIC ^ magic) return 0;
+    //Set sqz flag
+    fmt |= 4;
+    //Read format
+    fread(&sqz, 1, 1, fp);
+    fmt |= sqz;
+    //Read compression library
+    fread(&sqz, 1, 1, fp);
+    fmt |= sqz << 3;
+    fclose(fp);
+    return fmt;
 }

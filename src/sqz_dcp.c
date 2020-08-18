@@ -1,9 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sqz_dcp.h"
 #include "sqz_data.h"
+#include "sqz_dcp.h"
 
+
+long sqz_filesize(FILE *fp)
+{
+    fseek(fp, 0, SEEK_END);
+    long s = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    return s;
+}
 
 sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize)
 {
@@ -22,8 +30,16 @@ sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize)
     sqz->prevlen = 0;
     //Get file format
     char fmt = sqz_getformat(filename);
+    //Initialize kseq objects
+    if (!sqz_kseqinit(sqz)) {
+        free(sqz);
+        return NULL;
+    }
     switch (fmt & 7) {
         case 0:
+            fprintf(stderr,
+                    "[sqzlib ERROR]: File %s of unknown format\n",
+                    filename);
             free(sqz);
             sqz = NULL;
             break;
@@ -49,8 +65,35 @@ sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize)
             break;
         case 6:
             fprintf(stderr, "[sqzlib INFO]: sqz encoded fastq file.\n");
-            free(sqz);
-            sqz = NULL;
+            sqz->fmt = fmt;
+            sqz->qualbuffer = malloc(LOAD_SIZE + 1);
+            if (!sqz->qualbuffer) {
+                fprintf(stderr,
+                        "[sqzlib ERROR] Failed to allocate quality buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->qualbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            if (!sqz->seqbuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate sequence buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->namebuffer = malloc(1*1024*1024);
+            if (!sqz->namebuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate name buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->namelen = 0;
+            break;
     }
     return sqz;
 }
+
+
+

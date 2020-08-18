@@ -14,7 +14,7 @@ unsigned char sqz_getformat(const char *filename)
     }
     gzFile fp = gzopen(filename, "r");
     if (!fp) {
-        fprintf(stderr, "[libsqz: ERROR] Failed to open file: %s\n", filename);
+        fprintf(stderr, "[sqzlib ERROR]: Failed to open file: %s\n", filename);
         return ret;
     }
     kseq_t *seq = kseq_init(fp);
@@ -25,7 +25,7 @@ unsigned char sqz_getformat(const char *filename)
     int l = kseq_read(seq);
     //ERROR
     if (l < 0) {
-        fprintf(stderr, "[libsqz: ERROR] sequence file format not recognized\n");
+        fprintf(stderr, "[sqzlib ERROR]: sequence file format not recognized\n");
         goto exit;
     }
     //FASTQ
@@ -173,7 +173,7 @@ void sqz_kill(sqzfastx_t *sqz)
         kseq_destroy(sqz->seq);
         free(sqz->seqbuffer);
         free(sqz->namebuffer);
-        if (sqz->fmt == 2) free(sqz->qualbuffer);
+        if ( (sqz->fmt == 2) | (sqz->fmt == 14) ) free(sqz->qualbuffer);
         free(sqz);
     }
 }

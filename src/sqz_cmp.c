@@ -23,18 +23,19 @@ char sqz_filetail(size_t numseqs, FILE *ofp)
 
 char sqz_filehead(sqzfastx_t *sqz, FILE *ofp)
 {
-    if ( 4 != fwrite(magic, 1, 4, ofp) ) {
+    char wbytes = 0;
+    if ( 4 != (wbytes += fwrite(magic, 1, 4, ofp)) ) {
         return 0;
     }
-    if ( 1 != fwrite(&(sqz->fmt), 1, 1, ofp) ) {
+    if ( 5 != (wbytes += fwrite(&(sqz->fmt), 1, 1, ofp)) ) {
         return 0;
     }
     //Compression library
-    if ( 1 != fwrite(&cmpflag, 1, 1, ofp) ) {
+    if ( 6 != (wbytes += fwrite(&cmpflag, 1, 1, ofp)) ) {
         return 0;
     }
-    if ( 2 != fwrite(zbytes, 1, 2, ofp) ) {
+    if ( 8 != (wbytes += fwrite(zbytes, 1, 2, ofp)) ) {
         return 0;
     }
-    return 1;
+    return wbytes;
 }

@@ -47,7 +47,6 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     //Indicate if there is more sequence to read
     if (seqread < *seqlen) {
-        //fprintf(stderr, "More seq please!! %lu %lu\n", seqread, *seqlen);
         blk->newblk = 0;
         //Indicate how much sequence has been read
         sqz->toread = seqread;
@@ -55,7 +54,7 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
         sqz->prevlen = *seqlen;
     }
     if (k != sqzsize) {
-        fprintf(stderr, "[sqzlib ERROR]: Unloading buffer\n");
+        fprintf(stderr, "[sqzlib ERROR]: Failed to unloading raw data buffer\n");
         return 0;
     }
     return 1;
@@ -156,6 +155,61 @@ void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk)
     blk->blksize += wbytes;
 }
 
+
+size_t sqz_seqdecode(const uint8_t *buff)
+{
+    size_t cbytes = 0;
+    size_t seqlen;
+    char *seqstr;
+    const unsigned char *nstr;
+    size_t seqpos;
+    uint64_t *mer;
+    size_t blocklen;
+    seqlen = *(size_t *)buff;
+    fprintf(stderr, "\t\t%lu\n", seqlen);
+    cbytes += sizeof(size_t);
+    seqstr = malloc(seqlen);
+    if (!seqstr) {
+        fprintf(stderr, "[sqzlib ERROR]: Insufficient memory.\n");
+        return 0;
+    }
+    seqpos = 0;
+    while (seqlen > 0) {
+        blocklen = *(size_t *)(buff + cbytes);
+        cbytes += sizeof(size_t);
+        mer = (uint64_t *)(buff + cbytes);
+        for (size_t i = 0; i < blocklen; i+=32) {
+            //Blocks code 32mers except last block which may code a shorter kmer
+            //merlen = ((i+32) <= blocklen)?32:blocklen - i;
+            //decoded += bit2decode(mer + blockidx, seqpos, merlen);
+            //Keep traked of amount of decoded data: 64bit per mer
+            cbytes += sizeof(uint64_t);
+            //Move sequence pointer by abount of bases decoded (32 except last mer)
+            seqpos += ((i+32) <= blocklen)?32:blocklen - i;
+            //seqpos += merlen;
+            //Track next block to decompress
+            //blockidx++;
+        }
+        seqlen -= blocklen;
+        if (seqlen) {
+            nstr = buff + cbytes;
+            cbytes++;
+            while (1) {
+                unsigned char numn = *nstr & ~(1<<7);
+                //decoded += sqz_writens(*nstr & ~(1<<7), seqpos);
+                seqpos += numn;
+                seqlen -= numn;
+                if (*nstr & 128)
+                    break;
+                nstr++;
+                cbytes++;
+            }
+        }
+    }
+    free(seqstr);
+    fprintf(stderr, "Decoded sequence has length: %lu\n", seqpos);
+    return 0;
+}
 
 size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *blk)
 {

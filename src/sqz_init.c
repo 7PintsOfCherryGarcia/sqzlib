@@ -8,7 +8,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
 {
     sqzfastx_t *sqz = malloc(sizeof(sqzfastx_t));
     if (!sqz) {
-        fprintf(stderr, "[squeezma ERROR] Memory error\n");
+        fprintf(stderr, "[sqzlib ERROR] Memory error\n");
         return NULL;
     }
     sqz->filename = filename;
@@ -28,12 +28,14 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
     }
     switch (fmt & 7) {
         case 0:
+            fprintf(stderr,
+                    "[sqzlib ERROR]: File %s of unknown format\n",
+                    filename);
             free(sqz);
             sqz = NULL;
             break;
-        //fasta
         case 1:
-            fprintf(stderr, "[sqzlib INFO]: Detected FASTA format\n");
+            fprintf(stderr, "[sqzlib INFO]: Detected FASTa format %u\n", fmt);
             sqz->fmt = fmt;
             //No need for quality buffer
             sqz->qualbuffer = NULL;
@@ -83,14 +85,39 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
             sqz->namelen = 0;
             break;
         case 5:
+            fprintf(stderr,
+                    "[sqzlib INFO]: Detected sqz encoded FASTA format.\n");
             free(sqz);
             sqz = NULL;
-            fprintf(stderr, "[sqzlib INFO]: File %s is already sqz encoded.\n", filename);
             break;
         case 6:
-            free(sqz);
-            sqz = NULL;
-            fprintf(stderr, "[sqzlib INFO]: File %s is already sqz encoded.\n", filename);
+            fprintf(stderr,
+                    "[sqzlib INFO]: Detected sqz encoded FASTQ format.\n");
+            sqz->fmt = fmt;
+            sqz->qualbuffer = malloc(LOAD_SIZE + 1);
+            if (!sqz->qualbuffer) {
+                fprintf(stderr,
+                        "[sqzlib ERROR] Failed to allocate quality buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->qualbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            if (!sqz->seqbuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate sequence buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->namebuffer = malloc(1*1024*1024);
+            if (!sqz->namebuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate name buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->namelen = 0;
             break;
     }
     return sqz;

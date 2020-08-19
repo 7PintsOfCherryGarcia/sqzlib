@@ -161,23 +161,27 @@ size_t sqz_seqdecode(const uint8_t *buff)
     size_t cbytes = 0;
     size_t seqlen;
     char *seqstr;
+    char *qualstr;
     const unsigned char *nstr;
     size_t seqpos;
-    uint64_t *mer;
+    //uint64_t *mer;
     size_t blocklen;
     seqlen = *(size_t *)buff;
     fprintf(stderr, "\t\t%lu\n", seqlen);
     cbytes += sizeof(size_t);
     seqstr = malloc(seqlen);
-    if (!seqstr) {
+    qualstr = malloc(seqlen);
+    if (!seqstr | !qualstr) {
         fprintf(stderr, "[sqzlib ERROR]: Insufficient memory.\n");
+        free(qualstr);
+        free(seqstr);
         return 0;
     }
     seqpos = 0;
     while (seqlen > 0) {
         blocklen = *(size_t *)(buff + cbytes);
         cbytes += sizeof(size_t);
-        mer = (uint64_t *)(buff + cbytes);
+        //mer = (uint64_t *)(buff + cbytes);
         for (size_t i = 0; i < blocklen; i+=32) {
             //Blocks code 32mers except last block which may code a shorter kmer
             //merlen = ((i+32) <= blocklen)?32:blocklen - i;
@@ -206,8 +210,11 @@ size_t sqz_seqdecode(const uint8_t *buff)
             }
         }
     }
+
+    fprintf(stderr, "bytes decoded: %lu\n", cbytes);
+    sqz_qualdecode(buff + cbytes, qualstr, seqpos - 1);
     free(seqstr);
-    fprintf(stderr, "Decoded sequence has length: %lu\n", seqpos);
+    free(qualstr);
     return 0;
 }
 
@@ -314,4 +321,28 @@ void sqz_blkdestroy(sqzblock_t *blk)
         free(blk->cmpbuff);
         free(blk);
     }
+}
+
+
+size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length)
+{
+    size_t byte = 0;
+    size_t offset = 0;
+    size_t decoded = 0;
+    uint8_t code;
+    unsigned char count;
+    unsigned char q;
+    while (decoded != length) {
+        code = *(buff + byte); //get byte value
+        count = code & 31;         //get current symbol count
+        q = (code & 224) >> 5;     //get symbol index value
+        for (int i = 0; i <= count; i++) {
+            uncode[offset] = qual_val_table[q];
+            offset++;
+        }
+        decoded += ++count;
+        byte++;
+    }
+    uncode[offset] = '\0';
+    return decoded;
 }

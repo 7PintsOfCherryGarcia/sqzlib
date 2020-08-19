@@ -51,25 +51,4 @@ size_t sqz_qualencode(const char *strqual, uint8_t *codebuff)
 }
 
 
-size_t sqz_qualdecode(uint8_t *codebuff, char *uncode, size_t length)
-{
-    size_t byte = 0;
-    size_t offset = 0;
-    size_t decoded = 0;
-    uint8_t code;
-    unsigned char count;
-    unsigned char q;
-    while (decoded != length) {
-        code = *(codebuff + byte); //get byte value
-        count = code & 31;         //get current symbol count
-        q = (code & 224) >> 5;     //get symbol index value
-        for (int i = 0; i <= count; i++) {
-            uncode[offset] = qual_val_table[q];
-            offset++;
-        }
-        decoded += ++count;
-        byte++;
-    }
-    uncode[offset] = '\0';
-    return decoded;
-}
+

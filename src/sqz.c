@@ -83,9 +83,6 @@ char sqz_compress(const char *filename, const char *outname)
 }
 
 
-/*
-  Loads fastq data to buffer and compresses it with deflate
-*/
 char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 {
     char ret = 0;
@@ -206,7 +203,6 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
             //all the necessary data to inflate a zlib block
             fread(&dcpsize, bytes, 1, fp);
             fread(&cmpsize, bytes, 1, fp);
-            fprintf(stderr, "size cmp: %lu\nsize dcp: %lu\n", cmpsize, dcpsize);
             if ( cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp) ) {
                 fprintf(stderr, "ERROR reading\n");
                 break;

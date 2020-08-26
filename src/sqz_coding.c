@@ -28,16 +28,14 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
     size_t k = 0;
     size_t n = 0;
     size_t sqzsize = sqz->offset;
-    //uint8_t *qualbuff = NULL;
-    //Process sequence data in buffer
     while ( k < sqzsize) {
         n++;
-        //Extract length of sequences in buffer
         seqlen = (size_t *)(sqz->seqbuffer + k);
         k += lenbytes;
         seq =  sqz->seqbuffer + k;
         qual = sqz->qualbuffer + k;
         //Determine how much sequence is contained in the buffer
+        /*This happens because not all the sequence can be stored in buffer*/
         seqread = *seqlen < (sqzsize - k)?*seqlen + 1:sqzsize - k;
         k += seqread;
         //encode sequence
@@ -164,8 +162,12 @@ size_t sqz_seqdecode(const uint8_t *buff)
     char *qualstr;
     const unsigned char *nstr;
     size_t seqpos;
-    //uint64_t *mer;
+    uint64_t *mer;
     size_t blocklen;
+    char merlen;
+    size_t blockidx;
+    size_t decoded;
+    //slen
     seqlen = *(size_t *)buff;
     fprintf(stderr, "\t\t%lu\n", seqlen);
     cbytes += sizeof(size_t);
@@ -177,30 +179,37 @@ size_t sqz_seqdecode(const uint8_t *buff)
         free(seqstr);
         return 0;
     }
+    seqstr[seqlen - 1] = '\0';
+    qualstr[seqlen - 1] = '\0';
     seqpos = 0;
+    fprintf(stderr, ">>>>%p\n", seqstr) ;
     while (seqlen > 0) {
+        //blen - length of block (within sequence up to first non acgt base)
         blocklen = *(size_t *)(buff + cbytes);
+        fprintf(stderr, "^^block length %lu\n", blocklen);
         cbytes += sizeof(size_t);
-        //mer = (uint64_t *)(buff + cbytes);
+        //TODO try to remove this cast
+        mer = (uint64_t *)(buff + cbytes);
+        blockidx = 0;
         for (size_t i = 0; i < blocklen; i+=32) {
             //Blocks code 32mers except last block which may code a shorter kmer
-            //merlen = ((i+32) <= blocklen)?32:blocklen - i;
-            //decoded += bit2decode(mer + blockidx, seqpos, merlen);
+            merlen = ((i+32) <= blocklen)?32:blocklen - i - 1;
+            decoded += sqz_bit2decode(mer + blockidx, seqstr + seqpos, merlen);
             //Keep traked of amount of decoded data: 64bit per mer
             cbytes += sizeof(uint64_t);
-            //Move sequence pointer by abount of bases decoded (32 except last mer)
-            seqpos += ((i+32) <= blocklen)?32:blocklen - i;
-            //seqpos += merlen;
+            //Move sequencepointerbyabount of bases decoded (32 except last mer)
+            seqpos += merlen;
             //Track next block to decompress
-            //blockidx++;
+            blockidx++;
         }
         seqlen -= blocklen;
         if (seqlen) {
+            fprintf(stderr, "There are NS!!!!!!!\n");
             nstr = buff + cbytes;
             cbytes++;
             while (1) {
                 unsigned char numn = *nstr & ~(1<<7);
-                //decoded += sqz_writens(*nstr & ~(1<<7), seqpos);
+                decoded += sqz_writens(*nstr & ~(1<<7), seqstr);
                 seqpos += numn;
                 seqlen -= numn;
                 if (*nstr & 128)
@@ -213,6 +222,8 @@ size_t sqz_seqdecode(const uint8_t *buff)
 
     fprintf(stderr, "bytes decoded: %lu\n", cbytes);
     sqz_qualdecode(buff + cbytes, qualstr, seqpos - 1);
+    fprintf(stderr, "<<<<%p\n", seqstr);
+    fprintf(stdout, "||%s\n", seqstr);
     free(seqstr);
     free(qualstr);
     return 0;
@@ -345,4 +356,31 @@ size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length)
     }
     uncode[offset] = '\0';
     return decoded;
+}
+
+
+unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, uint32_t len)
+{
+    unsigned char byte;
+    unsigned char nbase = 0;
+    uint64_t code = *mer;
+    --len;
+    do {
+        byte = code & TWO_BIT_MASK;
+        decoded[len] = seq_dec_table[byte];
+        nbase++;
+        code >>= 2;
+    } while (len-- != 0);
+    return nbase;
+}
+
+
+unsigned char sqz_writens(unsigned char numn, char *decoded)
+{
+    unsigned char nwritten = 0;
+    while (numn-- > 0) {
+        decoded[numn] = 'N';
+        nwritten++;
+    }
+    return nwritten;
 }

@@ -2,6 +2,7 @@
 
 #include "sqz_data.h"
 
+#define TWO_BIT_MASK (3)
 
 //Table to change "ACGT" to 0123 else to 4
 unsigned char seq_nt4_table[128] = {
@@ -13,6 +14,19 @@ unsigned char seq_nt4_table[128] = {
     4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
     4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
     4, 4, 4, 4,  3, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
+};
+
+
+//Table to change 01234 to ACGTN
+unsigned char seq_dec_table[128] = {
+    'A', 'C','G', 'T',  'N', 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+     4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
 };
 
 
@@ -50,3 +64,9 @@ void sqz_blkdestroy(sqzblock_t *blk);
 
 
 size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length);
+
+
+unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, uint32_t len);
+
+
+unsigned char sqz_writens(unsigned char numn, char *decoded);

@@ -3,7 +3,6 @@
 
 size_t sqz_deflate(sqzblock_t *blk, int level)
 {
-    fprintf(stderr, "PENE\n");
     int ret;
     size_t wbytes = 0;
     size_t have;

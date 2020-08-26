@@ -65,7 +65,10 @@ char sqz_kseqinit(sqzfastx_t *sqz)
         return ret;
 }
 
-
+/*
+    Loads sqz's seqbuffer and qualbuffer with at most LOAD_SIZE bases/quality
+    data. Returns number of bytes used to store the data
+*/
 size_t sqz_loadfastq(sqzfastx_t *sqz)
 {
     if (!sqz->endflag) return sqz_newblock(sqz);
@@ -88,6 +91,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
           lenth of the next sequence), the length of the current sequence is
           stored as well as any bases the buffer can accomodate.
         */
+        //TODO move to function
         if (offset + sqz->seq->seq.l + 1 + lenbytes + lenbytes > LOAD_SIZE) {
             //Compute how much buffer is available
             bleftover = LOAD_SIZE - offset;

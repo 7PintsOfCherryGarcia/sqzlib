@@ -338,7 +338,7 @@ const unsigned char *findn(const unsigned char *strseq);
     This function takes a sequence and encodes it via 2 bit enconding for bases
     AaCcGgTt and runlength encoding for N. The following format is used to store the
     encoded sequence:
-        [slen|32bit|][blen|32bit]*[bblock|n*64bit](n*[nblock|n*8bit])
+        [slen|32bit|][blen|32bit]n*[bblock|64bit]n*[nblock|8bit]
     slen   - sequence length
     blen   - block length: Sequence length up to an N bases
     bblock - 64 bit integers encoding up to 32 base kmers each for a total of blen bases

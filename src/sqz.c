@@ -9,7 +9,8 @@
 long sqz_filesize(FILE *fp);
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     int ret = -1;
     if (argc < 2) goto exit;
     char oname[256];
@@ -29,7 +30,7 @@ int main(int argc, char *argv[]) {
             end = strrchr(oname, '.');
             if (end)
                 *end = '\0';
-            fprintf(stderr, "%s\n", oname);
+            fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
             if (!sqz_decompress(argv[argc - 1], oname)) goto exit;
     }
 
@@ -106,7 +107,6 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
         if (!sqz->endflag) {
             fprintf(stderr, "[sqz INFO]: Compress and flushing.\n");
             fprintf(stderr, "[sqz INFO]: Block info\n");
-            fprintf(stderr, "\t\toffset - %lu bytes\n", batchsize);
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
             fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
@@ -137,7 +137,6 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 char sqz_decompress(const char *filename, const char *outname)
 {
     char ret = 0;
-    fprintf(stderr, "%s %s\n", filename, outname);
     FILE *ofp = fopen("PENE", "wb");
     if (!ofp) {
         fprintf(stderr, "[sqz ERROR]: Failed to open %s for writing.\n", outname);
@@ -160,7 +159,6 @@ char sqz_decompress(const char *filename, const char *outname)
         case 5:
             break;
         case 6:
-            fprintf(stderr, "expanding\n");
             if (!sqz_spreadfastq(sqz, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");

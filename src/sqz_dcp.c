@@ -13,6 +13,7 @@ long sqz_filesize(FILE *fp)
     return s;
 }
 
+
 sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize)
 {
     sqzfastx_t *sqz = malloc(sizeof(sqzfastx_t));

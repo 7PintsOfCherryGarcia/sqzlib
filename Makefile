@@ -30,10 +30,12 @@ libsqz:$(OBJS) $(SOBJS)
 sqz:
 	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c libsqz.a $(LIBS)
 
-build:clean libsqz sqz
+build:wipe libsqz sqz
 
 clean:
-	rm -rf sqz $(SRCDIR)/*.o
+	rm -rf $(SRCDIR)/*.o
 
+wipe:
+	rm -rf sqz libsqz.so libsqz.a $(SRCDIR)/*.o
 
 # makedepend line not in use in current compilation enviroanment

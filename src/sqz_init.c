@@ -4,7 +4,7 @@
 #include "sqz_init.h"
 
 
-sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
+sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
 {
     sqzfastx_t *sqz = malloc(sizeof(sqzfastx_t));
     if (!sqz) {
@@ -35,18 +35,18 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize)
             sqz = NULL;
             break;
         case 1:
-            fprintf(stderr, "[sqzlib INFO]: Detected FASTa format %u\n", fmt);
+            fprintf(stderr, "[sqzlib INFO]: Detected fastA format %u\n", fmt);
             sqz->fmt = fmt;
             //No need for quality buffer
             sqz->qualbuffer = NULL;
-            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            sqz->seqbuffer = malloc(bsize + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,
                         "[sqzlib ERROR]: Failed to allocate sequence buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,

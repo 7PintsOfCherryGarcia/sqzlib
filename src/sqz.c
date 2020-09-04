@@ -137,7 +137,7 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 char sqz_decompress(const char *filename, const char *outname)
 {
     char ret = 0;
-    FILE *ofp = fopen("PENE", "wb");
+    FILE *ofp = fopen("output", "wb");
     if (!ofp) {
         fprintf(stderr, "[sqz ERROR]: Failed to open %s for writing.\n", outname);
         return 0;

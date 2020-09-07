@@ -109,4 +109,4 @@ sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize);
 size_t sqz_inflate(sqzblock_t *blk);
 
 
-size_t sqz_seqdecode(const uint8_t *buff);
+size_t sqz_fastqdecode(const uint8_t *buff, size_t size);

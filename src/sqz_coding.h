@@ -66,7 +66,10 @@ void sqz_blkdestroy(sqzblock_t *blk);
 size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length);
 
 
-unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, uint32_t len);
+unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, unsigned char len);
 
 
 unsigned char sqz_writens(unsigned char numn, char *decoded);
+
+
+size_t sqz_loopdecode(size_t length, uint64_t *seqbuffer, char *seqstr);

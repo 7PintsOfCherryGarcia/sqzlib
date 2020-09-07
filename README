@@ -1,0 +1,16 @@
+sqz format
+
+A file compressed with sqz follows the following format:
+
+    1 [HEADER]   |8 bytes|
+    N [CMPBLOCK] |M bytes|
+    1 [TAIL]     |  bytes|
+
+HEADER format - [magic number: 5859]               |4 bytes|
+                [sequence format: 0-fasta, 1-fastq]|1 bytes|
+                [compression API: 1-zlib]          |1 bytes|
+                [zeroes: 00]                       |2 bytes|
+
+CMPBLOCK format - [decompressed size]                |8 bytes|
+                  [compressed size]                  |8 bytes|
+                   [compressed data block]            |compressed size bytes|

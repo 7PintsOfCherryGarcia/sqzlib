@@ -154,49 +154,50 @@ void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk)
 }
 
 
-size_t sqz_seqdecode(const uint8_t *buff)
+size_t sqz_fastqdecode(const uint8_t *buff, size_t size)
 {
-    size_t cbytes = 0;
+    size_t buffpos = 0;
     size_t seqlen;
     char *seqstr;
     char *qualstr;
-    const unsigned char *nstr;
+    //const unsigned char *nstr;
     size_t seqpos;
-    uint64_t *mer;
-    size_t blocklen;
-    char merlen;
-    size_t blockidx;
-    size_t decoded;
-    //slen
+    //uint64_t *mer;
+    //size_t blocklen;
+    //char merlen;
+    //size_t blockidx;
+    //size_t decoded;
+    //get sequence length
     seqlen = *(size_t *)buff;
     fprintf(stderr, "\t\t%lu\n", seqlen);
-    cbytes += sizeof(size_t);
+    buffpos += sizeof(size_t);
     seqstr = malloc(seqlen);
     qualstr = malloc(seqlen);
     if (!seqstr | !qualstr) {
         fprintf(stderr, "[sqzlib ERROR]: Insufficient memory.\n");
-        free(qualstr);
-        free(seqstr);
-        return 0;
+        goto exit;
     }
     seqstr[seqlen - 1] = '\0';
     qualstr[seqlen - 1] = '\0';
     seqpos = 0;
-    fprintf(stderr, ">>>>%p\n", seqstr) ;
+    buffpos += sqz_loopdecode(seqlen, (uint64_t *)buff + buffpos, seqstr);
+    fprintf(stderr, "\tbytes decoded: %lu\n", buffpos);
+    buffpos += sqz_loopdecode(seqlen, (uint64_t *)buff + buffpos, seqstr);
+    fprintf(stderr, "\tbytes decoded: %lu\n", buffpos);
+    /*
     while (seqlen > 0) {
         //blen - length of block (within sequence up to first non acgt base)
-        blocklen = *(size_t *)(buff + cbytes);
-        fprintf(stderr, "^^block length %lu\n", blocklen);
-        cbytes += sizeof(size_t);
+        blocklen = *(size_t *)(buff + buffpos);
+        buffpos += sizeof(size_t);
         //TODO try to remove this cast
-        mer = (uint64_t *)(buff + cbytes);
+        mer = (uint64_t *)(buff + buffpos);
         blockidx = 0;
         for (size_t i = 0; i < blocklen; i+=32) {
             //Blocks code 32mers except last block which may code a shorter kmer
             merlen = ((i+32) <= blocklen)?32:blocklen - i - 1;
             decoded += sqz_bit2decode(mer + blockidx, seqstr + seqpos, merlen);
             //Keep traked of amount of decoded data: 64bit per mer
-            cbytes += sizeof(uint64_t);
+            buffpos += sizeof(uint64_t);
             //Move sequencepointerbyabount of bases decoded (32 except last mer)
             seqpos += merlen;
             //Track next block to decompress
@@ -205,8 +206,8 @@ size_t sqz_seqdecode(const uint8_t *buff)
         seqlen -= blocklen;
         if (seqlen) {
             fprintf(stderr, "There are NS!!!!!!!\n");
-            nstr = buff + cbytes;
-            cbytes++;
+            nstr = buff + buffpos;
+            buffpos++;
             while (1) {
                 unsigned char numn = *nstr & ~(1<<7);
                 decoded += sqz_writens(*nstr & ~(1<<7), seqstr);
@@ -215,19 +216,20 @@ size_t sqz_seqdecode(const uint8_t *buff)
                 if (*nstr & 128)
                     break;
                 nstr++;
-                cbytes++;
+                buffpos++;
             }
         }
     }
+    */
+    fprintf(stderr, "bytes decoded: %lu\n", buffpos);
+    sqz_qualdecode(buff + buffpos, qualstr, seqpos);
 
-    fprintf(stderr, "bytes decoded: %lu\n", cbytes);
-    sqz_qualdecode(buff + cbytes, qualstr, seqpos - 1);
-    fprintf(stderr, "<<<<%p\n", seqstr);
-    fprintf(stdout, "||%s\n", seqstr);
-    free(seqstr);
-    free(qualstr);
-    return 0;
+    exit:
+        free(seqstr);
+        free(qualstr);
+        return 0;
 }
+
 
 size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *blk)
 {
@@ -359,7 +361,7 @@ size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length)
 }
 
 
-unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, uint32_t len)
+unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, unsigned char len)
 {
     unsigned char byte;
     unsigned char nbase = 0;
@@ -383,4 +385,53 @@ unsigned char sqz_writens(unsigned char numn, char *decoded)
         nwritten++;
     }
     return nwritten;
+}
+
+
+size_t sqz_loopdecode(size_t length, uint64_t *seqbuffer, char *seqstr)
+{
+    size_t buffpos = 0;
+    uint64_t blklen;
+    uint64_t *mer;
+    size_t blkidx;
+    char merlen;
+    size_t seqpos = 0;
+    const unsigned char *nstr;
+    while (length > 0) {
+        //blen - length of block (within sequence up to first non acgt base)
+        blklen = *(seqbuffer + buffpos);
+        //TODO Define a constante equal to 8
+        buffpos += sizeof(size_t);
+        //TODO try to remove this cast
+        mer = seqbuffer + buffpos;
+        blkidx = 0;
+        for (size_t i = 0; i < blklen; i+=32) {
+            //Blocks code 32mers except last block which may code a shorter kmer
+            merlen = ((i+32) <= blklen)?32:blklen - i - 1;
+            sqz_bit2decode(mer + blkidx, seqstr + seqpos, merlen);
+            //Keep traked of amount of decoded data: 64bit per mer
+            buffpos += sizeof(uint64_t);
+            //Move sequencepointerbyabount of bases decoded (32 except last mer)
+            seqpos += merlen;
+            //Track next block to decompress
+            blkidx++;
+        }
+        length -= blklen;
+        if (length) {
+            fprintf(stderr, "There are NS!!!!!!!\n");
+            nstr = (const unsigned char *)seqbuffer + buffpos;
+            buffpos++;
+            while (1) {
+                unsigned char numn = *nstr & ~(1<<7);
+                sqz_writens(*nstr & ~(1<<7), seqstr);
+                seqpos += numn;
+                length -= numn;
+                if (*nstr & 128)
+                    break;
+                nstr++;
+                buffpos++;
+            }
+        }
+    }
+    return buffpos;
 }

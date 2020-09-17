@@ -214,7 +214,6 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
                     goto exit;
             }
             fprintf(stderr, "Deflate size: %lu\n", cbytes);
-            fprintf(stderr, "length of first sequence:\n");
             //Move all coded data to an decode buffer
             sqz_fastqdecode(blk->codebuff, dcpsize);
         }

@@ -101,7 +101,6 @@ size_t sqz_inflate(sqzblock_t *blk)
             break;
         }
         //Write to output buffer, keep track of written bytes
-        //memcpy(blk->codebuff + wbytes, out, have);
         wbytes += have;
     } while (strm.avail_out == 0);
     //Check compression went well

@@ -195,7 +195,6 @@ size_t sqz_fastqdecode(const uint8_t *buff, size_t size)
 
 size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *blk)
 {
-    fprintf(stderr, "\nPENE\n");
     uint8_t *codebuff = blk->codebuff + blk->blksize;
     size_t bytes = 0;
     uint8_t q = sqz_8binqual(*qual);
@@ -221,7 +220,6 @@ size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *blk)
         //Encode
         code = code | q;
         code = code | c;
-        fprintf(stderr, "^.^%u\n", c);
         memcpy(codebuff + bytes, &code, 1);
         qual++;
         q = sqz_8binqual(*qual);
@@ -312,10 +310,10 @@ size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length)
     unsigned char q;
     while (decoded != length) {
         code = *(buff + byte); //get byte value
-        fprintf(stderr, "byte value is: %u\n", code);
+        //fprintf(stderr, "byte value is: %u\n", code);
         count = code & 31;         //get current symbol count
         q = (code & 224) >> 5;     //get symbol index value
-        fprintf(stderr, "^%u\n", count);
+        //fprintf(stderr, "^%u\n", count);
         for (int i = 0; i <= count; i++) {
             uncode[offset] = qual_val_table[q];
             offset++;
@@ -367,7 +365,7 @@ size_t sqz_loopdecode(size_t length, uint64_t *seqbuffer, char *seqstr)
     while (length > 0) {
         //blen - length of block (within sequence up to first non acgt base)
         blklen = *(seqbuffer + buffpos);
-        fprintf(stderr, "\tBLK size: %lu\n", blklen);
+        //fprintf(stderr, "\tBLK size: %lu\n", blklen);
         //TODO Define a constante equal to 8
         buffpos += sizeof(size_t);
         //TODO try to remove this cast

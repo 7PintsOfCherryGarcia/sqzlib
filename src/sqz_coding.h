@@ -36,10 +36,16 @@ unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
-void sqz_seqencode(const uint8_t *seq, size_t seqlen, sqzblock_t *blk);
+void sqz_seqencode(const uint8_t *seq,
+                   uint64_t readlen,
+                   sqzblock_t *blk,
+                   uint64_t seqlen);
 
 
-size_t sqz_qualencode(const uint8_t *qual, size_t quallen, sqzblock_t *codebuff);
+size_t sqz_qualencode(const uint8_t *qual,
+                      size_t readlen,
+                      sqzblock_t *blk,
+                      uint64_t seqlen);
 
 
 uint8_t sqz_8binqual(uint8_t q);
@@ -63,7 +69,8 @@ char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk);
 void sqz_blkdestroy(sqzblock_t *blk);
 
 
-size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length);
+size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length);
+//size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length);
 
 
 unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, unsigned char len);
@@ -72,4 +79,8 @@ unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, unsigned char l
 unsigned char sqz_writens(unsigned char numn, char *decoded);
 
 
-size_t sqz_loopdecode(size_t length, uint64_t *seqbuffer, char *seqstr);
+size_t sqz_seqdecode(const uint8_t *codebuff,
+                     char *seqstr,
+                     char *qualstr,
+                     size_t length);
+//size_t sqz_loopdecode(size_t length, const uint8_t *seqbuffer, char *seqstr);

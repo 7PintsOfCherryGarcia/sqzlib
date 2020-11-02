@@ -122,6 +122,7 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
             batchsize = 0;
         }
     }
+
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
     if ( !sqz_filetail(numseqs, ofp) ) {
         fprintf(stderr, "[sqz ERROR]: IO error");
@@ -213,7 +214,7 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
                     fprintf(stderr, "[sqz ERROR]: Corrupt data encountered.\n");
                     goto exit;
             }
-            fprintf(stderr, "Deflate size: %lu\n", cbytes);
+            fprintf(stderr, "\tDeflate size: %lu\n", cbytes);
             //Move all coded data to an decode buffer
             sqz_fastqdecode(blk->codebuff, dcpsize);
         }
@@ -222,7 +223,7 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
     exit:
         sqz_blkdestroy(blk);
         fclose(fp);
-    return 0;
+    return ret;
 }
 
 

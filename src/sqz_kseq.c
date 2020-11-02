@@ -103,16 +103,27 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             Compute how much sequence can be loaded to the buffer.
             There are two option: as much sequence as leftover buffer, or the
             entire sequence
+            TODO - Problem: If only a fraction of a sequence is loaded, no null
+                   bytes is copied which messes up the buffer unloading (I think)
             */
-            sqz->rem = bleftover<sqz->seq->seq.l?bleftover:sqz->seq->seq.l + 1;
+            sqz->rem = bleftover < sqz->seq->seq.l ? bleftover: sqz->seq->seq.l;
             //Copy as much seq data as we can fit in remaining buffer
             memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, sqz->rem);
             memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, sqz->rem);
             offset += sqz->rem;
+            //Add null byte after loading data into buffers
+            sqz->seqbuffer[offset] = '\0';
+            sqz->qualbuffer[offset] = '\0';
+            offset++;
             sqz->n = n;
-            sqz->rem = sqz->seq->seq.l + 1 - sqz->rem;
-            //Set flag to indicate there is more sequence to load
-            if (sqz->rem != 0) sqz->endflag = 1;
+            sqz->rem = sqz->seq->seq.l - sqz->rem;
+
+            if (sqz->rem != 0) {
+                //Store length of sequence that could not complete loading
+                sqz->prevlen = sqz->seq->seq.l;
+                //Set flag to indicate there is more sequence to load
+                sqz->endflag = 1;
+            }
             sqz->offset = offset;
             return offset;
         }
@@ -128,7 +139,7 @@ size_t sqz_newblock(sqzfastx_t *sqz)
             offset += sqz->seq->seq.l + 1;
         }
     }
-    //sqz->n = 0;
+
     if (n != 0)
         sqz->n = n;
     sqz->offset = offset;
@@ -136,9 +147,6 @@ size_t sqz_newblock(sqzfastx_t *sqz)
 }
 
 
-/*
-Keep loading pending sequence
-*/
 size_t sqz_endblock(sqzfastx_t *sqz)
 {
     size_t lsize;
@@ -155,16 +163,16 @@ size_t sqz_endblock(sqzfastx_t *sqz)
         sqz->offset = LOAD_SIZE;
         return lsize;
     }
+
     //Rest of sequence can go into buffer
     memcpy(sqz->seqbuffer,
-           sqz->seq->seq.s + (sqz->seq->seq.l + 1 - sqz->rem),
-           sqz->rem);
+           sqz->seq->seq.s + sqz->toread,
+           sqz->rem + 1);
     memcpy(sqz->qualbuffer,
-           sqz->seq->qual.s + (sqz->seq->seq.l + 1 - sqz->rem),
-           sqz->rem);
-    lsize = sqz->rem;
+           sqz->seq->qual.s + sqz->toread,
+           sqz->rem + 1);
+    lsize = sqz->rem + 1;
     sqz->endflag = 0;
-    sqz->rem = 0;
     sqz->offset = lsize;
     return lsize;
 }
@@ -192,7 +200,10 @@ unsigned char sqz_checksqz(const char *filename)
     char sqz;
     //Read magic
     fread(&magic, 1, 4, fp);
-    if (MAGIC ^ magic) return 0;
+    if (MAGIC ^ magic) {
+        fclose(fp);
+        return 0;
+    }
     //Set sqz flag
     fmt |= 4;
     //Read format

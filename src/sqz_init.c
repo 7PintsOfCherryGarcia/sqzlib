@@ -19,7 +19,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
     sqz->rem =     0;
     sqz->toread =  0;
     sqz->prevlen = 0;
-    //Get file format
+    //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
     //Initialize kseq objects
     if (!sqz_kseqinit(sqz)) {
@@ -57,7 +57,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
             sqz->namelen = 0;
             break;
         case 2:
-            fprintf(stderr, "[sqzlib INFO]: Detected FASTQ format.\n");
+            fprintf(stderr, "[sqzlib INFO]: Detected fastQ format.\n");
             sqz->fmt = fmt;
             sqz->qualbuffer = malloc(LOAD_SIZE + 1);
             if (!sqz->qualbuffer) {

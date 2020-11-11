@@ -22,6 +22,8 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
     //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
     //Initialize kseq objects
+    //TODO Change exit at fail as sqz gets freed but the kseq object in it is
+    //lost causing memory leak.
     if (!sqz_kseqinit(sqz)) {
         free(sqz);
         return NULL;
@@ -87,8 +89,23 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
         case 5:
             fprintf(stderr,
                     "[sqzlib INFO]: Detected sqz encoded FASTA format.\n");
-            free(sqz);
-            sqz = NULL;
+            sqz->fmt = fmt;
+            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            if (!sqz->seqbuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate sequence buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->namebuffer = malloc(1*1024*1024);
+            if (!sqz->namebuffer) {
+                fprintf(stderr,
+                        "[squeezma ERROR] Failed to allocate name buffer\n");
+                free(sqz);
+                return NULL;
+            }
+            sqz->namelen = 0;
             break;
         case 6:
             fprintf(stderr,

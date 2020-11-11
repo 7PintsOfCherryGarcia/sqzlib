@@ -1,3 +1,31 @@
+# Get it
+
+    git clone --recursive https://github.com/7PintsOfCherryGarcia/squeezma.git
+
+# Compile it
+
+    cd squeezma
+    make
+
+# Run it
+
+    //Compress
+    sqz <input>
+
+    //Decompress
+    sqz -d <input>
+
+# Link it
+
+    //Static (Don't forget zlib)
+    gcc yourcode.c libsqz.a -lz
+
+    //Dynamic (Assuming your linker can find libsqz.so, don't forget zlib)
+    gcc yourcode.c -lsqz -lz
+
+
+
+####################IGNORE#################################################3
 sqz format changed from mobile
 
 A file compressed with sqz follows the following format:

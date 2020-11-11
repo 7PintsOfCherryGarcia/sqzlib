@@ -100,6 +100,93 @@ char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 }
 
 
+char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk)
+{
+    if (blk->newblk) {
+        fprintf(stderr, "[sqzlib INFO]: New block - %lu sequences.\n", sqz->n);
+        return sqz_fastaheadblk(sqz, blk);
+    }
+    else {
+        return sqz_fastatailblk(sqz, blk);
+    }
+}
+
+
+char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
+{
+    uint8_t *seq = NULL;
+    uint64_t seqlen = 0;
+    size_t seqread;
+    size_t lenbytes = sizeof(size_t);
+    size_t k = 0;
+    size_t n = 0;
+    size_t sqzsize = sqz->offset;
+    while ( k < sqzsize) {
+        //Keep track of how many sequences have been encoded
+        n++;
+        //Extract sequence length
+        seqlen = *(uint64_t *)(sqz->seqbuffer + k);
+        //Keep track of number of bytes read from seqbuffer
+        k += lenbytes;
+        //Store sequence length in code buffer
+        memcpy(blk->codebuff + blk->blksize, &seqlen, sizeof(uint64_t));
+        //Keep track of number of bytes written to codebuff
+        blk->blksize += sizeof(uint64_t);
+        //Position seq and qual strings to corresponding place in buffers
+        seq =  sqz->seqbuffer + k;
+        //Determine how much sequence is contained in the buffer
+        //This happens because not all the sequence may be loaded in buffer
+        seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
+        /*
+        TODO - Problem, if only a fraction of the sequence was loaded, that
+               number of bytes should be kept track of. If the entire sequence
+               was extracted, and additional byte should be counted
+               corresponding to the end of sequence NULL
+        */
+        k += seqread + 1;
+        //encode sequence
+        sqz_seqencode(seq, seqread, blk, seqlen);
+    }
+    //Indicate if there is more sequence to read
+    if (seqread < seqlen) {
+        //Unset new block flag. The rest of the sequence needs to be encoded
+        //before a new block can be started.
+        blk->newblk = 0;
+        //Indicate how much sequence has been read
+        sqz->toread = seqread;
+        //Indicate length of sequence still needing loading
+        //sqz->prevlen = seqlen;
+    }
+    if (k != sqzsize) {
+        fprintf(stderr, "[sqzlib ERROR]: Failed to unload raw data buffer\n");
+        fprintf(stderr, "\t\t%lu : %lu\n", k, sqzsize);
+        return 0;
+    }
+    return 1;
+}
+
+
+char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
+{
+    //Check if reading leftover sequence
+    size_t seqlen = sqz->prevlen;
+    uint8_t *seq =  sqz->seqbuffer;
+    //encode sequence
+    sqz_seqencode(seq, sqz->rem, blk, seqlen - sqz->toread);
+    //Update how much sequence has been read
+    sqz->toread += sqz->offset;
+
+    //Indicate if there is more sequence to read
+    if (sqz->toread < seqlen) {
+        blk->newblk = 0;
+    }
+    else {
+        blk->newblk = 1;
+    }
+    return 1;
+}
+
+
 void sqz_seqencode(const uint8_t *seq,
                    uint64_t seqlen,
                    sqzblock_t *blk,
@@ -262,7 +349,8 @@ size_t sqz_fastqdecode(const uint8_t *buff, size_t size)
 
         buffpos += sqz_seqdecode(buff + buffpos, seqstr, qualstr, seqlen);
         //buffpos += sqz_qualdecode(buff + buffpos, qualstr, seqlen);
-        fprintf(stdout, "@\n%s\n+\n%s\n", seqstr, qualstr);
+        fprintf(stdout, "@\n%s\n+\n", seqstr);
+        fprintf(stdout, "%s\n", qualstr);
         free(seqstr);
         free(qualstr);
         n++;
@@ -334,17 +422,63 @@ size_t sqz_seqdecode(const uint8_t *codebuff,
             }
             else {
                 //Otherwise, it's a quality block of blklen
-                buffpos += sqz_qualdecode(codebuff + buffpos,
-                                          qualstr + qualpos,
-                                          blklen);
-                qualpos += blklen;
+                if (qualstr) {
+                    buffpos += sqz_qualdecode(codebuff + buffpos,
+                                              qualstr + qualpos,
+                                              blklen);
+                    qualpos += blklen;
+                }
             }
         }
 
     }
-    buffpos += sqz_qualdecode(codebuff + buffpos, qualstr, seqpos  - qualpos);
+    if (qualstr)
+        buffpos += sqz_qualdecode(codebuff + buffpos,
+                                  qualstr + qualpos,
+                                  seqpos  - qualpos);
     return buffpos;
 }
+
+
+size_t sqz_fastadecode(const uint8_t *buff, size_t size)
+{
+    char ret = 0;
+    size_t buffpos = 0;
+    size_t seqlen;
+    char *seqstr;
+    uint64_t n = 0;
+    while (buffpos < size) {
+        seqlen = *(size_t *)(buff + buffpos);
+        //TODO change to constant
+        buffpos += sizeof(size_t);
+        seqstr = malloc(seqlen + 1);
+        if (!seqstr) {
+            fprintf(stderr, "[sqzlib ERROR]: Insufficient memory.\n");
+            goto exit;
+        }
+        seqstr[seqlen] = '\0';
+        /*
+          TODO - Problem, when a sequence is only partially loaded. The
+          sequence code is followed by the quality code bedofre the the entire
+          sequence information is stored. This is not taken into account in the
+          decoding logic
+        */
+
+        buffpos += sqz_seqdecode(buff + buffpos, seqstr, NULL, seqlen);
+        //buffpos += sqz_qualdecode(buff + buffpos, qualstr, seqlen);
+        fprintf(stdout, ">\n%s\n", seqstr);
+        //fprintf(stdout, "%s\n", qualstr);
+        free(seqstr);
+        n++;
+    }
+    ret = 1;
+    fprintf(stderr, "\t%lu sequences in block\n", n);
+    exit:
+        return ret;
+}
+
+
+
 
 
 size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length)
@@ -358,11 +492,10 @@ size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length)
     uint64_t total = 0;
     while (decoded != length) {
         code = *(codebuff + byte); //get byte value
-        //fprintf(stderr, "byte value is: %u\n", code);
         count = code & 31;         //get current symbol count
-        q = (code & 224) >> 5;     //get symbol index value
+        q = code >> 5;             //get symbol index value
         total += count + 1;
-        //fprintf(stderr, "||\tcount: %u\ttotal: %lu\n", count + 1, total);
+        //fprintf(stderr, "\tsymbol: %d count: %d\n", q, count);
         for (int i = 0; i <= count; i++) {
             qualstr[offset] = qual_val_table[q];
             offset++;
@@ -376,6 +509,7 @@ size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length)
 
 uint8_t sqz_8binqual(uint8_t q)
 {
+    //TODO bottom bound bin instead of upper bin
     if (q >= 73) return 7<<5;
     if ( (q < 73) && (q >= 68) ) return 6<<5;
     if ( (q < 68) && (q >= 63) ) return 5<<5;

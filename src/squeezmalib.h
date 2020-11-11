@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <zlib.h>
 
-#define LOAD_SIZE 4*1024*1024
+#define LOAD_SIZE 80*1024*1024
 
 typedef struct  kseq_t kseq_t;
 
@@ -78,6 +78,10 @@ void sqz_kill(sqzfastx_t *sqz);
 size_t sqz_loadfastq(sqzfastx_t *sqz);
 
 
+
+size_t sqz_loadfasta(sqzfastx_t *sqz);
+
+
 /*
     "sqz_sqzblkinit"
     Starts sqzblock_t object
@@ -86,6 +90,9 @@ sqzblock_t *sqz_sqzblkinit(size_t size);
 
 
 char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 void sqz_blkdestroy(sqzblock_t *blk);
@@ -110,3 +117,6 @@ size_t sqz_inflate(sqzblock_t *blk);
 
 
 size_t sqz_fastqdecode(const uint8_t *buff, size_t size);
+
+
+size_t sqz_fastadecode(const uint8_t *buff, size_t size);

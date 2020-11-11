@@ -1,0 +1,32 @@
+# API Documentation (Internal use only for the moment)
+
+# sqz specific structures
+
+sqzfastc_t - libsqz main data loading structure. Defines the buffers and
+             flags for reading sequencing data into.
+    members:
+        (char *)    filename
+        (gzFile)    zlib file handle
+        (size_t)    buffer offset index
+        (kseq_t *)  kseq sequence structure
+        (uint8_t *) sequence buffer
+        (uint8_t *) quality buffer
+        (uint8_t *) name buffer
+        (size_t)    name length
+        (size_t)    number of sequnces held in buffer
+        (size_t)    number of bases held in buffer
+        (char)      sequence format
+        (char)      sequence loading flag
+        (size_t)    remaining bases to load
+        (size_t)    Size of sequence still needed to be read
+        (size_t)    Size of sequence currently being read
+
+
+sqzblock_t - libsqz main data encoding and compression structure. Defines buffers
+             and flags for encoding and compression.
+    members:
+        (uint8_t *)  encoding buffer
+        (size_t)     coding block size
+        (char)       new block flag
+        (uint8_t *)  compression buffer
+        (size_t)     compression buffer size

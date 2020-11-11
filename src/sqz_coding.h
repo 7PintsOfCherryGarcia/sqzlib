@@ -48,6 +48,11 @@ size_t sqz_qualencode(const uint8_t *qual,
                       uint64_t seqlen);
 
 
+char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+
+
 uint8_t sqz_8binqual(uint8_t q);
 
 
@@ -64,6 +69,12 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 void sqz_blkdestroy(sqzblock_t *blk);
@@ -83,4 +94,8 @@ size_t sqz_seqdecode(const uint8_t *codebuff,
                      char *seqstr,
                      char *qualstr,
                      size_t length);
+
+
+size_t sqz_fastadecode(const uint8_t *buff, size_t size);
+
 //size_t sqz_loopdecode(size_t length, const uint8_t *seqbuffer, char *seqstr);

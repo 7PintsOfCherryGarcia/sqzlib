@@ -20,6 +20,15 @@ size_t sqz_newblock(sqzfastx_t *sqz);
 size_t sqz_endblock(sqzfastx_t *sqz);
 
 
+size_t sqz_loadfasta(sqzfastx_t *sqz);
+
+
+size_t sqz_fastanblock(sqzfastx_t *sqz);
+
+
+size_t sqz_fastaeblock(sqzfastx_t *sqz);
+
+
 void sqz_kill(sqzfastx_t *sqz);
 
 

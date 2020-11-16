@@ -234,12 +234,16 @@ void sqz_seqencode(const uint8_t *seq,
 	      if (*npos) {
             //Determine block length up to found N
             blen = npos - lstop;
+            //fprintf(stderr, "Firstblock %s: %lu\n", npos, blen);
             //Determine number of consecutive Ns until next base
             nn = 0;
 	          while ( seq_nt4_table[*npos] == 4) {
 	              nn++;
+                //fprintf(stderr, "inside ncount %s nn: %lu %u:\n",
+                //        npos, nn, seq_nt4_table[*npos]);
 		            npos++;
 	          }
+            //fprintf(stderr, "after ncount %s:\n", npos);
             //Write block length [blen]
             //fprintf(stderr, "||\t\tblklen: %lu\n", blen);
             memcpy(codebuff + wbytes, &blen, sizeof(size_t));

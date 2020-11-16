@@ -280,7 +280,7 @@ void sqz_seqencode(const uint8_t *seq,
     } while (*npos);
     //Detect and encode trailing bases
     blen = nptr - lstop;
-    fprintf(stderr, "LEFTOVER: %lu\n", blen);
+    //fprintf(stderr, "LEFTOVER: %lu\n", blen);
     if (blen) {
         memcpy(codebuff + wbytes, &blen, sizeof(size_t));
         wbytes += sizeof(size_t);

@@ -218,6 +218,7 @@ void sqz_seqencode(const uint8_t *seq,
     //Track position in sequence
     const uint8_t *lstop = seq;
     const uint8_t *nptr = seq + seqlen; //End of string
+    fprintf(stderr, "PNTRS: lstop:%p nptr:%p\n", lstop, nptr);
     size_t nn;                          //Number of Ns
     unsigned char wn;                   //127 N block. 1 bit flag 7 bit count
 	  const uint8_t *npos;                //Track positions where N occurs
@@ -280,7 +281,9 @@ void sqz_seqencode(const uint8_t *seq,
     } while (*npos);
     //Detect and encode trailing bases
     blen = nptr - lstop;
-    //fprintf(stderr, "LEFTOVER: %lu\n", blen);
+    fprintf(stderr, "LEFTOVER: %lu %ld\n", blen, nptr - lstop);
+    fprintf(stderr, "PNTRS: lstop:%p nptr:%p\n", lstop, nptr);
+
     if (blen) {
         memcpy(codebuff + wbytes, &blen, sizeof(size_t));
         wbytes += sizeof(size_t);

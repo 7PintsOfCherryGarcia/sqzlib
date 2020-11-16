@@ -240,7 +240,7 @@ void sqz_seqencode(const uint8_t *seq,
 		            npos++;
 	          }
             //Write block length [blen]
-            fprintf(stderr, "||\t\tblklen: %lu\n", blen);
+            //fprintf(stderr, "||\t\tblklen: %lu\n", blen);
             memcpy(codebuff + wbytes, &blen, sizeof(size_t));
             wbytes += sizeof(size_t);
             //Loop over sequence block in chunks of 32 bases and encode

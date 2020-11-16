@@ -128,6 +128,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         n++;
         //Extract sequence length
         seqlen = *(uint64_t *)(sqz->seqbuffer + k);
+        fprintf(stderr, "SEQLEN: %lu\n", seqlen);
         //Keep track of number of bytes read from seqbuffer
         k += lenbytes;
         //Store sequence length in code buffer

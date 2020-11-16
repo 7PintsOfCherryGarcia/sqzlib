@@ -104,9 +104,11 @@ char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     if (blk->newblk) {
         fprintf(stderr, "[sqzlib INFO]: New block - %lu sequences.\n", sqz->n);
+        fprintf(stderr, "HEAD||||%d\n", sqz->endflag);
         return sqz_fastaheadblk(sqz, blk);
     }
     else {
+        fprintf(stderr, "TAIL||||%d\n", sqz->endflag);
         return sqz_fastatailblk(sqz, blk);
     }
 }
@@ -162,6 +164,14 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         fprintf(stderr, "\t\t%lu : %lu\n", k, sqzsize);
         return 0;
     }
+    if (!sqz->endflag) {
+        fprintf(stderr, "Adding names1 %lu\n", sqz->namelen);
+        //memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        //blk->blksize += sqz->namelen;
+        //memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        //blk->blksize += sizeof(size_t);
+        fprintf(stderr, "Adding names1 %lu\n", blk->blksize);
+    }
     return 1;
 }
 
@@ -182,6 +192,14 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     else {
         blk->newblk = 1;
+    }
+    if (!sqz->endflag) {
+        fprintf(stderr, "Adding names2 %lu\n", sqz->namelen);
+        //memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        //blk->blksize += sqz->namelen;
+        //memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        //blk->blksize += sizeof(size_t);
+        fprintf(stderr, "Adding names2 %lu\n", blk->blksize);
     }
     return 1;
 }

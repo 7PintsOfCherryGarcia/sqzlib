@@ -86,6 +86,11 @@ size_t sqz_newblock(sqzfastx_t *sqz)
     size_t n = 0;
     //Loop over sequences and load data into sqzfastx_t struct
     while ( kseq_read(sqz->seq) >= 0) {
+        //TODO store name
+        //fprintf(stderr, "NAME: %s LEN: %lu LEN: %lu\n",
+        //        sqz->seq->name.s,
+        //        sqz->seq->name.l,
+        //        strlen(sqz->seq->name.s));
         sqz->bases += sqz->seq->seq.l;
         n++;
         /*
@@ -194,8 +199,18 @@ size_t sqz_fastanblock(sqzfastx_t *sqz)
     //TODO change to constant
     size_t lenbytes = sizeof(sqz->seq->seq.l);
     size_t n = 0;
+    sqz->namelen = 0;
     //Loop over sequences and load data into sqzfastx_t struct
     while ( kseq_read(sqz->seq) >= 0) {
+        //fprintf(stderr, "NAME: %s LEN: %lu LEN: %lu\n",
+        //        sqz->seq->name.s,
+        //        sqz->seq->name.l,
+        //        strlen(sqz->seq->name.s));
+        memcpy(sqz->namebuffer + sqz->namelen,
+               sqz->seq->name.s,
+               sqz->seq->name.l + 1);
+        sqz->namelen += sqz->seq->name.l + 1;
+        //fprintf(stderr, "NAMELEN: %lu\n", sqz->namelen);
         sqz->bases += sqz->seq->seq.l;
         n++;
         /*

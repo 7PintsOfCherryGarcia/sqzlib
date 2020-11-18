@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <zlib.h>
 
-#define LOAD_SIZE 80*1024*1024
+#define LOAD_SIZE 300*1024*1024
 
 typedef struct  kseq_t kseq_t;
 

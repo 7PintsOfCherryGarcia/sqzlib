@@ -194,6 +194,7 @@ size_t sqz_loadfasta(sqzfastx_t *sqz)
 
 size_t sqz_fastanblock(sqzfastx_t *sqz)
 {
+    //TODO handle errors
     size_t bleftover;
     size_t offset = 0;
     //TODO change to constant
@@ -210,6 +211,14 @@ size_t sqz_fastanblock(sqzfastx_t *sqz)
                sqz->seq->name.s,
                sqz->seq->name.l + 1);
         sqz->namelen += sqz->seq->name.l + 1;
+        if (sqz->namelen + 100 >= sqz->maxname) {
+            sqz->namebuffer = realloc(sqz->namebuffer, sqz->maxname*2);
+            if (!(sqz->namebuffer)) {
+                fprintf(stderr, "[sqzlib ERROR]: Memory error\n");
+            }
+            sqz->maxname *= 2;
+            fprintf(stderr, "More mem for names: %lu\n", sqz->maxname);
+        }
         //fprintf(stderr, "NAMELEN: %lu\n", sqz->namelen);
         sqz->bases += sqz->seq->seq.l;
         n++;

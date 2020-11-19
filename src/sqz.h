@@ -9,7 +9,7 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp);
 
 char sqz_spreadfasta(sqzfastx_t *sqz, FILE *ofp);
 
-   
+
 char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp);
 
 
@@ -23,3 +23,6 @@ char sqz_ropts(int argc, char **argv);
 
 
 void sqz_usage();
+
+
+char *sqz_basename(char *namestr);

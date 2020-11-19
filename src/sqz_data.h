@@ -24,6 +24,9 @@ typedef struct {
     //file members
     const char *filename;
     gzFile     fp;
+    //flags
+    char       fmt;
+    char       endflag; //Sequece has not completely been read into a buffer flag
     //data members
     size_t     offset;
     kseq_t     *seq;
@@ -31,11 +34,9 @@ typedef struct {
     uint8_t    *qualbuffer;
     uint8_t    *namebuffer;
     size_t     namelen;
+    size_t     maxname;
     size_t     n;
     size_t     bases;
-    //flags
-    char       fmt;
-    char       endflag; //Sequece has not completely been read into a buffer flag
     //miscelaneous
     size_t     rem;     //Length of sequence remaining to be read
     size_t     toread;  //Size of sequence still needed to be read

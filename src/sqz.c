@@ -13,16 +13,20 @@ int main(int argc, char *argv[])
 {
     int ret = -1;
     if (argc < 2) goto exit;
+    char iname[256];
+    strcpy(iname, argv[1]);
     char oname[256];
+    char *bname;
     char *end;
     switch (sqz_ropts(argc, argv)) {
         case 0:
             goto exit;
         case 1:
-            strcpy(oname, argv[1]);
+            bname = sqz_basename(argv[1]);
+            strcpy(oname, bname);
             strcat(oname, ".sqz");
             fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
-            if (!sqz_compress(argv[1], oname)) goto exit;
+            if (!sqz_compress(iname, oname)) goto exit;
             break;
         case 2:
             //TODO check for no file overwriting
@@ -356,7 +360,6 @@ char sqz_spreadfasta(sqzfastx_t *sqz, FILE *ofp)
 }
 
 
-
 char sqz_ropts(int argc, char **argv)
 {
     int elem;
@@ -388,4 +391,14 @@ void sqz_usage()
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "\t-d <file>\tDecompress previously sqz compressed file.\n");
     fprintf(stderr, "\t-h  \t\tThis help message.\n");
+}
+
+
+char *sqz_basename(char *namestr)
+{
+    char *tok = strtok(namestr, "/");
+    char *ret = tok;
+    while (NULL != (tok = strtok(NULL, "/")))
+        ret = tok;
+    return ret;
 }

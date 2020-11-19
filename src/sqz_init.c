@@ -12,13 +12,15 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
         return NULL;
     }
     sqz->filename = filename;
-    sqz->n =       0;
-    sqz->bases =   0;
-    sqz->offset  = 0;
-    sqz->endflag = 0;
-    sqz->rem =     0;
-    sqz->toread =  0;
-    sqz->prevlen = 0;
+    sqz->n        = 0;
+    sqz->bases    = 0;
+    sqz->offset   = 0;
+    sqz->endflag  = 0;
+    sqz->rem      = 0;
+    sqz->toread   = 0;
+    sqz->prevlen  = 0;
+    sqz->fmt      = 0;
+    sqz->maxname  = 1*1024*1024;
     //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
     //Initialize kseq objects

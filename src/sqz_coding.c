@@ -104,11 +104,9 @@ char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     if (blk->newblk) {
         fprintf(stderr, "[sqzlib INFO]: New block - %lu sequences.\n", sqz->n);
-        fprintf(stderr, "HEAD||||%d\n", sqz->endflag);
         return sqz_fastaheadblk(sqz, blk);
     }
     else {
-        fprintf(stderr, "TAIL||||%d\n", sqz->endflag);
         return sqz_fastatailblk(sqz, blk);
     }
 }
@@ -128,7 +126,6 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         n++;
         //Extract sequence length
         seqlen = *(uint64_t *)(sqz->seqbuffer + k);
-        //fprintf(stderr, "SEQLEN: %lu %lu\n", seqlen, n);
         //Keep track of number of bytes read from seqbuffer
         k += lenbytes;
         //Store sequence length in code buffer
@@ -150,6 +147,10 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         //encode sequence
         sqz_seqencode(seq, seqread, blk, seqlen);
     }
+    if (k != sqzsize) {
+        fprintf(stderr, "[sqzlib ERROR]: Failed to unload raw data buffer\n");
+        return 0;
+    }
     //Indicate if there is more sequence to read
     if (seqread < seqlen) {
         //Unset new block flag. The rest of the sequence needs to be encoded
@@ -157,20 +158,14 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->newblk = 0;
         //Indicate how much sequence has been read
         sqz->toread = seqread;
-        //Indicate length of sequence still needing loading
-        //sqz->prevlen = seqlen;
     }
-    if (k != sqzsize) {
-        fprintf(stderr, "[sqzlib ERROR]: Failed to unload raw data buffer\n");
-        fprintf(stderr, "\t\t%lu : %lu\n", k, sqzsize);
-        return 0;
-    }
+
     if (!sqz->endflag) {
         fprintf(stderr, "Adding names1 %lu\n", sqz->namelen);
-        //memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
-        //blk->blksize += sqz->namelen;
-        //memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
-        //blk->blksize += sizeof(size_t);
+        memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        blk->blksize += sqz->namelen;
+        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        blk->blksize += sizeof(size_t);
         fprintf(stderr, "Adding names1 %lu\n", blk->blksize);
     }
     return 1;
@@ -196,10 +191,10 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     if (!sqz->endflag) {
         fprintf(stderr, "Adding names2 %lu\n", sqz->namelen);
-        //memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
-        //blk->blksize += sqz->namelen;
-        //memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
-        //blk->blksize += sizeof(size_t);
+        memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        blk->blksize += sqz->namelen;
+        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        blk->blksize += sizeof(size_t);
         fprintf(stderr, "Adding names2 %lu\n", blk->blksize);
     }
     return 1;

@@ -51,7 +51,8 @@ char sqz_compress(const char *filename, const char *outname)
     //TODO move to function
     FILE *ofp = fopen(outname, "wb");
     if (!ofp) {
-        fprintf(stderr, "[sqz ERROR]: Failed to open %s for writing.\n", outname);
+        fprintf(stderr,
+                "[sqz ERROR]: Failed to open %s for writing.\n", outname);
         return 0;
     }
 
@@ -118,9 +119,6 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
             fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
-            fprintf(stderr,
-                    "COMPRESSING: %lu\n",
-                    strlen((char *)(sqz->namebuffer)));
             size_t cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
@@ -166,12 +164,6 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
             goto exit;
         }
         if (!sqz->endflag) {
-            fprintf(stderr, "COMPRESSING: %lu\n", sqz->namelen);
-            //int i = 0;
-            //while (i < sqz->namelen) {
-            //    fprintf(stderr, "%s\n", sqz->namebuffer + i);
-            //    i+= strlen(sqz->namebuffer + i) + 1;
-            //}
             fprintf(stderr, "[sqz INFO]: Compress and flushing.\n");
             fprintf(stderr, "[sqz INFO]: Block info\n");
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);

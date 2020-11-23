@@ -1,7 +1,9 @@
 #include <zlib.h>
 #include <stdint.h>
 
-#define LOAD_SIZE 300*1024*1024
+#define LOAD_SIZE 8*1024*1024
+
+#define B64 sizeof(uint64_t)
 
 #define NEND 128
 
@@ -12,7 +14,6 @@
 #ifndef KLIB
 #define kseq_t struct kseq_t
 #endif
-
 
 
 /*

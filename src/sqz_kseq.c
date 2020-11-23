@@ -67,10 +67,6 @@ char sqz_kseqinit(sqzfastx_t *sqz)
         return ret;
 }
 
-/*
-    Loads sqz's seqbuffer and qualbuffer with at most LOAD_SIZE bases/quality
-    data. Returns number of bytes used to store the data
-*/
 size_t sqz_loadfastq(sqzfastx_t *sqz)
 {
     if (!sqz->endflag) return sqz_newblock(sqz);
@@ -80,17 +76,26 @@ size_t sqz_loadfastq(sqzfastx_t *sqz)
 
 size_t sqz_newblock(sqzfastx_t *sqz)
 {
+    //TODO handle errors
     size_t bleftover;
     size_t offset = 0;
     size_t lenbytes = sizeof(sqz->seq->seq.l);
     size_t n = 0;
     //Loop over sequences and load data into sqzfastx_t struct
     while ( kseq_read(sqz->seq) >= 0) {
-        //TODO store name
-        //fprintf(stderr, "NAME: %s LEN: %lu LEN: %lu\n",
-        //        sqz->seq->name.s,
-        //        sqz->seq->name.l,
-        //        strlen(sqz->seq->name.s));
+        memcpy(sqz->namebuffer + sqz->namelen,
+               sqz->seq->name.s,
+               sqz->seq->name.l + 1);
+        sqz->namelen += sqz->seq->name.l + 1;
+        if (sqz->namelen + 100 >= sqz->maxname) {
+            sqz->namebuffer = realloc(sqz->namebuffer, sqz->maxname*2);
+            if (!(sqz->namebuffer)) {
+                fprintf(stderr, "[sqzlib ERROR]: Memory error\n");
+            }
+            sqz->maxname *= 2;
+            fprintf(stderr,
+                    "[sqzlib INFO]:Allocating memory %lu\n", sqz->maxname);
+        }
         sqz->bases += sqz->seq->seq.l;
         n++;
         /*

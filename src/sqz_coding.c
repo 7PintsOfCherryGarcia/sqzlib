@@ -57,6 +57,11 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
         //do something with the qualities
         sqz_qualencode(qual, seqread, blk, seqlen);
     }
+    if (k != sqzsize) {
+        fprintf(stderr, "[sqzlib ERROR]: Failed to unload raw data buffer\n");
+        fprintf(stderr, "\t\t%lu : %lu\n", k, sqzsize);
+        return 0;
+    }
     //Indicate if there is more sequence to read
     if (seqread < seqlen) {
         //Unset new block flag. The rest of the sequence needs to be encoded
@@ -67,10 +72,11 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
         //Indicate length of sequence still needing loading
         //sqz->prevlen = seqlen;
     }
-    if (k != sqzsize) {
-        fprintf(stderr, "[sqzlib ERROR]: Failed to unload raw data buffer\n");
-        fprintf(stderr, "\t\t%lu : %lu\n", k, sqzsize);
-        return 0;
+    if (!sqz->endflag) {
+        memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        blk->blksize += sqz->namelen;
+        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        blk->blksize += sizeof(size_t);
     }
     return 1;
 }
@@ -95,6 +101,12 @@ char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     else {
         blk->newblk = 1;
+    }
+    if (!sqz->endflag) {
+        memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
+        blk->blksize += sqz->namelen;
+        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
+        blk->blksize += sizeof(size_t);
     }
     return 1;
 }
@@ -159,14 +171,11 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         //Indicate how much sequence has been read
         sqz->toread = seqread;
     }
-
     if (!sqz->endflag) {
-        fprintf(stderr, "Adding names1 %lu\n", sqz->namelen);
         memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
         blk->blksize += sqz->namelen;
         memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
         blk->blksize += sizeof(size_t);
-        fprintf(stderr, "Adding names1 %lu\n", blk->blksize);
     }
     return 1;
 }
@@ -190,12 +199,10 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->newblk = 1;
     }
     if (!sqz->endflag) {
-        fprintf(stderr, "Adding names2 %lu\n", sqz->namelen);
         memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
         blk->blksize += sqz->namelen;
         memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
         blk->blksize += sizeof(size_t);
-        fprintf(stderr, "Adding names2 %lu\n", blk->blksize);
     }
     return 1;
 }
@@ -346,7 +353,9 @@ size_t sqz_fastqdecode(const uint8_t *buff, size_t size)
     char *seqstr;
     char *qualstr;
     uint64_t n = 0;
-    while (buffpos < size) {
+    uint64_t namelen = *(uint64_t *)(buff + (size - 8));
+    char *namebuff = (char *)(buff + (size - 8 - namelen));
+    while (buffpos < (size - sizeof(uint64_t) - namelen) ) {
         seqlen = *(size_t *)(buff + buffpos);
         //TODO change to constant
         buffpos += sizeof(size_t);
@@ -358,17 +367,9 @@ size_t sqz_fastqdecode(const uint8_t *buff, size_t size)
         }
         seqstr[seqlen] = '\0';
         qualstr[seqlen] = '\0';
-        /*
-          TODO - Problem, when a sequence is only partially loaded. The
-          sequence code is followed by the quality code bedofre the the entire
-          sequence information is stored. This is not taken into account in the
-          decoding logic
-        */
-
         buffpos += sqz_seqdecode(buff + buffpos, seqstr, qualstr, seqlen);
-        //buffpos += sqz_qualdecode(buff + buffpos, qualstr, seqlen);
-        fprintf(stdout, "@\n%s\n+\n", seqstr);
-        fprintf(stdout, "%s\n", qualstr);
+        fprintf(stdout, "@%s\n%s\n+\n%s\n", namebuff, seqstr, qualstr);
+        namebuff += strlen(namebuff) + 1;
         free(seqstr);
         free(qualstr);
         n++;
@@ -465,7 +466,9 @@ size_t sqz_fastadecode(const uint8_t *buff, size_t size)
     size_t seqlen;
     char *seqstr;
     uint64_t n = 0;
-    while (buffpos < size) {
+    uint64_t namelen = *(uint64_t *)(buff + (size - 8));
+    char *namebuff = (char *)(buff + (size - 8 - namelen));
+    while (buffpos < (size - sizeof(uint64_t) - namelen) ) {
         seqlen = *(size_t *)(buff + buffpos);
         //TODO change to constant
         buffpos += sizeof(size_t);
@@ -475,17 +478,9 @@ size_t sqz_fastadecode(const uint8_t *buff, size_t size)
             goto exit;
         }
         seqstr[seqlen] = '\0';
-        /*
-          TODO - Problem, when a sequence is only partially loaded. The
-          sequence code is followed by the quality code bedofre the the entire
-          sequence information is stored. This is not taken into account in the
-          decoding logic
-        */
-
         buffpos += sqz_seqdecode(buff + buffpos, seqstr, NULL, seqlen);
-        //buffpos += sqz_qualdecode(buff + buffpos, qualstr, seqlen);
-        fprintf(stdout, ">\n%s\n", seqstr);
-        //fprintf(stdout, "%s\n", qualstr);
+        fprintf(stdout, ">%s\n%s\n",namebuff, seqstr);
+        namebuff += strlen(namebuff) + 1;
         free(seqstr);
         n++;
     }
@@ -494,9 +489,6 @@ size_t sqz_fastadecode(const uint8_t *buff, size_t size)
     exit:
         return ret;
 }
-
-
-
 
 
 size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length)

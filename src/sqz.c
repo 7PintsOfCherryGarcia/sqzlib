@@ -12,7 +12,10 @@ long sqz_filesize(FILE *fp);
 int main(int argc, char *argv[])
 {
     int ret = -1;
-    if (argc < 2) goto exit;
+    if (argc < 2) {
+        sqz_usage();
+        goto exit;
+    }
     char iname[256];
     strcpy(iname, argv[1]);
     char oname[256];
@@ -22,14 +25,13 @@ int main(int argc, char *argv[])
         case 0:
             goto exit;
         case 1:
-            bname = sqz_basename(argv[1]);
+            bname = sqz_basename( argv[argc - 1] );
             strcpy(oname, bname);
             strcat(oname, ".sqz");
             fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
             if (!sqz_compress(iname, oname)) goto exit;
             break;
         case 2:
-            //TODO check for no file overwriting
             strcpy(oname, argv[argc - 1]);
             end = strrchr(oname, '.');
             if (end)
@@ -37,7 +39,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
             if (!sqz_decompress(argv[argc - 1], oname)) goto exit;
     }
-
     ret = 0;
     exit:
         return ret;
@@ -46,35 +47,29 @@ int main(int argc, char *argv[])
 
 char sqz_compress(const char *filename, const char *outname)
 {
-    int ret = 0;
-    //Open output file handle
-    //TODO move to function
+    char ret = 0;
     FILE *ofp = fopen(outname, "wb");
     if (!ofp) {
         fprintf(stderr,
                 "[sqz ERROR]: Failed to open %s for writing.\n", outname);
         return 0;
     }
-
-    //Initialize data main sqz data structure
     sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
     if (!sqz) {
-        fprintf(stderr, "[sqz ERROR: INIT] Failed to start data structures.\n");
+        fprintf(stderr, "[sqz ERROR]: Failed to start data structures.\n");
         goto exit;
     }
     //Check for format
     switch (sqz->fmt & 7) {
         case 1:
             if (!sqz_squeezefasta(sqz, ofp)) {
-                fprintf(stderr,
-                        "[sqz ERROR: COMPRESS] Failed to compress data.\n");
+                fprintf(stderr, "[sqz ERROR]: Failed to compress data.\n");
                 goto exit;
             }
             break;
         case 2:
             if (!sqz_squeezefastq(sqz, ofp)) {
-                fprintf(stderr,
-                        "[sqz ERROR: COMPRESS] Failed to compress data.\n");
+                fprintf(stderr, "[sqz ERROR]: Failed to compress data.\n");
                 goto exit;
             }
             break;
@@ -96,8 +91,10 @@ char sqz_compress(const char *filename, const char *outname)
 char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 {
     char ret = 0;
-    size_t batchsize = 0;
-    size_t numseqs = 0;
+    uint64_t dbytes = 0;
+    uint64_t cbytes = 0;
+    uint64_t lbytes = 0;
+    uint64_t numseqs = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) {
         goto exit;;
@@ -106,31 +103,31 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
         fprintf(stderr, "[sqz ERROR]: IO error");
         goto exit;
     }
-
-    //main compression loop
-    while ( (batchsize += sqz_loadfastq(sqz)) > 0 ) {
+    while ( (lbytes = sqz_loadfastq(sqz)) > 0 ) {
+        dbytes += lbytes;
         if (!sqz_encode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
         if (!sqz->endflag) {
-            fprintf(stderr, "[sqz INFO]: Compress and flushing.\n");
-            fprintf(stderr, "[sqz INFO]: Block info\n");
+            fprintf(stderr, "[sqz INFO]: Block encoded:\n");
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
             fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
-            size_t cbytes = sqz_deflate(blk, 9);
+            cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
                 goto exit;
             }
-            fprintf(stderr, "[sqz INFO]: Compressed to %lu bytes.\n", cbytes);
+            fprintf(stderr,
+                    "\t\tCompressed to %lu(%.2f%%) bytes.\n",
+                    cbytes, (double)cbytes/(double)dbytes);
             blk->blksize = 0;
             sqz->bases = 0;
-            batchsize = 0;
+            sqz->n = 0;
+            dbytes = 0;
         }
     }
-
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
     if ( !sqz_filetail(numseqs, ofp) ) {
         fprintf(stderr, "[sqz ERROR]: IO error");
@@ -146,8 +143,9 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
 {
     char ret = 0;
-    size_t batchsize = 0;
-    size_t numseqs = 0;
+    uint64_t dbytes = 0;
+    uint64_t numseqs = 0;
+    uint64_t cbytes  = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) {
         goto exit;;
@@ -156,32 +154,30 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
         fprintf(stderr, "[sqz ERROR]: IO error");
         goto exit;
     }
-
-    //main compression loop
-    while ( (batchsize += sqz_loadfasta(sqz)) > 0 ) {
+    while ( (dbytes += sqz_loadfasta(sqz)) > 0 ) {
         if (!sqz_fastaencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
         if (!sqz->endflag) {
-            fprintf(stderr, "[sqz INFO]: Compress and flushing.\n");
-            fprintf(stderr, "[sqz INFO]: Block info\n");
+            fprintf(stderr, "[sqz INFO]: Block encoded\n");
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
             fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
-
-            size_t cbytes = sqz_deflate(blk, 9);
+            cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
                 goto exit;
             }
-            fprintf(stderr, "[sqz INFO]: Compressed to %lu bytes.\n", cbytes);
+            fprintf(stderr,
+                    "\t\tCompressed to %lu(%.2f%%) bytes.\n",
+                    cbytes, (double)cbytes/(double)dbytes);
             blk->blksize = 0;
             sqz->bases = 0;
-            batchsize = 0;
+            sqz->n = 0;
+            dbytes = 0;
         }
     }
-
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
     if ( !sqz_filetail(numseqs, ofp) ) {
         fprintf(stderr, "[sqz ERROR]: IO error");

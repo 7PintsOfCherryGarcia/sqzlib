@@ -1,0 +1,11 @@
+List of features and modifications still needed:
+
+General:
+    Add a verbose mode. Current version prints too much.
+
+sqz.c - TODO check for no file overwriting
+
+sqz_kseq.c - TODO handle errors. No error detection implemented yet
+             sqz_fastqeblock
+              TODO - Fix awkwardness with return value
+

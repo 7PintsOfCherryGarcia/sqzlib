@@ -78,7 +78,7 @@ void sqz_kill(sqzfastx_t *sqz);
   "sqz_loadfastq"
   loads fastq data to sqzfastx_t object, returns number of sequences loaded
 */
-size_t sqz_loadfastq(sqzfastx_t *sqz);
+uint64_t sqz_loadfastq(sqzfastx_t *sqz);
 
 
 

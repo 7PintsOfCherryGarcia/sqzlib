@@ -4,7 +4,7 @@
 #include "sqz_init.h"
 
 
-sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
+sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
 {
     sqzfastx_t *sqz = malloc(sizeof(sqzfastx_t));
     if (!sqz) {
@@ -41,7 +41,6 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
         case 1:
             fprintf(stderr, "[sqzlib INFO]: Detected fastA format %u\n", fmt);
             sqz->fmt = fmt;
-            //No need for quality buffer
             sqz->qualbuffer = NULL;
             sqz->seqbuffer = malloc(bsize + 1);
             if (!sqz->seqbuffer) {
@@ -50,7 +49,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
                 free(sqz);
                 return NULL;
             }
-            sqz->seqbuffer[bsize] = 0;
+            sqz->seqbuffer[bsize] = '\0';
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,
@@ -63,22 +62,22 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
         case 2:
             fprintf(stderr, "[sqzlib INFO]: Detected fastQ format.\n");
             sqz->fmt = fmt;
-            sqz->qualbuffer = malloc(LOAD_SIZE + 1);
+            sqz->qualbuffer = malloc(bsize + 1);
             if (!sqz->qualbuffer) {
                 fprintf(stderr,
                         "[sqzlib ERROR] Failed to allocate quality buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->qualbuffer[LOAD_SIZE] = 0;
-            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            sqz->qualbuffer[bsize] = 0;
+            sqz->seqbuffer = malloc(bsize + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,
                         "[squeezma ERROR] Failed to allocate sequence buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,
@@ -92,14 +91,14 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
             fprintf(stderr,
                     "[sqzlib INFO]: Detected sqz encoded FASTA format.\n");
             sqz->fmt = fmt;
-            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            sqz->seqbuffer = malloc(bsize + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,
                         "[squeezma ERROR] Failed to allocate sequence buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,
@@ -113,22 +112,22 @@ sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize)
             fprintf(stderr,
                     "[sqzlib INFO]: Detected sqz encoded FASTQ format.\n");
             sqz->fmt = fmt;
-            sqz->qualbuffer = malloc(LOAD_SIZE + 1);
+            sqz->qualbuffer = malloc(bsize + 1);
             if (!sqz->qualbuffer) {
                 fprintf(stderr,
                         "[sqzlib ERROR] Failed to allocate quality buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->qualbuffer[LOAD_SIZE] = 0;
-            sqz->seqbuffer = malloc(LOAD_SIZE + 1);
+            sqz->qualbuffer[bsize] = 0;
+            sqz->seqbuffer = malloc(bsize + 1);
             if (!sqz->seqbuffer) {
                 fprintf(stderr,
                         "[squeezma ERROR] Failed to allocate sequence buffer\n");
                 free(sqz);
                 return NULL;
             }
-            sqz->seqbuffer[LOAD_SIZE] = 0;
+            sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(1*1024*1024);
             if (!sqz->namebuffer) {
                 fprintf(stderr,

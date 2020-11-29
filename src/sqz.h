@@ -26,3 +26,6 @@ void sqz_usage();
 
 
 char *sqz_basename(char *namestr);
+
+
+char sqz_readblksize(sqzblock_t *blk, FILE *fp);

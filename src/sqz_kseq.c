@@ -165,7 +165,6 @@ uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset)
 
 uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 {
-    uint64_t offset;
     uint64_t l = sqz->seq->seq.l;
     //buffer can be completely filled with current sequence
     if (sqz->rem >= LOAD_SIZE) {
@@ -179,7 +178,6 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
         sqz->offset = LOAD_SIZE;
         return LOAD_SIZE;
     }
-
     //Rest of sequence can go into buffer
     memcpy(sqz->seqbuffer,
            sqz->seq->seq.s + sqz->toread,
@@ -187,10 +185,9 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     memcpy(sqz->qualbuffer,
            sqz->seq->qual.s + sqz->toread,
            sqz->rem + 1);
-    offset = sqz->rem + 1;
+    sqz->offset = sqz->rem + 1;
     sqz->endflag = 0;
-    sqz->offset = offset;
-    return offset;
+    return sqz->offset;
 }
 
 
@@ -266,28 +263,25 @@ uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset)
 }
 
 
-size_t sqz_fastaeblock(sqzfastx_t *sqz)
+uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 {
-    size_t lsize;
     //buffer can be completely filled with current sequence
     if (sqz->rem >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,
                sqz->seq->seq.s + (sqz->seq->seq.l + 1 - sqz->rem),
                LOAD_SIZE);
         sqz->rem -= LOAD_SIZE;
-        lsize = LOAD_SIZE;
         sqz->offset = LOAD_SIZE;
-        return lsize;
+        return sqz->offset;
     }
 
     //Rest of sequence can go into buffer
     memcpy(sqz->seqbuffer,
            sqz->seq->seq.s + sqz->toread,
            sqz->rem + 1);
-    lsize = sqz->rem + 1;
+    sqz->offset = sqz->rem + 1;
     sqz->endflag = 0;
-    sqz->offset = lsize;
-    return lsize;
+    return sqz->offset;
 }
 
 

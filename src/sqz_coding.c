@@ -23,22 +23,16 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint8_t *seq = NULL;
     uint8_t *qual = NULL;
     uint64_t seqlen = 0;
-    size_t seqread;
-    size_t lenbytes = sizeof(size_t);
-    size_t k = 0;
-    size_t n = 0;
-    size_t sqzsize = sqz->offset;
+    uint64_t seqread;
+    uint64_t k = 0;
+    uint64_t sqzsize = sqz->offset;
     while ( k < sqzsize) {
-        //Keep track of how many sequences have been encoded
-        n++;
         //Extract sequence length
         seqlen = *(uint64_t *)(sqz->seqbuffer + k);
-        //Keep track of number of bytes read from seqbuffer
-        k += lenbytes;
-        //Store sequence length in code buffer
-        memcpy(blk->codebuff + blk->blksize, &seqlen, sizeof(uint64_t));
-        //Keep track of number of bytes written to codebuff
-        blk->blksize += sizeof(uint64_t);
+        k += B64;
+        //Store sequence length
+        memcpy(blk->codebuff + blk->blksize, &seqlen, B64);
+        blk->blksize += B64;
         //Position seq and qual strings to corresponding place in buffers
         seq =  sqz->seqbuffer + k;
         qual = sqz->qualbuffer + k;
@@ -75,8 +69,8 @@ char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk)
     if (!sqz->endflag) {
         memcpy(blk->codebuff + blk->blksize, sqz->namebuffer, sqz->namelen);
         blk->blksize += sqz->namelen;
-        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), sizeof(size_t));
-        blk->blksize += sizeof(size_t);
+        memcpy(blk->codebuff + blk->blksize, &(sqz->namelen), B64);
+        blk->blksize += B64;
     }
     return 1;
 }
@@ -547,32 +541,6 @@ uint64_t sqz_bit2encode(const uint8_t *seq, size_t seqlen)
         result = (result << 2) | seq_nt4_table[seq[i]];
     }
     return result;
-}
-
-
-sqzblock_t *sqz_sqzblkinit(size_t size)
-{
-    sqzblock_t *blk = malloc(sizeof(sqzblock_t));
-    if (!blk) return NULL;
-    //Code buffer array
-    blk->codebuff = malloc(2*size);
-    if (!blk->codebuff) {
-        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
-        free(blk);
-        return NULL;
-    }
-    blk->blksize = 0;
-    blk->newblk = 1;
-    //Compression buffer array
-    blk->cmpbuff = malloc(2*size);
-    if (!blk->cmpbuff) {
-        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
-        free(blk->codebuff);
-        free(blk);
-        return NULL;
-    }
-    blk->cmpsize = 2*size;
-    return blk;
 }
 
 

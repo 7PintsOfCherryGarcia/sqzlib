@@ -97,4 +97,26 @@ sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize)
 }
 
 
-
+sqzblock_t *sqz_sqzblkinit(size_t size)
+{
+    sqzblock_t *blk = malloc(sizeof(sqzblock_t));
+    if (!blk) return NULL;
+    blk->codebuff = malloc(2*size);
+    if (!blk->codebuff) {
+        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
+        free(blk);
+        return NULL;
+    }
+    blk->blksize = 0;
+    blk->newblk = 1;
+    //Compression buffer array
+    blk->cmpbuff = malloc(2*size);
+    if (!blk->cmpbuff) {
+        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
+        free(blk->codebuff);
+        free(blk);
+        return NULL;
+    }
+    blk->cmpsize = 2*size;
+    return blk;
+}

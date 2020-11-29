@@ -23,6 +23,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
     sqz->maxname  = 1*1024*1024;
     //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
+    fprintf(stderr, "FORMAT: %u\n", fmt);
     //Initialize kseq objects
     //TODO Change exit at fail as sqz gets freed but the kseq object in it is
     //lost causing memory leak.

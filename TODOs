@@ -2,6 +2,8 @@ List of features and modifications still needed:
 
 General:
     Add a verbose mode. Current version prints too much.
+    General error handling. Currently when errors are detected a log
+        is printed. This makes for a clunky api
 
 sqz.c - TODO check for no file overwriting
 

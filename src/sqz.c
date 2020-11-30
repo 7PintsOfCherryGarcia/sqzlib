@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <getopt.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include "sqzlib.h"
 #include "sqz.h"
 
@@ -55,11 +50,7 @@ char sqz_compress(const char *filename, const char *outname)
         return 0;
     }
     sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    if (!sqz) {
-        fprintf(stderr, "[sqz ERROR]: Failed to start data structures.\n");
-        goto exit;
-    }
-    //Check for format
+    if (!sqz) goto exit;
     switch (sqz->fmt & 7) {
         case 1:
             if (!sqz_squeezefasta(sqz, ofp)) {
@@ -150,10 +141,8 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
     if (!blk) {
         goto exit;;
     }
-    if ( !sqz_filehead(sqz, ofp) ) {
-        fprintf(stderr, "[sqz ERROR]: IO error");
-        goto exit;
-    }
+    if ( !sqz_filehead(sqz, ofp) ) goto exit;
+
     while ( (dbytes += sqz_loadfasta(sqz)) > 0 ) {
         if (!sqz_fastaencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");

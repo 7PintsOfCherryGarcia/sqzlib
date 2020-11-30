@@ -9,15 +9,10 @@ KSEQ_INIT(gzFile, gzread)
 unsigned char sqz_getformat(const char *filename)
 {
     unsigned char ret = 0;
-    if ( (ret = sqz_checksqz(filename)) ) {
-        fprintf(stderr, "DETECTED sqz\n");
-        return ret;
-    }
+    if ( (ret = sqz_checksqz(filename)) ) return ret;
+
     gzFile fp = gzopen(filename, "r");
-    if (!fp) {
-        fprintf(stderr, "[sqzlib ERROR]: Failed to open file: %s\n", filename);
-        return ret;
-    }
+    if (!fp) return ret;
 
     kseq_t *seq = kseq_init(fp);
     if (!seq) {
@@ -48,16 +43,10 @@ char sqz_kseqinit(sqzfastx_t *sqz)
 {
     char ret = 0;
     sqz->fp = gzopen(sqz->filename, "r");
-    if (!sqz->fp) {
-        fprintf(stderr,
-                "[libsqz ERROR: zlib] Failed to open file: %s\n", sqz->filename);
-        goto exit;
-    }
+    if (!sqz->fp) goto exit;
     sqz->seq = kseq_init(sqz->fp);
     if (!sqz->seq) {
         gzclose(sqz->fp);
-        fprintf(stderr,
-                "[libsqz ERROR: kseq] Failed to init kseq: %s\n", sqz->filename);
         goto exit;
     }
     ret = 1;
@@ -322,5 +311,6 @@ unsigned char sqz_checksqz(const char *filename)
     tmp += fread(&sqz, 1, 1, fp);
     fmt |= sqz << 3;
     fclose(fp);
+    fprintf(stderr, "fmt: %u\n", fmt);
     return fmt;
 }

@@ -23,15 +23,12 @@ int main(int argc, char *argv[])
             bname = sqz_basename( argv[argc - 1] );
             strcpy(oname, bname);
             strcat(oname, ".sqz");
-            fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
             if (!sqz_compress(iname, oname)) goto exit;
             break;
         case 2:
             strcpy(oname, argv[argc - 1]);
             end = strrchr(oname, '.');
-            if (end)
-                *end = '\0';
-            fprintf(stderr, "[sqz INFO]: output filename - %s\n", oname);
+            if (end) *end = '\0';
             if (!sqz_decompress(argv[argc - 1], oname)) goto exit;
     }
     ret = 0;
@@ -44,25 +41,15 @@ char sqz_compress(const char *filename, const char *outname)
 {
     char ret = 0;
     FILE *ofp = fopen(outname, "wb");
-    if (!ofp) {
-        fprintf(stderr,
-                "[sqz ERROR]: Failed to open %s for writing.\n", outname);
-        return 0;
-    }
+    if (!ofp) return 0;
     sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
     if (!sqz) goto exit;
     switch (sqz->fmt & 7) {
         case 1:
-            if (!sqz_squeezefasta(sqz, ofp)) {
-                fprintf(stderr, "[sqz ERROR]: Failed to compress data.\n");
-                goto exit;
-            }
+            if (!sqz_squeezefasta(sqz, ofp)) goto exit;
             break;
         case 2:
-            if (!sqz_squeezefastq(sqz, ofp)) {
-                fprintf(stderr, "[sqz ERROR]: Failed to compress data.\n");
-                goto exit;
-            }
+            if (!sqz_squeezefastq(sqz, ofp)) goto exit;
             break;
         case 5:
             fprintf(stderr, "File %s alredy sqz encoded.\n", filename);
@@ -87,16 +74,16 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
     uint64_t lbytes = 0;
     uint64_t numseqs = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
-    if (!blk) {
-        goto exit;;
-    }
+    if (!blk) goto exit;
+
     if ( !sqz_filehead(sqz, ofp) ) {
         fprintf(stderr, "[sqz ERROR]: IO error");
         goto exit;
     }
+
     while ( (lbytes = sqz_loadfastq(sqz)) > 0 ) {
         dbytes += lbytes;
-        if (!sqz_encode(sqz, blk)) {
+        if (!sqz_fastqencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }

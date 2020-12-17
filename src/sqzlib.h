@@ -6,6 +6,7 @@
 #include <zlib.h>
 
 #define LOAD_SIZE 8*1024*1024
+#define B64       sizeof(uint64_t)
 
 typedef struct kseq_t kseq_t;
 
@@ -66,13 +67,13 @@ char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
 
 
 /*
-    Load fastX data into sqz struct
+    Load fasta data into sqz struct
 */
 size_t sqz_loadfasta(sqzfastx_t *sqz);
 
 
 /*
-    Encode fastX data already loaded in sqz struct and sotore it in blk struct
+    Encode fasta data already loaded in sqz struct and store it in blk struct
 */
 char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
@@ -83,6 +84,47 @@ size_t sqz_deflate(sqzblock_t *blk, int level);
 
 
 /*
-    
+    Load fastq data into sqz struct
 */
 uint64_t sqz_loadfastq(sqzfastx_t *sqz);
+
+
+/*
+    Load fastq data already loaded in sqz struct and store it in blk struct
+*/
+char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+/*
+    Write compressed data stored in blk to file
+*/
+char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp);
+
+
+/*
+    Write sqz file tail
+*/
+char sqz_filetail(size_t numseqs, FILE *ofp);
+
+/*
+    Free blk object
+*/
+void sqz_blkdestroy(sqzblock_t *blk);
+
+
+/*
+    Decode data stored in buff. For fastq data streams
+*/
+size_t sqz_fastqdecode(const uint8_t *buff, size_t size);
+
+
+/*
+    Decode data stored in buff. For fasta data streams
+*/
+size_t sqz_fastadecode(const uint8_t *buff, size_t size);
+
+
+/*
+    Decompress zlib data stored in blk struct
+*/
+size_t sqz_inflate(sqzblock_t *blk);

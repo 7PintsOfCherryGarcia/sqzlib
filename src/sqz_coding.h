@@ -33,7 +33,7 @@ unsigned char seq_dec_table[128] = {
 unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 
 
-char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
+char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 void sqz_seqencode(const uint8_t *seq,

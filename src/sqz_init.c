@@ -7,10 +7,7 @@
 sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
 {
     sqzfastx_t *sqz = malloc(sizeof(sqzfastx_t));
-    if (!sqz) {
-        fprintf(stderr, "[sqzlib ERROR] Memory error\n");
-        return NULL;
-    }
+    if (!sqz) return NULL;
     sqz->filename = filename;
     sqz->n        = 0;
     sqz->bases    = 0;
@@ -23,10 +20,8 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
     sqz->maxname  = 1*1024*1024;
     //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
-    fprintf(stderr, "FORMAT: %u\n", fmt);
     //Initialize kseq objects
-    //TODO Change exit at fail as sqz gets freed but the kseq object in it is
-    //lost causing memory leak.
+    //if ( fmt >= 1 )
     if (!sqz_kseqinit(sqz)) {
         free(sqz);
         return NULL;

@@ -6,7 +6,7 @@
 #include "sqz_coding.h"
 
 
-char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk)
+char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     if (blk->newblk) {
         fprintf(stderr, "[sqzlib INFO]: New block - %lu sequences.\n", sqz->n);

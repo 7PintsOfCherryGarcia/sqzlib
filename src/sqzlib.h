@@ -1,125 +1,130 @@
 #include <stdio.h>
+#include <string.h>
+#include <getopt.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <zlib.h>
 
 #define LOAD_SIZE 8*1024*1024
+#define B64       sizeof(uint64_t)
 
-#define B64 sizeof(uint64_t)
-
-typedef struct  kseq_t kseq_t;
+typedef struct kseq_t kseq_t;
 
 
-/*
-  "sqzfastx_t"
-  libsqueezma main data loading structure. Defines the buffers and flags for
-  reading sequencing data into.
-*/
 typedef struct {
-    //file members
-    const char *filename;
-    gzFile     fp;
-    //flags
-    char       fmt;
-    char       endflag; //Sequece has not completely been read into a buffer flag
-    //data members
-    size_t     offset;
-    kseq_t     *seq;
-    uint8_t    *seqbuffer;
-    uint8_t    *qualbuffer;
-    uint8_t    *namebuffer;
-    size_t     namelen;
-    size_t     maxname;
-    size_t     n;
-    size_t     bases;
-    //miscelaneous
-    size_t     rem;     //Length of sequence remaining to be read
-    size_t     toread;  //Size of sequence still needed to be read
-    size_t     prevlen; //Size of sequence currently being read
+  //file members
+  const char *filename;
+  gzFile     fp;
+  //flags
+  char       fmt;
+  char       endflag; //Sequece has not completely been read into a buffer flag
+  //data members
+  size_t     offset;
+  kseq_t     *seq;
+  uint8_t    *seqbuffer;
+  uint8_t    *qualbuffer;
+  uint8_t    *namebuffer;
+  size_t     namelen;
+  size_t     maxname;
+  size_t     n;
+  size_t     bases;
+  //miscelaneous
+  size_t     rem;     //Length of sequence remaining to be read
+  size_t     toread;  //Size of sequence still needed to be read
+  size_t     prevlen; //Size of sequence currently being read
 } sqzfastx_t;
 
 
 typedef struct {
-    //Code data buffer
-    uint8_t *codebuff;
-    size_t  blksize;
-    char    newblk;
-    //Compression members
-    uint8_t *cmpbuff;
-    size_t cmpsize;
+  //Code data buffer
+  uint8_t *codebuff;
+  size_t  blksize;
+  char    newblk;
+  //Compression members
+  uint8_t *cmpbuff;
+  size_t cmpsize;
 } sqzblock_t;
 
-
 /*
-  "sqz_fastxinit"
+    Initialize sqz struct
 */
-sqzfastx_t *sqz_fastxinit(const char *filename, size_t bsize);
+sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize);
 
 /*
-  "sqz_getformat"
-  Reads the first sequence record in a fast q/a file. If a quality string is found, fastq
-  format is assumed, fasta otherwise
-*/
-char sqz_getformat(const char *filename);
-
-/*
-  "sqz_kseqinit"
-  Starts kseq objects
-*/
-char sqz_kseqinit(sqzfastx_t *sqz);
-
-/*
-  "sqz_kill"
-  frees allocated buffers in sqzfastx_t struct
+    Free sqz object
 */
 void sqz_kill(sqzfastx_t *sqz);
 
+/*
+    Initialize blk struct
+*/
+sqzblock_t *sqz_sqzblkinit(size_t size);
 
 /*
-  "sqz_loadfastq"
-  loads fastq data to sqzfastx_t object, returns number of sequences loaded
+    Write sqz file header
 */
-uint64_t sqz_loadfastq(sqzfastx_t *sqz);
+char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
 
 
-
+/*
+    Load fasta data into sqz struct
+*/
 size_t sqz_loadfasta(sqzfastx_t *sqz);
 
 
 /*
-    "sqz_sqzblkinit"
-    Starts sqzblock_t object
+    Encode fasta data already loaded in sqz struct and store it in blk struct
 */
-sqzblock_t *sqz_sqzblkinit(size_t size);
-
-
-char sqz_encode(sqzfastx_t *sqz, sqzblock_t *blk);
-
-
 char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
-
-void sqz_blkdestroy(sqzblock_t *blk);
-
-
+/*
+    Compress data already loaded in blk struct
+*/
 size_t sqz_deflate(sqzblock_t *blk, int level);
 
 
+/*
+    Load fastq data into sqz struct
+*/
+uint64_t sqz_loadfastq(sqzfastx_t *sqz);
+
+
+/*
+    Load fastq data already loaded in sqz struct and store it in blk struct
+*/
+char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);
+
+
+/*
+    Write compressed data stored in blk to file
+*/
 char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp);
 
 
+/*
+    Write sqz file tail
+*/
 char sqz_filetail(size_t numseqs, FILE *ofp);
 
-
-char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
-
-
-sqzfastx_t *sqz_sqzinit(const char *filename, size_t bsize);
-
-
-size_t sqz_inflate(sqzblock_t *blk);
+/*
+    Free blk object
+*/
+void sqz_blkdestroy(sqzblock_t *blk);
 
 
+/*
+    Decode data stored in buff. For fastq data streams
+*/
 size_t sqz_fastqdecode(const uint8_t *buff, size_t size);
 
 
+/*
+    Decode data stored in buff. For fasta data streams
+*/
 size_t sqz_fastadecode(const uint8_t *buff, size_t size);
+
+
+/*
+    Decompress zlib data stored in blk struct
+*/
+size_t sqz_inflate(sqzblock_t *blk);

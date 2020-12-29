@@ -2,6 +2,11 @@ List of features and modifications still needed:
 
 General:
     Add a verbose mode. Current version prints too much.
+    General error handling. Currently when errors are detected a log
+        is printed. This makes for a clunky api.
+        Solution: Create an error member (int) in sqz struct. This can be modified
+                  accordingly when an error occurs. Afterwards, a log function can
+                  print the right message based on error code.
 
 sqz.c - TODO check for no file overwriting
 

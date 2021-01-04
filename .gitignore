@@ -3,3 +3,7 @@ testdata
 testing
 *.a
 *.so
+docs/auto
+docs/*.aux
+docs/*.log
+docs/*.gz

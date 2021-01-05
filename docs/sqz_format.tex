@@ -1,0 +1,29 @@
+\documentclass{article}
+\usepackage{geometry}
+\geometry{a4paper, portrait, margin=1in}
+\usepackage{fancyhdr}
+
+\title{SQZ format documentation}
+\date{2021-1-X}
+\author{Julian Regalado Perez}
+
+\begin{document}
+    \pagestyle{fancy}
+    \rhead{sqz format}
+    \pagenumbering{gobble}
+    \maketitle
+    \newpage
+
+    \pagenumbering{arabic}
+    \section*{\centering{sqz format specification}}
+    \subsection*{Format}
+    Put figure of fileformat here
+    \subsection*{Header}
+    Size: 10 bytes
+    \\4 bytes - Magic number 5859
+    \\1 bytes - sqz flag
+    \\1 byte  - Compression library flag
+    \\\indent Currently supported:
+    \\\indent zlib, value - 1
+    \\\indent 4 bytes - Zeroes
+\end{document}

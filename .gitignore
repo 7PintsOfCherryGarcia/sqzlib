@@ -1,9 +1,15 @@
+
+src/*o
 sqz
 testdata
 testing
 *.a
 *.so
+docs/*.pdf
 docs/auto
 docs/*.aux
 docs/*.log
 docs/*.gz
+docs/html
+docs/latex
+docs/rtf

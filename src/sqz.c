@@ -220,7 +220,7 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     long size = sqz_filesize(fp) - 16;
-    fseek(fp, B64, SEEK_SET);
+    fseek(fp, HEADLEN, SEEK_SET);
     while ( ftell(fp) < size )
     {
         nblock++;

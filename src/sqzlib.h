@@ -1,3 +1,6 @@
+/** \file sqzlib.h
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
@@ -7,6 +10,7 @@
 
 #define LOAD_SIZE 8*1024*1024
 #define B64       sizeof(uint64_t)
+#define HEADLEN   8
 
 typedef struct kseq_t kseq_t;
 
@@ -128,3 +132,42 @@ size_t sqz_fastadecode(const uint8_t *buff, size_t size);
     Decompress zlib data stored in blk struct
 */
 size_t sqz_inflate(sqzblock_t *blk);
+
+
+/*
+#########################################PENE###################################
+KSEQ compatibility functions
+
+In order to use kseq.h and take advantage of the quick fastX parsing, a
+"reading" function must be provided. This "reading" function loads uncompressed
+data into a buffer which is subsequently parsed by the rest of kseq.h functions.
+
+The reading function must be of the form:
+see gzread(): https://github.com/madler/zlib/blob/master/zlib.h
+       int reader(FILE *file, void *buff, unsigned len)
+Where
+    file corresponds to a filepointer
+    buff is a non empty buffer where compressed data is extracted
+    len number of uncompressed bytes that should be read
+
+This function returns the number of uncompressed bytes read, less than len for
+end of file, or -1 for error.
+
+################################################################################
+*/
+typedef struct {
+    FILE *fp;
+    sqzfastx_t *sqz;
+    sqzblock_t *blk;
+} sqz_File;
+
+
+sqz_File sqz_sqzopen(char *filename);
+
+//! A function
+/**
+ * Read uncompressed data in sqz file into a buffer.
+ *
+ * @param file - sqz_File pointer previously opened with sqz_sqzopen
+ */
+size_t sqz_sqzread(sqz_File *file, void *buff, size_t len);

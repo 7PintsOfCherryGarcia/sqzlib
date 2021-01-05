@@ -21,7 +21,6 @@ DPLYSOBJS=$(SRC:%.c=$(SRCDIR)/%DPLYS.o)
 .SUFFIXES:.c .o
 
 
-#all:libsqz sqz
 all:libsqzDPLY sqzDPLY
 
 %.o:%.c

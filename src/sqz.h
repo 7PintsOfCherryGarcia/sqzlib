@@ -1,4 +1,3 @@
-#include <stdio.h>
 
 
 char sqz_compress(const char *filename, const char *outname);

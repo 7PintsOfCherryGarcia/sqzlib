@@ -21,20 +21,24 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
     //Get file format if reading an sqz file
     unsigned char fmt = sqz_getformat(filename);
     //Initialize kseq objects
-    //if ( fmt >= 1 )
-    if (!sqz_kseqinit(sqz)) {
-        free(sqz);
-        return NULL;
+    if ( fmt <= 2 ) {
+        if (!sqz_kseqinit(sqz)) {
+            free(sqz);
+            return NULL;
+        }
     }
     switch (fmt & 7) {
         case 0:
+            {
             fprintf(stderr,
                     "[sqzlib ERROR]: File %s of unknown format\n",
                     filename);
             free(sqz);
             sqz = NULL;
             break;
+            }
         case 1:
+            {
             fprintf(stderr, "[sqzlib INFO]: Detected fastA format %u\n", fmt);
             sqz->fmt = fmt;
             sqz->qualbuffer = NULL;
@@ -55,7 +59,9 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
             sqz->namelen = 0;
             break;
+            }
         case 2:
+            {
             fprintf(stderr, "[sqzlib INFO]: Detected fastQ format.\n");
             sqz->fmt = fmt;
             sqz->qualbuffer = malloc(bsize + 1);
@@ -83,7 +89,9 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
             sqz->namelen = 0;
             break;
+            }
         case 5:
+            {
             fprintf(stderr,
                     "[sqzlib INFO]: Detected sqz encoded FASTA format.\n");
             sqz->fmt = fmt;
@@ -104,7 +112,9 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
             sqz->namelen = 0;
             break;
+            }
         case 6:
+            {
             fprintf(stderr,
                     "[sqzlib INFO]: Detected sqz encoded FASTQ format.\n");
             sqz->fmt = fmt;
@@ -133,6 +143,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
             sqz->namelen = 0;
             break;
+            }
     }
     return sqz;
 }

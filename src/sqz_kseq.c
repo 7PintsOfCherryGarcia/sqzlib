@@ -306,11 +306,25 @@ unsigned char sqz_checksqz(const char *filename)
     fmt |= 4;
     //Read format
     tmp += fread(&sqz, 1, 1, fp);
+    //fprintf(stderr, "^^^sqz: %d\n", sqz);
     fmt |= sqz;
     //Read compression library
     tmp += fread(&sqz, 1, 1, fp);
+    //fprintf(stderr, "^^^sqz: %d\n", sqz);
     fmt |= sqz << 3;
     fclose(fp);
-    fprintf(stderr, "fmt: %u\n", fmt);
+    //fprintf(stderr, "^^^fmt: %u\n", fmt);
     return fmt;
+}
+
+
+sqz_File sqz_sqzopen(char *filename)
+{
+    
+}
+
+
+size_t sqz_read(sqzFile *file, void *buff, size_t len)
+{
+    if (!file | !buff) return 0;
 }

@@ -1,4 +1,3 @@
-
 src/*o
 sqz
 testdata
@@ -13,3 +12,4 @@ docs/*.gz
 docs/html
 docs/latex
 docs/rtf
+misc

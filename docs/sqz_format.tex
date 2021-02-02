@@ -19,11 +19,11 @@
     \subsection*{Format}
     Put figure of fileformat here
     \subsection*{Header}
-    Size: 10 bytes
-    \\4 bytes - Magic number 5859
-    \\1 bytes - sqz flag
-    \\1 byte  - Compression library flag
+    Size: 8 bytes
+    \\4 bytes - Magic number 5859 (sets sqz flag)
+    \\1 bytes - format flag (1:fastA, 2:fastQ)
+    \\1 byte  - Compression library flag (1:zlib)
     \\\indent Currently supported:
-    \\\indent zlib, value - 1
-    \\\indent 4 bytes - Zeroes
+    \\\indent\indent zlib, value - 1
+    \\2 bytes - Zeroes
 \end{document}

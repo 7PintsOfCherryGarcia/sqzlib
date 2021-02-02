@@ -1,7 +1,7 @@
+#define SQZLIB
+#define KLIB
 #include "sqzlib.h"
 #include "sqz.h"
-
-long sqz_filesize(FILE *fp);
 
 
 int main(int argc, char *argv[])
@@ -69,9 +69,8 @@ char sqz_compress(const char *filename, const char *outname)
 char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 {
     char ret = 0;
-    uint64_t dbytes = 0;
-    uint64_t cbytes = 0;
     uint64_t lbytes = 0;
+    uint64_t cbytes = 0;
     uint64_t numseqs = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
@@ -81,8 +80,7 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
         goto exit;
     }
 
-    while ( (lbytes = sqz_loadfastq(sqz)) > 0 ) {
-        dbytes += lbytes;
+    while ( (lbytes += sqz_loadfastq(sqz)) > 0 ) {
         if (!sqz_fastqencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
@@ -92,18 +90,21 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
             fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
             fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
+            fprintf(stderr, "Loaded Bytes: %lu\n", lbytes);
             cbytes = sqz_deflate(blk, 9);
+            fprintf(stderr, "Compressed Bytes: %lu\n", cbytes);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
                 goto exit;
             }
             fprintf(stderr,
-                    "\t\tCompressed to %lu(%.2f%%) bytes.\n",
-                    cbytes, (double)cbytes/(double)dbytes);
-            blk->blksize = 0;
-            sqz->bases = 0;
+                    "\t\tCompressed to %lu(%.2f) bytes.\n",
+                    cbytes, (double)cbytes/(double)lbytes);
+            blk->blkpos  = 0;
+            sqz->bases   = 0;
+            sqz->namepos = 0;
             sqz->n = 0;
-            dbytes = 0;
+            lbytes = 0;
         }
     }
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
@@ -183,25 +184,33 @@ char sqz_decompress(const char *filename, const char *outname)
     //Check for format
     switch (sqz->fmt & 7) {
         case 1:
+            {
             fprintf(stderr, "File %s already decoded.\n", filename);
             goto exit;
+            }
         case 2:
+            {
             fprintf(stderr, "File %s already decoded.\n", filename);
             goto exit;
+            }
         case 5:
+            {
             if (!sqz_spreadfasta(sqz, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");
                 goto exit;
             }
             break;
+            }
         case 6:
+            {
             if (!sqz_spreadfastq(sqz, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");
                 goto exit;
             }
             break;
+            }
         }
     ret = 1;
     exit:
@@ -219,14 +228,14 @@ char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
     if (!fp)  return ret;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
-    long size = sqz_filesize(fp) - 16;
+    uint64_t size = sqz_filesize(fp);
     fseek(fp, HEADLEN, SEEK_SET);
     while ( ftell(fp) < size )
     {
         nblock++;
         fprintf(stderr, "[sqz INFO]: In block %lu\n", nblock);
         if (!sqz_readblksize(blk, fp)) goto exit;
-        sqz_fastqdecode(blk->codebuff, blk->blksize);
+        sqz_fastqdecode(blk);
     }
     ret = 1;
     exit:
@@ -250,7 +259,7 @@ char sqz_spreadfasta(sqzfastx_t *sqz, FILE *ofp)
         nblock++;
         fprintf(stderr, "[sqz INFO]: In block %lu\n", nblock);
         if (!sqz_readblksize(blk, fp)) goto exit;
-        sqz_fastadecode(blk->codebuff, blk->blksize);
+        sqz_fastadecode(blk->blkbuff, blk->blksize);
     }
     ret = 1;
     exit:
@@ -304,29 +313,3 @@ char *sqz_basename(char *namestr)
 }
 
 
-char sqz_readblksize(sqzblock_t *blk, FILE *fp)
-{
-    char ret = 0;
-    uint64_t cmpsize;
-    uint64_t dcpsize;
-    uint64_t cbytes;
-    size_t   nelem;
-    nelem =  fread(&dcpsize, B64, 1, fp);
-    nelem += fread(&cmpsize, B64, 1, fp);
-    if ((cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) | (nelem != 2)) {
-        fprintf(stderr, "ERROR reading sqz file.\n");
-        goto exit;
-    }
-    blk->cmpsize = cmpsize;
-    blk->blksize = LOAD_SIZE*2;
-    cbytes = sqz_inflate(blk);
-    if (cbytes != dcpsize) {
-        fprintf(stderr, "[sqz ERROR]: Corrupt data encountered.\n");
-        goto exit;
-    }
-    blk->blksize = dcpsize;
-    fprintf(stderr, "\tDeflate size: %lu\n", cbytes);
-    ret = 1;
-    exit:
-        return ret;
-}

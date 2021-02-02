@@ -45,4 +45,30 @@ uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset);
 
 uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset);
 
-char sqz_loadname(sqzfastx_t *sqz, kstring_t name);
+
+char sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n);
+//char sqz_loadname(sqzfastx_t *sqz, kstring_t name);
+
+
+sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize);
+
+
+sqzblock_t *sqz_sqzblkinit(size_t size);
+
+
+uint64_t sqz_filesize(FILE *fp);
+
+
+char sqz_readblksize(sqzblock_t *blk, FILE *fp);
+
+
+size_t sqz_inflate(sqzblock_t *blk);
+
+
+void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl);
+
+
+size_t sqz_fastqdecode(sqzblock_t *blk);
+
+//TMP
+size_t sqz_fastqdecode2(sqzblock_t *blk, uint8_t *klibbuff, uint64_t klibl);

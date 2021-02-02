@@ -1,4 +1,7 @@
 #include <stdio.h>
+
+#define SQZLIB
+#define KLIB
 #include "sqz_data.h"
 
 char zbytes[4] = {0, 0, 0, 0};

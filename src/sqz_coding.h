@@ -36,16 +36,16 @@ unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
-void sqz_seqencode(const uint8_t *seq,
-                   uint64_t readlen,
-                   sqzblock_t *blk,
-                   uint64_t seqlen);
+uint64_t sqz_seqencode(const uint8_t *seq,
+                       uint64_t seqlen,
+                       uint8_t *blkbuff,
+                       uint64_t seqlenOG);
 
 
-size_t sqz_qualencode(const uint8_t *qual,
-                      size_t readlen,
-                      sqzblock_t *blk,
-                      uint64_t seqlen);
+uint64_t sqz_qualencode(const uint8_t *qual,
+                        uint64_t quallen,
+                        uint8_t *blkbuff,
+                        uint64_t seqlen);
 
 
 char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
@@ -80,22 +80,36 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk);
 void sqz_blkdestroy(sqzblock_t *blk);
 
 
-size_t sqz_qualdecode(const uint8_t *codebuff, char *qualstr, size_t length);
-//size_t sqz_qualdecode(const uint8_t *buff, char *uncode, size_t length);
+size_t sqz_qualdecode(const uint8_t *codebuff,
+                      uint8_t *qualstr,
+                      size_t length,
+                      uint64_t *wbytes);
 
 
-unsigned char sqz_bit2decode(const uint64_t *mer, char *decoded, unsigned char len);
+unsigned char sqz_bit2decode(const uint64_t *mer,
+                             uint8_t *decoded,
+                             unsigned char len);
 
 
-unsigned char sqz_writens(unsigned char numn, char *decoded);
+unsigned char sqz_writens(unsigned char numn, uint8_t *decoded);
 
 
 size_t sqz_seqdecode(const uint8_t *codebuff,
                      char *seqstr,
                      char *qualstr,
-                     size_t length);
+                     size_t length,
+                     char flag);
+//size_t sqz_seqdecode(const uint8_t *codebuff,
+//                     char *seqstr,
+//                     char *qualstr,
+//                     size_t length);
 
 
 size_t sqz_fastadecode(const uint8_t *buff, size_t size);
 
-//size_t sqz_loopdecode(size_t length, const uint8_t *seqbuffer, char *seqstr);
+//tmp
+size_t sqz_seqdecode2(const uint8_t *codebuff,
+                      uint8_t *decodebuff,
+                      size_t length,
+                      char qflag,
+                      uint64_t *wbytes);

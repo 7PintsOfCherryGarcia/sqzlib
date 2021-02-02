@@ -1,3 +1,5 @@
+#define SQZLIB
+#define KLIB
 #include "sqz_zlib.h"
 
 
@@ -17,8 +19,8 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
         return (size_t)ret;
     }
     //Main compression loop
-    strm.avail_in = blk->blksize;
-    strm.next_in = blk->codebuff;
+    strm.avail_in = blk->blkpos;
+    strm.next_in  = blk->blkbuff;
     do {
         strm.avail_out = blk->cmpsize;
         strm.next_out = blk->cmpbuff;
@@ -43,13 +45,13 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
 }
 
 
-char sqz_zlibcmpdump(sqzblock_t *blk, size_t size, FILE *ofp)
+char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 {
     size_t bytes = sizeof(size_t);
     size_t wbytes = 0;
     fprintf(stderr, "[sqzlib INFO]: Dumping block.\n");
     //Write uncompressed number of bytes in block
-    wbytes += fwrite(&(blk->blksize), bytes, 1, ofp);
+    wbytes += fwrite(&(blk->blkpos), bytes, 1, ofp);
     //Write compressed number of bytes in block
     wbytes += fwrite(&(size), bytes, 1, ofp);
     //Write block
@@ -81,7 +83,7 @@ size_t sqz_inflate(sqzblock_t *blk)
     strm.next_in = blk->cmpbuff;
     do {
         strm.avail_out = blk->blksize;
-        strm.next_out = blk->codebuff;
+        strm.next_out  = blk->blkbuff;
         ret = inflate(&strm, Z_SYNC_FLUSH);    /* no bad return value */
         switch (ret) {
             case Z_NEED_DICT:

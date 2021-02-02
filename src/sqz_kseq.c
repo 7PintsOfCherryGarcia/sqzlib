@@ -2,7 +2,7 @@
 #include <zlib.h>
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
-#define KLIB
+#define SQZLIB
 #include "sqz_kseq.h"
 
 
@@ -67,11 +67,13 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
     uint64_t offset = 0;
     uint64_t n = 0;
     uint64_t l;
+    fprintf(stderr, "Namepos: %lu\n", sqz->namepos);
+    //TODO remove pointer references inside loop
     while ( kseq_read(sqz->seq) >= 0 ) {
         l = sqz->seq->seq.l;
         sqz->bases += l;
         n++;
-        if (!sqz_loadname(sqz, sqz->seq->name)) {
+        if (!sqz_loadname(sqz, sqz->seq->name, n)) {
             offset = 0;
             goto exit;
         }
@@ -93,20 +95,23 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
 }
 
 
-char sqz_loadname(sqzfastx_t *sqz, kstring_t name)
+char sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n)
 {
     char ret = 0;
-    memcpy(sqz->namebuffer + sqz->namelen, name.s, name.l + 1);
-    sqz->namelen += name.l + 1;
-    if (sqz->namelen + 100 >= sqz->maxname) {
-        sqz->namebuffer = realloc(sqz->namebuffer, sqz->maxname*2);
+    //fprintf(stderr, "\n\n%s\n\n", name.s);
+    //sleep(2);
+    memcpy(sqz->namebuffer + sqz->namepos, name.s, name.l + 1);
+    sqz->namepos += name.l + 1;
+    if (sqz->namepos + 100 >= sqz->namesize) {
+        //fprintf(stderr, "At seq %lu\n", n);
+        sqz->namebuffer = realloc(sqz->namebuffer, sqz->namesize*2);
         if (!(sqz->namebuffer)) {
-            fprintf(stderr, "[sqzlib ERROR]: Memory error\n");
+            fprintf(stderr, "Name error\n");
             goto exit;
         }
-        sqz->maxname *= 2;
-        fprintf(stderr,
-                "[sqzlib INFO]:Allocating memory %lu\n", sqz->maxname);
+        //fprintf(stderr, "Previous size: %lu\n", sqz->namesize);
+        sqz->namesize *= 2;
+        //fprintf(stderr, "Name memory %lu\n", sqz->namesize);
     }
     ret = 1;
     exit:
@@ -196,7 +201,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
         l = sqz->seq->seq.l;
         sqz->bases += l;
         n++;
-        if (!sqz_loadname(sqz, sqz->seq->name)) {
+        if (!sqz_loadname(sqz, sqz->seq->name, n)) {
             offset = 0;
             goto exit;
         }
@@ -277,13 +282,23 @@ uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 void sqz_kill(sqzfastx_t *sqz)
 {
     if (sqz) {
-        gzclose(sqz->fp);
-        kseq_destroy(sqz->seq);
+        if (sqz->fp)
+            gzclose(sqz->fp);
+        if (sqz->seq)
+            kseq_destroy(sqz->seq);
         free(sqz->seqbuffer);
         free(sqz->namebuffer);
         if ( (sqz->fmt == 2) | (sqz->fmt == 14) ) free(sqz->qualbuffer);
         free(sqz);
     }
+}
+
+
+void sqz_killblk(sqzblock_t *blk)
+{
+    free(blk->blkbuff);
+    free(blk->cmpbuff);
+    free(blk);
 }
 
 
@@ -304,27 +319,200 @@ unsigned char sqz_checksqz(const char *filename)
     }
     //Set sqz flag
     fmt |= 4;
-    //Read format
+    //Read format (fastA or fastQ)
     tmp += fread(&sqz, 1, 1, fp);
-    //fprintf(stderr, "^^^sqz: %d\n", sqz);
     fmt |= sqz;
-    //Read compression library
+    //Read compression library (zlib or ...)
     tmp += fread(&sqz, 1, 1, fp);
-    //fprintf(stderr, "^^^sqz: %d\n", sqz);
     fmt |= sqz << 3;
     fclose(fp);
-    //fprintf(stderr, "^^^fmt: %u\n", fmt);
     return fmt;
 }
 
 
 sqz_File sqz_sqzopen(char *filename)
 {
-    
+    sqz_File sqzfile = {NULL, NULL, NULL, 0, 0, 0};
+    sqzfile.fp = fopen(filename, "rb");
+    if (!sqzfile.fp) {
+        sqzfile.fp = NULL;
+        goto exit;
+    }
+    sqzfile.size = sqz_filesize(sqzfile.fp);
+    fseek(sqzfile.fp, HEADLEN, SEEK_SET);
+    sqzfile.filepos = ftell(sqzfile.fp);
+
+    sqzfile.sqz = sqz_fastxinit(filename, LOAD_SIZE);
+    if ( !sqzfile.sqz | !(sqzfile.sqz->fmt | 4) ) {
+        sqz_kill(sqzfile.sqz);
+        sqzfile.sqz = NULL;
+        goto exit;
+    }
+
+    sqzfile.blk = sqz_sqzblkinit(LOAD_SIZE);
+    if (!sqzfile.blk) {
+        sqz_kill(sqzfile.sqz);
+        sqzfile.sqz = NULL;
+        sqzfile.blk = NULL;
+        goto exit;
+    }
+    exit:
+        return sqzfile;
 }
 
 
-size_t sqz_read(sqzFile *file, void *buff, size_t len)
+int64_t sqz_sqzread(sqz_File *file, void *buff, size_t len)
 {
     if (!file | !buff) return 0;
+    sqzfastx_t *sqz  = file->sqz;
+    sqzblock_t *blk  = file->blk;
+    uint8_t *outbuff = (uint8_t *)buff;
+    int64_t read     = 0;
+    //Take lower 7 bits of flag
+    switch (file->ff & 127) {
+    case 0: //Buffers are empty
+        {
+        // Decompress sqz block
+        if (!sqz_readblksize(file->blk, file->fp)) goto error;
+        // Check if we have reached end of file
+        if (ftell(file->fp) == file->size) {
+            //Set bit 7
+            file->ff |= 128;
+        }
+        // Decode sqz block
+        sqz_decode(sqz, blk, LOAD_SIZE);
+        // Compute how much data can be loaded
+        read = sqz->offset > len ? len : sqz->offset;
+        // Load data
+        memcpy(outbuff, sqz->readbuffer, read);
+        // Update how much has been read
+        sqz->rem += read;
+        // Update how much data is left
+        sqz->offset -= read;
+        if (sqz->offset < len) {
+            //All of leftover data fits in buffer. So more data will be needed
+            //or reading has finished
+            //Keep bit 7 status, switch flag to 2
+            file->ff = (file->ff & 128) | 2;
+        }
+        else {
+            //Can keep loading data
+            //Keep bit 7 status, switch flag to 1
+            file->ff = (file->ff & 128) | 1;
+        }
+        //fprintf(stderr, "Returning case 0 %ld\n", read);
+        return read;
+        }
+    case 1: //Data just need to be copied
+        {
+        read = sqz->offset > len ? len : sqz->offset;
+        memcpy(outbuff, sqz->readbuffer + sqz->rem, read);
+        sqz->rem += read;
+        sqz->offset -= read;
+        if (sqz->offset < len) {
+            //Keep bit 7 status, switch flag to 2
+            file->ff = (file->ff & 128) | 2;
+        }
+        return read;
+        }
+    case 2: //Data can be copied but entire buffer can't be filled
+        {
+        //Store how much data needs to be copied
+        uint64_t leftover = sqz->offset;
+        //Finish copying remaining data
+        memcpy(outbuff, sqz->readbuffer + sqz->rem, leftover);
+        //Check if there is more data to decode
+        if (blk->blkpos) {
+            //There is more data to decode
+            sqz_decode(sqz, blk, LOAD_SIZE);
+        }
+        else {
+            //There is no more data to decode
+            //We need to know if more data exists in file if there is more data,
+            //data needs to be decompressed and decoded. Otherwise, reading data
+            //has finished and we can exit
+            if (file->ff & 128) {
+                //We can terminate
+                file->ff = 3;
+                return leftover;
+            }
+            else {
+                if (!sqz_readblksize(file->blk, file->fp)) goto error;
+                if (ftell(file->fp) == file->size) {
+                    //Set bit 7
+                    file->ff |= 128;
+                }
+                sqz_decode(sqz, blk, LOAD_SIZE);
+            }
+        }
+        //Determine how much new data can be copied
+        read = sqz->offset > ( len - leftover) ? (len - leftover) : sqz->offset;
+        //Copy data making sure to not overwrite previously copied data
+        memcpy(outbuff + leftover, sqz->readbuffer, read);
+        sqz->offset -= read;
+        sqz->rem = read;
+        if (sqz->offset < len)
+            //Will need to exit or more decoding
+            file->ff = (file->ff & 128) | 2;
+        else
+            //Can keep loading data
+            file->ff = (file->ff & 128) | 1;
+        return read + leftover;
+        }
+    case 3:
+        return 0;
+    }
+    error:
+        return -1;
+}
+
+
+void sqz_sqzclose(sqz_File file)
+{
+    sqz_kill(file.sqz);
+    sqz_killblk(file.blk);
+}
+
+
+char sqz_readblksize(sqzblock_t *blk, FILE *fp)
+{
+    //TODO Error handling
+    char ret = 0;
+    uint64_t cmpsize;
+    uint64_t dcpsize;
+    uint64_t cbytes;
+    uint64_t nelem;
+    nelem =  fread(&dcpsize, B64, 1, fp);
+    nelem += fread(&cmpsize, B64, 1, fp);
+    if ((cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) | (nelem != 2)) {
+        //TODO Error goes here
+        goto exit;
+    }
+    blk->cmpsize = cmpsize;
+    blk->blksize = LOAD_SIZE*2;
+    cbytes = sqz_inflate(blk);
+    if (cbytes != dcpsize) {
+        //TODO Error goes here
+        goto exit;
+    }
+    blk->blksize = dcpsize;
+    ret = 1;
+    exit:
+        return ret;
+}
+
+
+void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl)
+{
+    switch (sqz->fmt) {
+    case 14:
+        {
+        sqz->offset = sqz_fastqdecode2(blk, sqz->readbuffer, klibl);
+        break;
+        }
+    case 13:
+        {
+        break;
+        }
+    }
 }

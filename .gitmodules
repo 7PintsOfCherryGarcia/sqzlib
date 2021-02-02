@@ -1,3 +1,0 @@
-[submodule "seqstats"]
-	path = examples/seqstats
-	url = https://github.com/clwgg/seqstats

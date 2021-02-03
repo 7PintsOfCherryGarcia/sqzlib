@@ -4,6 +4,8 @@ testdata
 testing
 *.a
 *.so
+examples/countseqs
+examples/seqstats/seqstats
 docs/*.pdf
 docs/auto
 docs/*.aux

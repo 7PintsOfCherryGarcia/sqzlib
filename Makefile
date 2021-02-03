@@ -63,7 +63,7 @@ libsqzflag:
 
 
 sqzB:sqzflag
-	$(CC) $(CFLAGSB) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c libsqz.a $(LIBS)
+	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c libsqz.a $(LIBS)
 
 sqzflag:
 	$(info ****Building sqz****)

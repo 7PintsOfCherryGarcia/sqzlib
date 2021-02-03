@@ -86,20 +86,12 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
             goto exit;
         }
         if (!sqz->endflag) {
-            fprintf(stderr, "[sqz INFO]: Block encoded:\n");
-            fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
-            fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
-            fprintf(stderr, "Loaded Bytes: %lu\n", lbytes);
             cbytes = sqz_deflate(blk, 9);
-            fprintf(stderr, "Compressed Bytes: %lu\n", cbytes);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
                 goto exit;
             }
-            fprintf(stderr,
-                    "\t\tCompressed to %lu(%.2f) bytes.\n",
-                    cbytes, (double)cbytes/(double)lbytes);
             blk->blkpos  = 0;
             sqz->bases   = 0;
             sqz->namepos = 0;
@@ -122,37 +114,33 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
 char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
 {
     char ret = 0;
-    uint64_t dbytes = 0;
-    uint64_t numseqs = 0;
+    uint64_t lbytes = 0;
     uint64_t cbytes  = 0;
+    uint64_t numseqs = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) {
         goto exit;;
     }
     if ( !sqz_filehead(sqz, ofp) ) goto exit;
 
-    while ( (dbytes += sqz_loadfasta(sqz)) > 0 ) {
+    while ( (lbytes += sqz_loadfasta(sqz)) > 0 ) {
         if (!sqz_fastaencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
         if (!sqz->endflag) {
-            fprintf(stderr, "[sqz INFO]: Block encoded\n");
-            fprintf(stderr, "\t\tsequences - %lu\n", sqz->n);
-            fprintf(stderr ,"\t\tbases - %lu\n", sqz->bases);
             numseqs += sqz->n;
             cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
                 fprintf(stderr, "[sqz ERROR]: IO error");
                 goto exit;
             }
-            fprintf(stderr,
-                    "\t\tCompressed to %lu(%.2f%%) bytes.\n",
-                    cbytes, (double)cbytes/(double)dbytes);
-            blk->blksize = 0;
-            sqz->bases = 0;
+            blk->blkpos  = 0;
+            sqz->bases   = 0;
+            sqz->namepos = 0;
             sqz->n = 0;
-            dbytes = 0;
+            lbytes = 0;
+
         }
     }
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);

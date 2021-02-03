@@ -70,5 +70,8 @@ void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl);
 
 size_t sqz_fastqdecode(sqzblock_t *blk);
 
-//TMP
-size_t sqz_fastqdecode2(sqzblock_t *blk, uint8_t *klibbuff, uint64_t klibl);
+
+size_t sqz_fastXdecode(sqzblock_t *blk,
+                       uint8_t *klibbuff,
+                       uint64_t klibl,
+                       char fastqflag);

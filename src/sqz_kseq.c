@@ -6,9 +6,9 @@ KSEQ_INIT(gzFile, gzread)
 #include "sqz_kseq.h"
 
 
-unsigned char sqz_getformat(const char *filename)
+uint8_t  sqz_getformat(const char *filename)
 {
-    unsigned char ret = 0;
+    uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
 
     gzFile fp = gzopen(filename, "r");
@@ -39,7 +39,7 @@ unsigned char sqz_getformat(const char *filename)
 }
 
 
-char sqz_kseqinit(sqzfastx_t *sqz)
+char     sqz_kseqinit(sqzfastx_t *sqz)
 {
     char ret = 0;
     sqz->fp = gzopen(sqz->filename, "r");
@@ -67,7 +67,6 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
     uint64_t offset = 0;
     uint64_t n = 0;
     uint64_t l;
-    fprintf(stderr, "Namepos: %lu\n", sqz->namepos);
     //TODO remove pointer references inside loop
     while ( kseq_read(sqz->seq) >= 0 ) {
         l = sqz->seq->seq.l;
@@ -95,7 +94,7 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
 }
 
 
-char sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n)
+char     sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n)
 {
     char ret = 0;
     //fprintf(stderr, "\n\n%s\n\n", name.s);
@@ -185,7 +184,7 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 }
 
 
-size_t sqz_loadfasta(sqzfastx_t *sqz)
+size_t   sqz_loadfasta(sqzfastx_t *sqz)
 {
     if (!sqz->endflag) return sqz_fastanblock(sqz);
     return sqz_fastaeblock(sqz);
@@ -197,6 +196,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
     uint64_t offset = 0;
     uint64_t n = 0;
     uint64_t l;
+    //TODO remove pointer references inside loop
     while ( kseq_read(sqz->seq) >= 0) {
         l = sqz->seq->seq.l;
         sqz->bases += l;
@@ -210,7 +210,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
             offset = sqz_fastawrap(sqz, offset);
             goto exit;
         }
-        memcpy(sqz->seqbuffer + offset, &(sqz->seq->seq.l), B64);
+        memcpy(sqz->seqbuffer + offset, &l, B64);
         offset += B64;
         memcpy(sqz->seqbuffer+offset, sqz->seq->seq.s, l + 1);
         offset += l + 1;
@@ -279,7 +279,7 @@ uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 }
 
 
-void sqz_kill(sqzfastx_t *sqz)
+void     sqz_kill(sqzfastx_t *sqz)
 {
     if (sqz) {
         if (sqz->fp)
@@ -294,7 +294,7 @@ void sqz_kill(sqzfastx_t *sqz)
 }
 
 
-void sqz_killblk(sqzblock_t *blk)
+void     sqz_killblk(sqzblock_t *blk)
 {
     free(blk->blkbuff);
     free(blk->cmpbuff);
@@ -361,7 +361,7 @@ sqz_File sqz_sqzopen(char *filename)
 }
 
 
-int64_t sqz_sqzread(sqz_File *file, void *buff, size_t len)
+int64_t  sqz_sqzread(sqz_File *file, void *buff, size_t len)
 {
     if (!file | !buff) return 0;
     sqzfastx_t *sqz  = file->sqz;
@@ -467,14 +467,14 @@ int64_t sqz_sqzread(sqz_File *file, void *buff, size_t len)
 }
 
 
-void sqz_sqzclose(sqz_File file)
+void     sqz_sqzclose(sqz_File file)
 {
     sqz_kill(file.sqz);
     sqz_killblk(file.blk);
 }
 
 
-char sqz_readblksize(sqzblock_t *blk, FILE *fp)
+char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
 {
     //TODO Error handling
     char ret = 0;
@@ -502,16 +502,17 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp)
 }
 
 
-void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl)
+void     sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl)
 {
     switch (sqz->fmt) {
     case 14:
         {
-        sqz->offset = sqz_fastqdecode2(blk, sqz->readbuffer, klibl);
+        sqz->offset = sqz_fastXdecode(blk, sqz->readbuffer, klibl, 1);
         break;
         }
     case 13:
         {
+        sqz->offset = sqz_fastXdecode(blk, sqz->readbuffer, klibl, 0);
         break;
         }
     }

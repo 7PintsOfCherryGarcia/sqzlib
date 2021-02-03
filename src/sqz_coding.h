@@ -99,10 +99,6 @@ size_t sqz_seqdecode(const uint8_t *codebuff,
                      char *qualstr,
                      size_t length,
                      char flag);
-//size_t sqz_seqdecode(const uint8_t *codebuff,
-//                     char *seqstr,
-//                     char *qualstr,
-//                     size_t length);
 
 
 size_t sqz_fastadecode(const uint8_t *buff, size_t size);

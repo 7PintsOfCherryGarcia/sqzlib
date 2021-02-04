@@ -4,6 +4,7 @@ testdata
 testing
 *.a
 *.so
+*.h
 examples/countseqs
 examples/seqstats/seqstats
 docs/*.pdf

@@ -43,7 +43,7 @@ unsigned char sqz_checksqz(const char *buf);
 uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset);
 
 
-uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset);
+uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen);
 
 
 char sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n);

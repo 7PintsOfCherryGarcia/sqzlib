@@ -75,17 +75,14 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
 
-    if ( !sqz_filehead(sqz, ofp) ) {
-        fprintf(stderr, "[sqz ERROR]: IO error");
-        goto exit;
-    }
+    if ( !sqz_filehead(sqz, ofp) ) goto exit;
 
     while ( (lbytes += sqz_loadfastq(sqz)) > 0 ) {
         if (!sqz_fastqencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
-        if (!sqz->endflag) {
+        if (sqz->cmpflag) {
             numseqs += sqz->n;
             cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
@@ -95,6 +92,9 @@ char sqz_squeezefastq(sqzfastx_t *sqz, FILE *ofp)
             blk->blkpos  = 0;
             sqz->bases   = 0;
             sqz->namepos = 0;
+            sqz->endflag = 0;
+            sqz->cmpflag = 0;
+            blk->newblk  = 1;
             sqz->n = 0;
             lbytes = 0;
         }
@@ -118,17 +118,15 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
     uint64_t cbytes  = 0;
     uint64_t numseqs = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
-    if (!blk) {
-        goto exit;;
-    }
-    if ( !sqz_filehead(sqz, ofp) ) goto exit;
+    if (!blk) goto exit;;
 
+    if ( !sqz_filehead(sqz, ofp) ) goto exit;
     while ( (lbytes += sqz_loadfasta(sqz)) > 0 ) {
         if (!sqz_fastaencode(sqz, blk)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
-        if (!sqz->endflag) {
+        if (sqz->cmpflag) {
             numseqs += sqz->n;
             cbytes = sqz_deflate(blk, 9);
             if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
@@ -138,6 +136,9 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
             blk->blkpos  = 0;
             sqz->bases   = 0;
             sqz->namepos = 0;
+            sqz->endflag = 0;
+            sqz->cmpflag = 0;
+            blk->newblk  = 1;
             sqz->n = 0;
             lbytes = 0;
 
@@ -158,19 +159,18 @@ char sqz_squeezefasta(sqzfastx_t *sqz, FILE *ofp)
 char sqz_decompress(const char *filename, const char *outname)
 {
     char ret = 0;
-    FILE *ofp = fopen("/dev/stdout", "wb");
-    if (!ofp) {
-        fprintf(stderr, "[sqz ERROR]: Failed to open %s for writing.\n", outname);
-        return 0;
-    }
-    //Read head and tail
-    sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    if (!sqz | !(sqz->fmt | 4) ) {
-        fprintf(stderr, "[sqz ERROR]: Input is not sqz encoded.\n");
+    FILE *ifp = NULL;
+    FILE *ofp = NULL;
+    ofp = fopen("/dev/stdout", "wb");
+    if (!ofp)
         goto exit;
-    }
+    ifp = fopen(filename, "rb");
+    if (!ifp)
+        goto exit;
+
+    uint8_t fmt = sqz_getformat(filename);
     //Check for format
-    switch (sqz->fmt & 7) {
+    switch (fmt & 7) {
         case 1:
             {
             fprintf(stderr, "File %s already decoded.\n", filename);
@@ -183,7 +183,7 @@ char sqz_decompress(const char *filename, const char *outname)
             }
         case 5:
             {
-            if (!sqz_spreadfasta(sqz, ofp)) {
+            if (!sqz_spreadfasta(ifp, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");
                 goto exit;
@@ -192,7 +192,7 @@ char sqz_decompress(const char *filename, const char *outname)
             }
         case 6:
             {
-            if (!sqz_spreadfastq(sqz, ofp)) {
+            if (!sqz_spreadfastq(ifp, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");
                 goto exit;
@@ -202,57 +202,60 @@ char sqz_decompress(const char *filename, const char *outname)
         }
     ret = 1;
     exit:
-        sqz_kill(sqz);
-        fclose(ofp);
+        if(ifp) fclose(ifp);
+        if(ofp) fclose(ofp);
         return ret;
 }
 
 
-char sqz_spreadfastq(sqzfastx_t *sqz, FILE *ofp)
+char sqz_spreadfastq(FILE *ifp, FILE *ofp)
 {
     char ret = 0;
-    uint64_t nblock = 0;
-    FILE *fp = fopen(sqz->filename, "rb");
-    if (!fp)  return ret;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
-    uint64_t size = sqz_filesize(fp);
-    fseek(fp, HEADLEN, SEEK_SET);
-    while ( ftell(fp) < size )
+    long size = sqz_filesize(ifp);
+    uint8_t *outbuff = malloc(LOAD_SIZE);
+    uint64_t dsize = 0;
+    if (!outbuff) goto exit;
+    fseek(ifp, HEADLEN, SEEK_SET);
+    while ( ftell(ifp) < size )
     {
-        nblock++;
-        fprintf(stderr, "[sqz INFO]: In block %lu\n", nblock);
-        if (!sqz_readblksize(blk, fp)) goto exit;
-        sqz_fastqdecode(blk);
+        if (!sqz_readblksize(blk, ifp)) goto exit;
+        //Decode block
+        do {
+            dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 1);
+            fwrite(outbuff, 1, dsize, ofp);
+        } while (blk->blkpos);
     }
     ret = 1;
     exit:
         sqz_blkdestroy(blk);
-        fclose(fp);
     return ret;
 }
 
 
-char sqz_spreadfasta(sqzfastx_t *sqz, FILE *ofp)
+char sqz_spreadfasta(FILE *ifp, FILE *ofp)
 {
     char ret = 0;
-    uint64_t nblock = 0;
-    FILE *fp = fopen(sqz->filename, "rb");
-    if (!fp) return ret;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;;
-    long size = sqz_filesize(fp) - 16;
-    fseek(fp, B64, SEEK_SET);
-    while ( ftell(fp) < size ) {
-        nblock++;
-        fprintf(stderr, "[sqz INFO]: In block %lu\n", nblock);
-        if (!sqz_readblksize(blk, fp)) goto exit;
-        sqz_fastadecode(blk->blkbuff, blk->blksize);
+    long size = sqz_filesize(ifp) - 16;
+    uint8_t *outbuff = malloc(LOAD_SIZE);
+    uint64_t dsize = 0;
+    if (!outbuff) goto exit;
+    fseek(ifp, B64, SEEK_SET);
+    while ( ftell(ifp) < size ) {
+        //Decompress blk
+        if (!sqz_readblksize(blk, ifp)) goto exit;
+        //Decode block
+        do {
+            dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 0);
+            fwrite(outbuff, 1, dsize, ofp);
+        } while (blk->blkpos);
     }
     ret = 1;
     exit:
         sqz_blkdestroy(blk);
-        fclose(fp);
     return ret;
 }
 

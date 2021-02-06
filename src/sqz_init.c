@@ -16,6 +16,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
     sqz->fp         = NULL;
     sqz->fmt        = 0;
     sqz->endflag    = 0;
+    sqz->cmpflag    = 0;
     sqz->offset     = 0;
     sqz->seq        = NULL;
     sqz->seqbuffer  = NULL;

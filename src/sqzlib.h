@@ -131,6 +131,23 @@ size_t sqz_fastqdecode(sqzblock_t *blk);
 size_t sqz_fastadecode(const uint8_t *buff, size_t size);
 
 
+//!SQZLIB buffer function
+/**
+* # Decode sqz data
+*
+*
+* Given blk object with data, an output buffer, and size, sqz_fastXdecode will
+* decode up to size decoded bytes and store it in the output buffer.
+*
+* @param TODO add params
+*
+* @returns uint64_t, Number of decoded bytes
+*/
+uint64_t sqz_fastXdecode(sqzblock_t *blk,
+                         uint8_t *klibbuff,
+                         uint64_t size,
+                         char fastqflag);
+
 /*
     Decompress zlib data stored in blk struct
 */

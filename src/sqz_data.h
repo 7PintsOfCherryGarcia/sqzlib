@@ -36,6 +36,7 @@ typedef struct {
     //flags
     char       fmt;
     char       endflag; //Sequece has not completely been read into a buffer flag
+    char       cmpflag;
     //data members
     uint64_t   offset;
     kseq_t     *seq;
@@ -43,8 +44,8 @@ typedef struct {
     uint8_t    *qualbuffer;
     uint8_t    *namebuffer;
     uint8_t    *readbuffer;
-    size_t     namesize;
-    size_t     namepos;
+    uint64_t    namesize;
+    uint64_t    namepos;
 
     size_t     n;
     size_t     bases;

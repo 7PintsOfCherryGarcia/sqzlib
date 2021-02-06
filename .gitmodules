@@ -1,0 +1,6 @@
+[submodule "examples/minimap2"]
+	path = examples/minimap2
+	url = https://github.com/7PintsOfCherryGarcia/minimap2
+[submodule "examples/seqstats"]
+	path = examples/seqstats
+	url = https://github.com/7PintsOfCherryGarcia/seqstats

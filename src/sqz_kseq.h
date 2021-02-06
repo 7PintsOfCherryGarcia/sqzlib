@@ -40,7 +40,7 @@ void sqz_kill(sqzfastx_t *sqz);
 unsigned char sqz_checksqz(const char *buf);
 
 
-uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset);
+uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen);
 
 
 uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen);

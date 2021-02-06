@@ -94,17 +94,12 @@ unsigned char sqz_bit2decode(const uint64_t *mer,
 unsigned char sqz_writens(unsigned char numn, uint8_t *decoded);
 
 
-size_t sqz_seqdecode(const uint8_t *codebuff,
-                     char *seqstr,
-                     char *qualstr,
-                     size_t length);
-
 
 size_t sqz_fastadecode(const uint8_t *buff, size_t size);
 
-//tmp
-size_t sqz_seqdecode2(const uint8_t *codebuff,
-                      uint8_t *decodebuff,
-                      size_t length,
-                      char qflag,
-                      uint64_t *wbytes);
+
+size_t sqz_seqdecode(const uint8_t *codebuff,
+                     uint8_t *decodebuff,
+                     size_t length,
+                     char qflag,
+                     uint64_t *wbytes);

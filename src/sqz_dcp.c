@@ -45,4 +45,34 @@ sqzblock_t *sqz_sqzblkinit(size_t size)
 }
 
 
+void sqzrewind(sqz_File *sqzfp)
+{
+    sqz_fastxreset(sqzfp->sqz);
+    sqz_blkreset(sqzfp->blk);
+    fseek(sqzfp->fp, HEADLEN, SEEK_SET);
+    sqzfp->filepos = ftell(sqzfp->fp);
+    sqzfp->ff = 0;
+}
 
+
+static void sqz_fastxreset(sqzfastx_t *sqz)
+{
+    sqz->endflag    = 0;
+    sqz->cmpflag    = 0;
+    sqz->offset     = 0;
+    sqz->namepos    = 0;
+    sqz->n          = 0;
+    sqz->bases      = 0;
+    sqz->rem        = 0;
+    sqz->toread     = 0;
+    sqz->prevlen    = 0;
+}
+
+
+static void sqz_blkreset(sqzblock_t *blk)
+{
+    blk->blkpos  = 0;
+    blk->namepos = 0;
+    blk->newblk  = 1;
+    blk->cmppos  = 0;
+}

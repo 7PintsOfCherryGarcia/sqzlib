@@ -256,3 +256,13 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp);
  * @returns nothing
  */
 void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl);
+
+
+//!SQZLIB file function
+/**
+ * # Moves file pointer of sqzfile to the beginning.
+ *
+ * @param sqzfp - sqzfile to be rewined
+ * @return nothing
+ */
+void sqzrewind(sqz_File *sqzfp);

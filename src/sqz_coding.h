@@ -5,7 +5,7 @@
 #define TWO_BIT_MASK (3)
 
 //Table to change "ACGT" to 0123 else to 4
-unsigned char seq_nt4_table[128] = {
+unsigned char seq_nt4_tableSQZ[128] = {
     128, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
       4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
       4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
@@ -18,7 +18,7 @@ unsigned char seq_nt4_table[128] = {
 
 
 //Table to change 01234 to ACGTN
-unsigned char seq_dec_table[128] = {
+unsigned char seq_dec_tableSQZ[128] = {
     'A', 'C','G', 'T',  'N', 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
      4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
      4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,

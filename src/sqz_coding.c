@@ -254,7 +254,7 @@ uint64_t sqz_seqencode(const uint8_t *seq,
             blen = npos - lstop;
             //Determine number of consecutive Ns until next base
             nn = 0;
-	          while ( seq_nt4_table[*npos] == 4) {
+	          while ( seq_nt4_tableSQZ[*npos] == 4) {
 	              nn++;
 		            npos++;
 	          }
@@ -552,7 +552,7 @@ uint8_t sqz_8binqual(uint8_t q)
 
 const uint8_t *sqz_findn(const uint8_t *seq)
 {
-    while (seq_nt4_table[*seq] < 4) {
+    while (seq_nt4_tableSQZ[*seq] < 4) {
         seq++;
     }
     return seq;
@@ -590,7 +590,7 @@ unsigned char sqz_bit2decode(const uint64_t *mer,
     --len;
     do {
         byte = code & TWO_BIT_MASK;
-        decoded[len] = seq_dec_table[byte];
+        decoded[len] = seq_dec_tableSQZ[byte];
         nbase++;
         code >>= 2;
     } while (len-- != 0);

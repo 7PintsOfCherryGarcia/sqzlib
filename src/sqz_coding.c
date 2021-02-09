@@ -29,7 +29,7 @@ char sqz_headblk(sqzfastx_t *sqz,
     uint8_t *seq    = NULL;
     uint8_t *qual   = NULL;
     uint64_t seqlen = 0;
-    uint64_t seqread;
+    uint64_t seqread = 0;
     uint64_t k = 0;
     while ( k < sqzsize ) {
         //Extract sequence length
@@ -137,7 +137,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
     uint8_t *seq = NULL;
     uint64_t seqlen = 0;
-    uint64_t seqread;
+    uint64_t seqread = 0;
     uint64_t k = 0;
     while ( k < sqzsize ) {
         //Extract sequence length

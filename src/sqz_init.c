@@ -52,7 +52,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
         case 1:
             {
-            //fprintf(stderr, "[sqzlib INFO]: Detected fastA format %u\n", fmt);
+            //FASTA
             sqz->fmt = fmt;
             sqz->qualbuffer = NULL;
             sqz->seqbuffer = malloc(bsize + 1);
@@ -74,7 +74,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
             }
         case 2:
             {
-            //fprintf(stderr, "[sqzlib INFO]: Detected fastQ format.\n");
+            //FASTQ
             sqz->fmt = fmt;
             sqz->qualbuffer = malloc(bsize + 1);
             if (!sqz->qualbuffer) {

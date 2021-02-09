@@ -375,16 +375,23 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
     while ( blkpos < datasize ) {
         //Check how much sequence can be decoded
         seqlen = *(uint64_t *)( blkbuff + blkpos );
-
-        //TODO add this computation to the while condition
-        if ( (size - wbytes)  < ( seqlen * 2 )  + (6 + namelen ) ) {
+        namelen = strlen(namebuff + namepos);
+        ///TODO awkward way of handling fq file
+        /*
+        fix bug when sequence is larger than buffer size
+        When a sequence can not be completely decoded into a buffer, decoding
+        is interupted so that buffers can be offloaded. Afterwards decoding
+        continues from where it left. The problem arrises when a single sequence
+        is larger than the provided buffer. In this scenario, the sequence is
+        never loaded. This is not fatal during library execution as the decoding
+        function exist as if it had decoded an entore block.
+        */
+        if ( (size - wbytes)  < ( seqlen * (1 + fqflag) )  + (6 + namelen ) ) {
             blk->blkpos  = blkpos;
             blk->namepos = namepos;
             goto exit;
         }
-        namelen = strlen(namebuff + namepos);
         blkpos += B64;
-
         //Add fastq header
         buff[wbytes++] = H;
         //Copy sequence name
@@ -402,7 +409,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
     }
     //Update blk on buffpos
     blk->blkpos  = 0;
-    //blk->blksize = 0;
     blk->namepos = 0;
     exit:
         return wbytes;
@@ -410,10 +416,10 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
 
 
 uint64_t sqz_seqdecode(const uint8_t *codebuff,
-                        uint8_t       *decodebuff,
-                        uint64_t       length,
-                        char           qflag,
-                        uint64_t      *wbytes)
+                       uint8_t       *decodebuff,
+                       uint64_t       length,
+                       char           qflag,
+                       uint64_t      *wbytes)
 {
     uint64_t seqlen     = length;
     uint64_t buffpos    = 0;
@@ -487,7 +493,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
             }
         }
     }
-
+    //Decode quality strings for fastq data
     if (qflag) {
         decodebuff[seqpos++] = NL;
         decodebuff[seqpos++] = '+';
@@ -557,12 +563,8 @@ uint64_t sqz_bit2encode(const uint8_t *seq,
                         size_t seqlen)
 {
     uint64_t result = 0;
-    //uint8_t N;
     for (uint64_t i = 0; i < seqlen; i++) {
-        //N = seq[i];
-        //fprintf(stderr, "%u\n", N);
-        //result = (result << 2) | seq_nt4_table[N];
-        result = (result << 2) | seq_nt4_table[seq[i]];
+        result = (result << 2) | seq_nt4_tableSQZ[seq[i]];
     }
     return result;
 }

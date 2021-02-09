@@ -183,7 +183,7 @@ char sqz_decompress(const char *filename, const char *outname)
             }
         case 5:
             {
-            if (!sqz_spreadfasta(ifp, ofp)) {
+                if (!sqz_spreadfasta(ifp, ofp)) {
                 fprintf(stderr,
                         "[sqz ERROR]: Failed to decode data.\n");
                 goto exit;

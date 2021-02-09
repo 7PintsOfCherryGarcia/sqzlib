@@ -387,6 +387,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
         function exist as if it had decoded an entore block.
         */
         if ( (size - wbytes)  < ( seqlen * (1 + fqflag) )  + (6 + namelen ) ) {
+            //if (seq)
             blk->blkpos  = blkpos;
             blk->namepos = namepos;
             goto exit;
@@ -421,34 +422,27 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
                        char           qflag,
                        uint64_t      *wbytes)
 {
+    //TODO: Add feature to decode at most N bytes
+    /*
+      Currently, output buffer must be large enough to store entire fastX
+      sequence. This has the limitation of allowing a maximum sequence length of
+      LOAD_SIZE - 6 - sequence name size for fastA and
+      (LOAD_SIZE - 6 - sequence name) / 2 for fastQ sequences
+    */
     uint64_t seqlen     = length;
     uint64_t buffpos    = 0;
     uint64_t blklen     = 0;
     uint64_t prevblk    = 0;
-    uint64_t *mer       = NULL;
-    uint64_t blkidx     = 0;
-    char merlen         = 0;
     uint64_t seqpos     = 0;
     const uint8_t *nstr = NULL;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + buffpos);
         buffpos += B64;
-        mer = (uint64_t *)(codebuff + buffpos);
-        blkidx = 0;
-        //TODO, compute number of iterations instead of increments of 32
-        //TODO move to function
-        for (size_t i = 0; i < blklen; i+=32) {
-            //Blocks code 32mers except last block which may code a shorter kmer
-            merlen = ((i+32)<= blklen)?32:blklen-i;
-            sqz_bit2decode(mer + blkidx, decodebuff + seqpos, merlen);
-            //Keep traked of amount of decoded data: 64bit per mer
-            //Same as before
-            buffpos += B64;
-            //Move sequencepointerbyabount of bases decoded (32 except last mer)
-            seqpos += merlen;
-            //Track next block to decode
-            blkidx++;
-        }
+        if (blklen > length) blklen = length;
+        buffpos += sqz_blkdecode(codebuff + buffpos,
+                                 decodebuff + seqpos,
+                                 &seqpos,
+                                 blklen);
         length -= blklen;
         //Check how much sequence has been decoded
         if (length) {
@@ -456,6 +450,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
             buffpos++;
             //Check if it is an N block
             if (*nstr) {
+                //TODO move to function
                 nstr = codebuff + buffpos;
                 while (1) {
                     unsigned char numn = *nstr & ~(1<<7);
@@ -470,24 +465,29 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
             }
             else {
                 //Otherwise, it's a quality block of blklen
+                //TODO: This if might be unnnecessary
                 if (qflag) {
                     /*
-                    Even though entore sequence has not been decoded completely,
+                    Even though entire sequence has not been decoded completely,
                     there is quality data to be decoded. This happens because in
-                    this particular sequence, a buffer was filled before entire
-                    sequence could be loaded. In this case, what was loaded of
-                    the sequence is encoded, and then the reast of the sequence
-                    finishes loading. Resulting in the following patter in the
-                    code block:
-                        seqcode:qualcode:seqcode:qualcode
+                    this particular sequence, during the encoding process a buffer
+                    was filled before entire sequence could be loaded. In this
+                    case, what was loaded of the sequence is encoded, and then
+                    the reast of the sequence finishes loading. Resulting in the
+                    following patter in the code block:
+                        blklen:seqcode:qualcode:blklen:seqcode:qualcode
                     Instead of:
-                        seqcode:qualcode
+                        blklen:seqcode:qualcode
                     */
                     buffpos += sqz_qualdecode(codebuff + buffpos,
                                               decodebuff + seqlen + 3,
                                               blklen,
                                               wbytes);
+                    //Change sequence length to reflect part of the quality
+                    //string has been decoded
                     seqlen -= blklen;
+                    //Store this blk length for proper placement of decoded
+                    //qualities
                     prevblk = blklen;
                 }
             }
@@ -610,3 +610,28 @@ unsigned char sqz_writens(unsigned char numn,
 }
 
 
+static uint64_t sqz_blkdecode(const uint8_t *codebuff,
+                              uint8_t       *decodebuff,
+                              uint64_t      *wbytes,
+                              uint64_t      blklen)
+{
+    uint64_t codepos = 0;
+    uint64_t decodepos = 0;
+    uint64_t blknum;
+    uint64_t *mer;
+    uint64_t blkidx;
+    blknum = blklen / 32;
+    mer = (uint64_t *)codebuff;
+    for (blkidx = 0; blkidx < blknum; blkidx++) {
+        sqz_bit2decode(mer + blkidx, decodebuff + decodepos, 32);
+        //Keep traked of amount of decoded data: 64bit per mer
+        codepos += B64;
+        //Move sequence pointer by amount of bases decoded
+        decodepos += 32;
+    }
+    sqz_bit2decode(mer + blkidx, decodebuff + decodepos, blklen % 32);
+    codepos += B64;
+    decodepos += blklen % 32;
+    *wbytes += decodepos;
+    return codepos;
+}

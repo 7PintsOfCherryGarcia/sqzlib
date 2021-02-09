@@ -103,3 +103,9 @@ size_t sqz_seqdecode(const uint8_t *codebuff,
                      size_t length,
                      char qflag,
                      uint64_t *wbytes);
+
+
+static uint64_t sqz_blkdecode(const uint8_t *codebuff,
+                              uint8_t       *decodebuff,
+                              uint64_t      *wbytes,
+                              uint64_t      blklen);

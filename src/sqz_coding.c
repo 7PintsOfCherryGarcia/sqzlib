@@ -132,7 +132,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         k += B64;
         
         fprintf(stderr, "Encoding seq: %s\n", namebuff + namepos);
-        namepos += strlen(namebuff);
+        namepos += strlen(namebuff) + 1;
 
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;

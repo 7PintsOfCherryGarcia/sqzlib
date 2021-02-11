@@ -124,8 +124,8 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t seqread = 0;
     uint64_t k = 0;
 
-    char *namebuff = sqz->namebuffer;
-    uint64_t namepos  = sqz->namepos;
+    uint8_t *namebuff = sqz->namebuffer;
+    uint64_t namepos  = 0;
 
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqbuffer + k );

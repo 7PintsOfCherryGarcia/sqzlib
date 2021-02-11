@@ -1,4 +1,7 @@
-
+typedef struct  {
+    char ifile[256];
+    char ofile[256];
+} sqzopts_t;
 
 char sqz_compress(const char *filename, const char *outname);
 
@@ -18,7 +21,7 @@ char sqz_decompress(const char *filename, const char *outname);
 char sqz_spreadfastq(FILE *ifp, FILE *ofp);
 
 
-char sqz_ropts(int argc, char **argv);
+char sqz_ropts(int argc, char **argv, sqzopts_t *opts);
 
 
 void sqz_usage();

@@ -4,6 +4,7 @@
 #include "sqz.h"
 
 
+
 int main(int argc, char *argv[])
 {
     int ret = -1;
@@ -11,25 +12,16 @@ int main(int argc, char *argv[])
         sqz_usage();
         goto exit;
     }
-    char iname[256];
-    strcpy(iname, argv[1]);
-    char oname[256];
-    char *bname;
-    char *end;
-    switch (sqz_ropts(argc, argv)) {
+    sqzopts_t opts;
+    strcpy(opts.ifile, argv[argc - 1]);
+    switch (sqz_ropts(argc - 1, argv, &opts)) {
         case 0:
             goto exit;
         case 1:
-            bname = sqz_basename( argv[argc - 1] );
-            strcpy(oname, bname);
-            strcat(oname, ".sqz");
-            if (!sqz_compress(iname, oname)) goto exit;
+            if (!sqz_compress(opts.ifile, opts.ofile)) goto exit;
             break;
         case 2:
-            strcpy(oname, argv[argc - 1]);
-            end = strrchr(oname, '.');
-            if (end) *end = '\0';
-            if (!sqz_decompress(argv[argc - 1], oname)) goto exit;
+            if (!sqz_decompress(opts.ifile, opts.ofile)) goto exit;
     }
     ret = 0;
     exit:
@@ -161,7 +153,7 @@ char sqz_decompress(const char *filename, const char *outname)
     char ret = 0;
     FILE *ifp = NULL;
     FILE *ofp = NULL;
-    ofp = fopen("/dev/stdout", "wb");
+    ofp = fopen(outname, "wb");
     if (!ofp)
         goto exit;
     ifp = fopen(filename, "rb");
@@ -260,14 +252,21 @@ char sqz_spreadfasta(FILE *ifp, FILE *ofp)
 }
 
 
-char sqz_ropts(int argc, char **argv)
+char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 {
     int elem;
-    char ret = 1;
-    while (( elem = getopt(argc, argv, "d:h") ) >= 0) {
+    char ret   = 1;      //Defoults to encode and compress
+    char dflag = 0;      //Decompression flag
+    char oflag = 1;      //Output flag
+    while (( elem = getopt(argc, argv, "o:dh") ) >= 0) {
         switch(elem) {
         case 'd':
-            ret = 2;
+            dflag = 1;
+            ret   = 2;
+            continue;
+        case 'o':
+            oflag = 0;
+            strcpy(opts->ofile,optarg);
             continue;
         case 'h':
             ret = 0;
@@ -279,6 +278,17 @@ char sqz_ropts(int argc, char **argv)
             break;
         }
 
+    }
+    if (dflag) {
+        if (oflag) strcpy(opts->ofile,"/dev/stdout");
+    }
+    else {
+        if (oflag) {
+            char *bname;
+            bname = sqz_basename( argv[argc] );
+            strcpy(opts->ofile, bname);
+            strcat(opts->ofile, ".sqz");
+        }
     }
     return ret;
 }

@@ -294,14 +294,15 @@ void     sqz_killblk(sqzblock_t *blk)
 }
 
 
-unsigned char sqz_checksqz(const char *filename)
+uint8_t sqz_checksqz(const char *filename)
 {
-    size_t tmp = 0;
+    size_t   tmp = 0;
+    uint32_t magic;
+    uint8_t  fmt = 0;
+    char     sqz;
+
     FILE *fp = fopen(filename, "rb");
     if (!fp) return 0;
-    uint32_t magic;
-    unsigned char fmt = 0;
-    char sqz;
     //Read magic
     tmp += fread(&magic, 1, 4, fp);
     if (MAGIC ^ magic) {
@@ -311,6 +312,7 @@ unsigned char sqz_checksqz(const char *filename)
     }
     //Set sqz flag
     fmt |= 4;
+
     //Read format (fastA or fastQ)
     tmp += fread(&sqz, 1, 1, fp);
     fmt |= sqz;
@@ -335,7 +337,7 @@ sqz_File sqz_sqzopen(char *filename)
     sqzfile.filepos = ftell(sqzfile.fp);
 
     sqzfile.sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    if ( !sqzfile.sqz | !(sqzfile.sqz->fmt | 4) ) {
+    if ( !sqzfile.sqz || !(sqzfile.sqz->fmt & 4) ) {
         sqz_kill(sqzfile.sqz);
         sqzfile.sqz = NULL;
         goto exit;

@@ -25,11 +25,11 @@ char sqz_headblk(sqzfastx_t *sqz,
     uint8_t  *seqbuffer  = sqz->seqbuffer;
     uint8_t  *qualbuffer = sqz->qualbuffer;
     uint64_t  sqzsize    = sqz->offset;
-    uint8_t *seq    = NULL;
-    uint8_t *qual   = NULL;
-    uint64_t seqlen = 0;
-    uint64_t seqread = 0;
-    uint64_t k = 0;
+    uint8_t  *seq     = NULL;
+    uint8_t  *qual    = NULL;
+    uint64_t  seqlen  = 0;
+    uint64_t  seqread = 0;
+    uint64_t  k       = 0;
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqbuffer + k );
         k += B64;
@@ -44,13 +44,10 @@ char sqz_headblk(sqzfastx_t *sqz,
         blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, seqlen);
         blkpos += sqz_qualencode(qual, seqread, blkbuff + blkpos, seqlen);
     }
-    //Indicate if there is more sequence to read
-    if (sqz->endflag) {
-        //Unset new block flag. The rest of the sequence needs to be encoded
-        //before a new block can be started.
+    if (sqz->endflag) { //More sequence to encode?
+        //Unset new block flag.
         blk->newblk = 0;
         //Indicate how much sequence has been read
-        //TODO check if this is usefull
         sqz->toread = seqread;
         goto exit;
     }

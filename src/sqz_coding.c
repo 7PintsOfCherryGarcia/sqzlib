@@ -123,9 +123,17 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t seqlen = 0;
     uint64_t seqread = 0;
     uint64_t k = 0;
+
+    uint8_t *namebuff = sqz->namebuff;
+    uint64_t namepos  = sqz->namepos;
+
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqbuffer + k );
         k += B64;
+        
+        fprintf(stderr, "Encoding seq: %s\n", namebuff + namepos);
+        namepos += strlen(namebuff);
+
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
         seq = seqbuffer + k;
@@ -157,6 +165,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 char sqz_fastatailblk(sqzfastx_t *sqz,
                       sqzblock_t *blk)
 {
+    fprintf(stderr, "DEBUG: From tail:\n");
     uint64_t seqlen  = sqz->prevlen;
     uint8_t *seq     = sqz->seqbuffer;
     uint8_t *blkbuff = blk->blkbuff;

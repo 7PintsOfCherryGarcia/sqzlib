@@ -186,12 +186,13 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
     uint64_t n = 0;
     uint64_t l;
     uint64_t maxlen = LOAD_SIZE - B64;
+    kseq_t *seq = sqz->seq;
     //TODO remove pointer references inside loop
-    while ( (kseq_read(sqz->seq) >= 0) ) {
-        l = sqz->seq->seq.l;
+    while ( (kseq_read(seq) >= 0) ) {
+        l = seq->seq.l;
         sqz->bases += l;
         n++;
-        if (!sqz_loadname(sqz, sqz->seq->name, n)) {
+        if (!sqz_loadname(sqz, seq->name, n)) {
             offset = 0;
             goto exit;
         }
@@ -204,7 +205,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
         }
         memcpy(sqz->seqbuffer + offset, &l, B64);
         offset += B64;
-        memcpy(sqz->seqbuffer+offset, sqz->seq->seq.s, l + 1);
+        memcpy(sqz->seqbuffer + offset, seq->seq.s, l + 1);
         offset += l + 1;
 
         if ( maxlen <= l + 1 + B64 ) break;
@@ -219,13 +220,14 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
 
 uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen)
 {
+    kseq_t *seq = sqz->seq;
     //Compute how much buffer is available
-    uint64_t l = sqz->seq->seq.l;
+    uint64_t l = seq->seq.l;
     //Copy sequence length data
     memcpy(sqz->seqbuffer + offset, &l, B64);
     offset += B64;
     //Copy as much seq data as we can fit in remaining buffer
-    memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, maxlen);
+    memcpy(sqz->seqbuffer + offset, seq->seq.s, maxlen);
 
     offset += maxlen;
     //Add null byte after loading data into buffers

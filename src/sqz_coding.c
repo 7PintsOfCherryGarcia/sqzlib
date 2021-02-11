@@ -196,67 +196,45 @@ char sqz_fastatailblk(sqzfastx_t *sqz,
 
 
 uint64_t sqz_seqencode(const uint8_t *seq,
-                       uint64_t seqlen,
+                       uint64_t lentocode,
                        uint8_t *blkbuff,
-                       uint64_t seqlenOG)
+                       uint64_t seqlen)
 {
-    //TODO function to long and there is code repetition. Create new functions
-    //for reduntsnt code
-    //Set coding buffer to the next unused position in the block
-    uint64_t blkpos = 0;
-    //Track position in sequence
-    const uint8_t *lstop = seq;
-    const uint8_t *nptr = seq + seqlen; //End of string
-    size_t nn;                          //Number of Ns
-    unsigned char wn;                   //127 N block. 1 bit flag 7 bit count
-	  const uint8_t *npos;                //Track positions where N occurs
-	  uint64_t blen = 0;                    //Length of segment before first N
-    uint64_t code;                      //2 bit encoded sequence
-    uint64_t nbases = 0;                //Number of bases encoded
-    unsigned char flag1 = 255;
-    unsigned char flag2 = 0;
-    //Main encoding loop
+    uint64_t       blkpos = 0;
+    const uint8_t *lstop = seq;            //Track position in sequence
+    const uint8_t *nptr = seq + lentocode; //End of string
+	  const uint8_t *npos;                   //Track positions where N occurs
+    uint64_t       nn;                     //Number of Ns
+	  uint64_t       blen = 0;               //Length of segment before first N
+    uint64_t       nbases = 0;             //Number of bases encoded
+    uint8_t        flag1 = 255;
+    uint8_t        flag2 = 0;
     do {
         //Get position of first non ACGTacgt base
 	      npos = sqz_findn(lstop);
         if (*npos) {
-            //Determine block length up to found N
+            //Determine block length up to first non ACGT base
             blen = npos - lstop;
             //Determine number of consecutive Ns until next base
+            //TODO rewrite with increment in while condition
             nn = 0;
 	          while ( seq_nt4_tableSQZ[*npos] == 4) {
 	              nn++;
 		            npos++;
 	          }
-            //Write block length [blen]
+            //TODO move the memcpy to the coding function
+            //Write block length
             memcpy(blkbuff + blkpos, &blen, B64);
             blkpos += B64;
-            //Loop over sequence block in chunks of 32 bases and encode
-            //TODO Change loop to always fit 32mers, add final encoding of
-            //whatever is left outside of loop (hint use modulo 32)
-            for (uint64_t i = 0; i < blen; i+=32) {
-                //Encode 32mer or what is left of sequence block
-                code = sqz_bit2encode(lstop+i,((i+32)<= blen)?32:blen-i);
-                //TODO change sizeof(uint64_t), by definition it's 8 bytes
-                //so just use 8
-                memcpy(blkbuff + blkpos, &code, sizeof(uint64_t));
-                blkpos += B64;
-                nbases += ( (i+32) <= blen ) ? 32 : blen - i;
-            }
-            //Indicate that an N block follows
+            //Encode sequence
+            blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
+            nbases += blen;
+            //Indicate that a non ACGT block follows
             memcpy(blkbuff + blkpos, &flag1, 1);
             blkpos++;
-            //Loop over Ns in chunks of 127 and encode
-            //TODO move to function
-            for (size_t i = 0; i < nn; i +=127) {
-                //Encode 127 Ns or what is left
-                wn = ((i+127) <= nn)?127:nn-i;
-                //Set bit 7 if last N block before next base
-                if (i+127 >= nn) wn = wn | NEND;
-                memcpy(blkbuff + blkpos, &wn, 1);
-                blkpos++;
-                nbases += ((i+127) <= nn)?127:nn-i;
-            }
+            //Encode non ACGT block
+            blkpos += sqz_nblkcode(blkbuff + blkpos, nn);
+            nbases += nn;
             //Trace next base after sequence of Ns
             lstop = npos;
 	      }
@@ -266,21 +244,24 @@ uint64_t sqz_seqencode(const uint8_t *seq,
     if (blen) {
         memcpy(blkbuff + blkpos, &blen, B64);
         blkpos += B64;
-        for ( uint64_t i = 0; i < blen; i+=32 ) {
-            code = sqz_bit2encode(lstop + i, ((i+32) <= blen) ? 32 : blen - i);
-            memcpy(blkbuff + blkpos, &code, B64);
-            blkpos += B64;
-            nbases += ((i+32) <= blen) ? 32 : blen - i;
+        blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
+        nbases += blen;
+        /*
+          Check that no more sequence needs to be loaded. If more sequence is
+          needed write corresponding byte.
+          When a sequence has only been partialy loaded when encoding loop
+          finishes, a flag with a value of zero is written to the buffer.
+          This is so that when decoding, a quality block can be distinguished
+          from more sequence blocks. This flag is needed only when the loaded
+          sequence is truncates at ACGT bases. If the sequence is truncated at
+          non ACGT bases there will be no trailing bases to decode (blen == 0)
+          and the corresponding flag would have already been written.
+        */
+        if ( seqlen - nbases ) {
+            memcpy(blkbuff + blkpos, &flag2, 1);
+            blkpos++;
         }
     }
-    //Check that no more sequence needs to be loaded. If more sequence is needed
-    //write corresponding byte
-    if (seqlenOG - nbases) {
-        memcpy(blkbuff + blkpos, &flag2, 1);
-        blkpos++;
-    }
-    //Move offset by number of bytes written
-    //blk->blksize += wbytes;
     return blkpos;
 }
 
@@ -403,47 +384,41 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t blklen     = 0;
     uint64_t prevblk    = 0;
     uint64_t seqpos     = 0;
-    const uint8_t *nstr = NULL;
+    uint8_t nflag;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + buffpos);
         buffpos += B64;
-        if (blklen > length) blklen = length;
         buffpos += sqz_blkdecode(codebuff + buffpos,
                                  decodebuff + seqpos,
                                  &seqpos,
                                  blklen);
         length -= blklen;
-        //Check how much sequence has been decoded
-        if (length) {
-            nstr = codebuff + buffpos;
+        if (length) {     //Partial sequence decoding
+            nflag = *(codebuff + buffpos);
             buffpos++;
-            //Check if it is an N block
-            if (*nstr) {
+            if (nflag) {  //Check if it is an N block
                 //TODO move to function
-                nstr = codebuff + buffpos;
                 while (1) {
-                    unsigned char numn = *nstr & ~(1<<7);
-                    sqz_writens(*nstr & ~(1<<7), decodebuff + seqpos);
+                    nflag = *(codebuff + buffpos);
+                    unsigned char numn = nflag & ~(1<<7);
+                    sqz_writens(numn, decodebuff + seqpos);
                     seqpos += numn;
                     length -= numn;
                     buffpos++;
-                    if (*nstr & 128)
+                    if (nflag & 128)
                         break;
-                    nstr++;
                 }
             }
             else {
-                //Otherwise, it's a quality block of blklen
-                //TODO: This if might be unnnecessary
                 if (qflag) {
                     /*
                     Even though entire sequence has not been decoded completely,
                     there is quality data to be decoded. This happens because in
-                    this particular sequence, during the encoding process a buffer
-                    was filled before entire sequence could be loaded. In this
-                    case, what was loaded of the sequence is encoded, and then
-                    the reast of the sequence finishes loading. Resulting in the
-                    following patter in the code block:
+                    this particular sequence, during the encoding process a
+                    buffer was filled before entire sequence could be loaded.
+                    In this case, what was loaded of the sequence is encoded,
+                    and then the rest of the sequence finishes loading.
+                    Resulting in the following patter in the code block:
                         blklen:seqcode:qualcode:blklen:seqcode:qualcode
                     Instead of:
                         blklen:seqcode:qualcode
@@ -579,6 +554,47 @@ unsigned char sqz_writens(unsigned char numn,
 }
 
 
+static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len)
+{
+    //TODO change loop to be more like nblkcode
+    uint64_t nblks = len / 32;
+    uint64_t lenleft = len % 32;
+    uint64_t code;
+    uint64_t buffpos;
+    uint64_t nbytes = 0;
+    for (buffpos = 0; buffpos < nblks; buffpos++) {
+        //Encode 32mer or what is left of sequence block
+        code = sqz_bit2encode(seq, 32);
+        memcpy(buff + buffpos, &code, B64);
+        nbytes += B64;
+        seq += 32;
+    }
+    if (lenleft) {
+        code = sqz_bit2encode(seq, lenleft);
+        memcpy(buff + buffpos, &code, B64);
+        nbytes += B64;
+    }
+    return nbytes;
+}
+
+
+static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t nnum)
+{
+    //1 less than the total number of iterations needed.
+    uint64_t nblks = ( (nnum / 127) + ( (nnum % 127) > 0 ) ) - 1;
+    uint64_t buffpos = 0;
+    for (buffpos = 0; buffpos < nblks; buffpos++)
+        buff[buffpos] = 127; // 127 consecutive non ACGT bases
+
+    //Last itteration needs special treatment
+    //Set bit 7 if last N block before next base
+    uint8_t l = (nnum - (nblks * 127)) | NEND;
+    memcpy(buff + buffpos, &l, 1);
+    buffpos++;
+    return buffpos;
+}
+
+
 static uint64_t sqz_blkdecode(const uint8_t *codebuff,
                               uint8_t       *decodebuff,
                               uint64_t      *wbytes,
@@ -586,10 +602,10 @@ static uint64_t sqz_blkdecode(const uint8_t *codebuff,
 {
     uint64_t codepos = 0;
     uint64_t decodepos = 0;
-    uint64_t blknum;
+    uint64_t blknum = blklen / 32;;
+    uint64_t blkleft  = blklen % 32;
     uint64_t *mer;
     uint64_t blkidx;
-    blknum = blklen / 32;
     mer = (uint64_t *)codebuff;
     for (blkidx = 0; blkidx < blknum; blkidx++) {
         sqz_bit2decode(mer + blkidx, decodebuff + decodepos, 32);
@@ -598,9 +614,11 @@ static uint64_t sqz_blkdecode(const uint8_t *codebuff,
         //Move sequence pointer by amount of bases decoded
         decodepos += 32;
     }
-    sqz_bit2decode(mer + blkidx, decodebuff + decodepos, blklen % 32);
-    codepos += B64;
-    decodepos += blklen % 32;
+    if (blkleft) {
+        sqz_bit2decode(mer + blkidx, decodebuff + decodepos, blkleft);
+        codepos += B64;
+        decodepos += blkleft;
+    }
     *wbytes += decodepos;
     return codepos;
 }

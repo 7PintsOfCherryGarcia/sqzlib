@@ -109,3 +109,9 @@ static uint64_t sqz_blkdecode(const uint8_t *codebuff,
                               uint8_t       *decodebuff,
                               uint64_t      *wbytes,
                               uint64_t      blklen);
+
+
+static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t nnum);
+
+
+static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len);

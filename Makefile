@@ -1,4 +1,3 @@
-
 CC=gcc
 CFLAGS= -Wall -std=c11 -pedantic -O2
 CFLAGSB= -Wall -g -std=c11 -pedantic
@@ -86,7 +85,7 @@ examplesB:exampleflag
 
 
 
-build:wipe libsqzB sqzB
+build:wipe libsqzB sqzB examplesB
 
 
 clean:

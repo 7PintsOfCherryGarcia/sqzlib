@@ -47,12 +47,13 @@ typedef struct {
     uint64_t    namesize;
     uint64_t    namepos;
 
-    size_t     n;
-    size_t     bases;
+    uint64_t    n;
+    uint64_t    bases;
     //miscelaneous
-    size_t     rem;     //Length of sequence remaining to be read
-    size_t     toread;  //Size of sequence still needed to be read
-    size_t     prevlen; //Size of sequence currently being read
+    uint64_t    seqread;
+    uint64_t    rem;     //Length of sequence remaining to be read
+    uint64_t    toread;  //Size of sequence still needed to be read
+    uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
 
 

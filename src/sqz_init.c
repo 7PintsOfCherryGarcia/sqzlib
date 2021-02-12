@@ -27,6 +27,7 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize)
     sqz->namesize   = NAME_SIZE;
     sqz->n          = 0;
     sqz->bases      = 0;
+    sqz->seqread    = 0;
     sqz->rem        = 0;
     sqz->toread     = 0;
     sqz->prevlen    = 0;

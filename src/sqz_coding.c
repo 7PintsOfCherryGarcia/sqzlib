@@ -124,15 +124,11 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t seqread = 0;
     uint64_t k = 0;
 
-    uint8_t *namebuff = sqz->namebuffer;
-    uint64_t namepos  = 0;
 
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqbuffer + k );
         k += B64;
-        
-        fprintf(stderr, "Encoding seq: %s\n", namebuff + namepos);
-        namepos += strlen(namebuff) + 1;
+
 
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
@@ -143,12 +139,11 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
-        //Unset new block flag. The rest of the sequence needs to be encoded
-        //before a new block can be started.
+        //Unset new block flag.
         blk->newblk = 0;
         //Indicate how much sequence has been read
         //TODO check if this is usefull
-        sqz->toread = seqread;
+        //sqz->toread = seqread;
         goto exit;
     }
     memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
@@ -165,18 +160,21 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 char sqz_fastatailblk(sqzfastx_t *sqz,
                       sqzblock_t *blk)
 {
-    fprintf(stderr, "DEBUG: From tail:\n");
     uint64_t seqlen  = sqz->prevlen;
-    uint8_t *seq     = sqz->seqbuffer;
+    uint64_t seqleft = seqlen - sqz->seqread;
+    uint8_t *seqbuff = sqz->seqbuffer;
     uint8_t *blkbuff = blk->blkbuff;
     uint64_t blksize = blk->blksize;
     uint64_t blkpos  = blk->blkpos;
-    uint64_t seqread = sqz->rem;
-    uint64_t seqleft = seqlen - sqz->toread;
+    uint64_t seqread;
+
+    if (sqz->endflag) seqread = LOAD_SIZE;
+    else seqread = seqleft;
+
     //encode sequence
-    blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, seqleft);
+    blkpos += sqz_seqencode(seqbuff, seqread, blkbuff + blkpos, seqleft);
     //Update how much sequence has been read
-    sqz->toread += sqz->offset;
+    //sqz->toread += sqz->offset;
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
         blk->newblk = 0;
@@ -343,7 +341,13 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
         never loaded. This is not fatal during library execution as the decoding
         function exist as if it had decoded an entore block.
         */
-        if ( (size - wbytes)  < ( seqlen * (1 + fqflag) )  + (6 + namelen ) ) {
+        if ((size - wbytes)  < (( seqlen * (1 + fqflag) )  + (6 + namelen ))) {
+            if (blkpos == 0) {
+                fprintf(stderr,
+                        "doesnt's fit %lu\n",
+                        ( ( seqlen * (1 + fqflag) )  + (6 + namelen ) ) );
+                fprintf(stderr, ">>buff size: %lu\n", size - wbytes);
+            }
             blk->blkpos  = blkpos;
             blk->namepos = namepos;
             goto exit;
@@ -394,6 +398,11 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + buffpos);
         buffpos += B64;
+        //Compute how much sequence can be decoded
+        /*
+          With blk size, the amount of sequence to be decoded can be computed
+          use this to partialy decode a sequence
+        */
         buffpos += sqz_blkdecode(codebuff + buffpos,
                                  decodebuff + seqpos,
                                  &seqpos,

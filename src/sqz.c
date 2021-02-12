@@ -159,7 +159,6 @@ char sqz_decompress(const char *filename, const char *outname)
     ifp = fopen(filename, "rb");
     if (!ifp)
         goto exit;
-
     uint8_t fmt = sqz_getformat(filename);
     //Check for format
     switch (fmt & 7) {

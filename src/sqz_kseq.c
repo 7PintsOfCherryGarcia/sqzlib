@@ -73,7 +73,7 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
         l = sqz->seq->seq.l;
         sqz->bases += l;
         n++;
-        if (!sqz_loadname(sqz, sqz->seq->name, n)) {
+        if (!sqz_loadname(sqz, sqz->seq, n)) {
             offset = 0;
             goto exit;
         }
@@ -99,26 +99,35 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
 }
 
 
-char     sqz_loadname(sqzfastx_t *sqz, kstring_t name, uint64_t n)
+uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
 {
-    char ret = 0;
-    //fprintf(stderr, "\n\n%s\n\n", name.s);
-    //sleep(2);
-    memcpy(sqz->namebuffer + sqz->namepos, name.s, name.l + 1);
-    sqz->namepos += name.l + 1;
-    if (sqz->namepos + 100 >= sqz->namesize) {
-        //fprintf(stderr, "At seq %lu\n", n);
-        sqz->namebuffer = realloc(sqz->namebuffer, sqz->namesize*2);
-        if (!(sqz->namebuffer)) {
+    uint8_t ret = 0;
+    uint8_t *namebuffer = sqz->namebuffer;
+    uint64_t pos = sqz->namepos;
+
+    memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
+    pos += seq->name.l + 1;
+    //If comment exists
+    if (seq->comment.s) {
+        //Substitute terminating null with space
+        namebuffer[pos - 1] = ' ';
+        //Append comment including terminating null
+        memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
+        pos += seq->comment.l + 1;
+    }
+
+
+    if (pos + 100 >= sqz->namesize) {
+        namebuffer = realloc(namebuffer, sqz->namesize*2);
+        if (!(namebuffer)) {
             fprintf(stderr, "Name error\n");
             goto exit;
         }
-        //fprintf(stderr, "Previous size: %lu\n", sqz->namesize);
         sqz->namesize *= 2;
-        //fprintf(stderr, "Name memory %lu\n", sqz->namesize);
     }
     ret = 1;
     exit:
+        sqz->namepos = pos;
         return ret;
 }
 
@@ -189,11 +198,10 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
     uint64_t maxlen = LOAD_SIZE - B64;
     kseq_t *seq = sqz->seq;
     uint8_t *seqbuffer = sqz->seqbuffer;
-    //TODO remove pointer references inside loop
     while ( (kseq_read(seq) >= 0) ) {
         l = seq->seq.l;
         n++;
-        if (!sqz_loadname(sqz, seq->name, n)) {
+        if (!sqz_loadname(sqz, seq, n)) {
             offset = 0;
             goto exit;
         }
@@ -208,7 +216,6 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
-            //offset += sqz_fastawrap(sqz, offset, maxlen);
             goto exit;
         }
         bases += l;

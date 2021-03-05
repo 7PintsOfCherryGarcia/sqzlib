@@ -104,9 +104,11 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
     uint8_t ret = 0;
     uint8_t *namebuffer = sqz->namebuffer;
     uint64_t pos = sqz->namepos;
-
+    //uint64_t ogpos = pos;
+    //fprintf(stderr, "%lu\n", pos);
     memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
     pos += seq->name.l + 1;
+    //fprintf(stderr, "%lu\n", pos);
     //If comment exists
     if (seq->comment.s) {
         //Substitute terminating null with space
@@ -114,8 +116,10 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
         //Append comment including terminating null
         memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
         pos += seq->comment.l + 1;
+        //fprintf(stderr, "%lu\n", pos);
     }
-
+    //fprintf(stderr, "len %lu\n", strlen(namebuffer + ogpos) );
+    //sleep(1);
 
     if (pos + 100 >= sqz->namesize) {
         namebuffer = realloc(namebuffer, sqz->namesize*2);
@@ -235,33 +239,11 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
 }
 
 
-//uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen)
-//uint64_t sqz_fastawrap(uint8_t *seqbuffer, uint8_t *seq, uint64_t size)
-//{
-    //kseq_t *seq = sqz->seq;
-    //uint64_t l = seq->seq.l;
-    //Copy sequence length data
-    //memcpy(seqbuffer + offset, &l, B64);
-    //offset += B64;
-    //Copy as much seq data as we can fit in remaining buffer
-//    memcpy(seqbuffer, seq, size);
-
-    //Add null byte after loading data into buffers
-//    sqz->seqbuffer[size++] = '\0';
-
-
-    //sqz->rem = l - maxlen;
-    //fprintf(stderr, "\t>>%lu remaining\n");
-    //Store length of sequence that could not complete loading
-    //sqz->prevlen = l;
-//    return offset;
-//}
-
-
 uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 {
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
+
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,

@@ -30,17 +30,19 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     blk->blkpos  = 0;
 
     blk->namepos = 0;
+    blk->prevlen = 0;
     blk->newblk  = 1;
-    //Compression buffer array
+
+    //Compression buffer
     blk->cmpbuff = malloc(2*size);
     if (!blk->cmpbuff) {
-        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
         free(blk->blkbuff);
         free(blk);
         return NULL;
     }
     blk->cmpsize = 2*size;
     blk->cmppos  = 0;
+
     return blk;
 }
 

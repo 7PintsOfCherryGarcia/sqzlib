@@ -266,3 +266,9 @@ void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl);
  * @return nothing
  */
 void sqzrewind(sqz_File *sqzfp);
+
+
+
+
+
+

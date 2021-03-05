@@ -1,4 +1,5 @@
 #include <zlib.h>
+
 #include "sqzlib.h"
 #include "klib/kseq.h"
 KSEQ_INIT(sqz_File*, sqz_sqzread)
@@ -8,7 +9,7 @@ int main(int argc, char *argv[])
 {
     int ret = 1;
     if (argc == 1) {
-        printf("Usage: fqcnt <in.fq.gz>\n");
+        printf("Usage: countseqs <in.fq.gz>\n");
         return 0;
     }
 

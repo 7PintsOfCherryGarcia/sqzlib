@@ -228,12 +228,14 @@ char sqz_spreadfastq(FILE *ifp, FILE *ofp)
 char sqz_spreadfasta(FILE *ifp, FILE *ofp)
 {
     char ret = 0;
+    uint8_t *outbuff = NULL;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;;
     long size = sqz_filesize(ifp) - 16;
-    uint8_t *outbuff = malloc(LOAD_SIZE);
-    uint64_t dsize = 0;
+    outbuff = malloc(LOAD_SIZE + 1);
+    outbuff[LOAD_SIZE] = 0;
     if (!outbuff) goto exit;
+    uint64_t dsize = 0;
     fseek(ifp, B64, SEEK_SET);
     while ( ftell(ifp) < size ) {
         //Decompress blk
@@ -242,11 +244,12 @@ char sqz_spreadfasta(FILE *ifp, FILE *ofp)
         do {
             dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 0);
             fwrite(outbuff, 1, dsize, ofp);
-        } while (blk->blkpos);
+        } while (blk->newblk);
     }
     ret = 1;
     exit:
         sqz_blkdestroy(blk);
+        free(outbuff);
     return ret;
 }
 

@@ -8,6 +8,21 @@
 #define KLIB
 #include "sqz_coding.h"
 
+void writens(uint64_t  numn,
+             uint8_t *decoded);
+
+uint64_t countnblk(const uint8_t *buff, uint64_t *pos);
+
+uint64_t getblkbytesize(uint64_t blklen);
+
+uint64_t pdecode(uint8_t *blkbuff,
+                 uint64_t seqlen,
+                 uint64_t start,
+                 uint64_t bases,
+                 uint8_t *buff);
+
+uint64_t sqz_getblkbytes(uint8_t *blkbuff, uint64_t seqlength);
+
 
 char sqz_fastqencode(sqzfastx_t *sqz,
                      sqzblock_t *blk)
@@ -124,26 +139,28 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t seqread = 0;
     uint64_t k = 0;
 
-
+    //uint8_t *namebuff = sqz->namebuffer;
+    //uint64_t namepos = 0;
+    //uint64_t tmp;
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqbuffer + k );
         k += B64;
-
-
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
         seq = seqbuffer + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
+        //fprintf(stderr, "Encoding: %s\n", namebuff + namepos);
+        //fprintf(stderr, "\t\tat blkpos: %lu\n", blkpos);
+        //namepos += strlen(namebuff + namepos) + 1;
+        //tmp = sqz_seqencode(seq, seqread, blkbuff + blkpos, seqlen);
         blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, seqlen);
+        //fprintf(stderr, "\t\tuntil: %lu\n", blkpos);
     }
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
         //Unset new block flag.
         blk->newblk = 0;
-        //Indicate how much sequence has been read
-        //TODO check if this is usefull
-        //sqz->toread = seqread;
         goto exit;
     }
     memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
@@ -202,7 +219,7 @@ char sqz_fastatailblk(sqzfastx_t *sqz,
 uint64_t sqz_seqencode(const uint8_t *seq,
                        uint64_t lentocode,
                        uint8_t *blkbuff,
-                       uint64_t seqlen)
+                       uint64_t blksize)
 {
     uint64_t       blkpos = 0;
     const uint8_t *lstop = seq;            //Track position in sequence
@@ -220,7 +237,6 @@ uint64_t sqz_seqencode(const uint8_t *seq,
             //Determine block length up to first non ACGT base
             blen = npos - lstop;
             //Determine number of consecutive Ns until next base
-            //TODO rewrite with increment in while condition
             nn = 0;
 	          while ( seq_nt4_tableSQZ[*npos] == 4) {
 	              nn++;
@@ -230,6 +246,7 @@ uint64_t sqz_seqencode(const uint8_t *seq,
             //Write block length
             memcpy(blkbuff + blkpos, &blen, B64);
             blkpos += B64;
+
             //Encode sequence
             blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
             nbases += blen;
@@ -241,7 +258,7 @@ uint64_t sqz_seqencode(const uint8_t *seq,
             nbases += nn;
             //Trace next base after sequence of Ns
             lstop = npos;
-	      }
+        }
     } while (*npos);
     //Detect and encode trailing bases
     blen = nptr - lstop;
@@ -257,14 +274,12 @@ uint64_t sqz_seqencode(const uint8_t *seq,
           finishes, a flag with a value of zero is written to the buffer.
           This is so that when decoding, a quality block can be distinguished
           from more sequence blocks. This flag is needed only when the loaded
-          sequence is truncates at ACGT bases. If the sequence is truncated at
+          sequence is truncated at ACGT bases. If the sequence is truncated at
           non ACGT bases there will be no trailing bases to decode (blen == 0)
           and the corresponding flag would have already been written.
         */
-        if ( seqlen - nbases ) {
-            memcpy(blkbuff + blkpos, &flag2, 1);
-            blkpos++;
-        }
+        memcpy(blkbuff + blkpos, &flag2, 1);
+        blkpos++;
     }
     return blkpos;
 }

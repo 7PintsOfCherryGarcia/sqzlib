@@ -254,7 +254,7 @@ uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
     }
     //Rest of sequence can go into buffer
     memcpy(sqz->seqbuffer,
-           sqz->seq->seq.s + sqz->toread,
+           sqz->seq->seq.s + sqz->seqread,
            seqleft);
     sqz->seqbuffer[seqleft++] = '\0';
     sqz->endflag = 0;
@@ -464,25 +464,39 @@ void     sqz_sqzclose(sqz_File file)
 char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
 {
     //TODO Error handling
+    /*
+      Handling of blk buffers is weird. Sizes are being changed without keeping
+      track of original size. This might prove confusing.
+    */
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;
     uint64_t cbytes;
+
     uint64_t nelem;
     nelem =  fread(&dcpsize, B64, 1, fp);
     nelem += fread(&cmpsize, B64, 1, fp);
-    if ((cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) | (nelem != 2)) {
-        //TODO Error goes here
-        goto exit;
+
+    if ( cmpsize > (blk->cmpsize) ) {
+        blk->cmpbuff = realloc(blk->cmpbuff, cmpsize);
+        if ( !(blk->cmpbuff) ) goto exit;
+        blk->cmpsize = cmpsize;
     }
+    if ( dcpsize > (blk->blksize) ) {
+        blk->blkbuff = realloc(blk->blkbuff, dcpsize);
+        if ( !(blk->blkbuff) ) goto exit;
+        blk->blksize = dcpsize;
+    }
+
+    if ((cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) || (nelem != 2))
+        goto exit;
     blk->cmpsize = cmpsize;
-    blk->blksize = LOAD_SIZE*2;
+
     cbytes = sqz_inflate(blk);
-    if (cbytes != dcpsize) {
-        //TODO Error goes here
+    if (cbytes != dcpsize)
         goto exit;
-    }
     blk->blksize = dcpsize;
+    blk->newblk = 1;
     ret = 1;
     exit:
         return ret;

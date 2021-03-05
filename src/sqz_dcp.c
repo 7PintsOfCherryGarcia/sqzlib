@@ -16,13 +16,13 @@ uint64_t sqz_filesize(FILE *fp)
 }
 
 
-sqzblock_t *sqz_sqzblkinit(size_t size)
+sqzblock_t *sqz_sqzblkinit(uint64_t size)
 {
     sqzblock_t *blk = malloc(sizeof(sqzblock_t));
     if (!blk) return NULL;
+    //Encoding buffer
     blk->blkbuff = malloc(2*size);
     if (!blk->blkbuff) {
-        fprintf(stderr, "[libsqz ERROR]: memory error.\n");
         free(blk);
         return NULL;
     }

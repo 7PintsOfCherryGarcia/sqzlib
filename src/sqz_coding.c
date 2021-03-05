@@ -290,7 +290,6 @@ uint64_t sqz_qualencode(const uint8_t *qual,
                         uint8_t *blkbuff,
                         uint64_t seqlen)
 {
-    //uint8_t *codebuff = blk->blkbuff + blk->blksize;
     uint64_t blkpos = 0;
     uint8_t q       = sqz_8binqual(*qual);
     uint8_t c       = 0;
@@ -480,6 +479,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
     }
     decodebuff[seqpos++] = NL;
     *wbytes += seqpos;
+    fprintf(stderr, "returning: %lu\n", buffpos);
     return buffpos;
 }
 
@@ -572,7 +572,7 @@ unsigned char sqz_bit2decode(const uint64_t *mer,
 }
 
 
-unsigned char sqz_writens(unsigned char numn,
+unsigned char sqz_writens(uint8_t  numn,
                           uint8_t *decoded)
 {
     unsigned char nwritten = 0;

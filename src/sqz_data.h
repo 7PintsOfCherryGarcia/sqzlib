@@ -18,6 +18,10 @@
 typedef struct kseq_t kseq_t;
 #endif
 
+
+/*sqzfastx_t and sqzblock_t are opaque structures the user needs not to concern
+  about what they do or have
+*/
 #ifndef SQZLIB
 typedef struct sqzfastx_t sqzfastx_t;
 typedef struct sqzblock_t sqzblock_t;
@@ -32,14 +36,14 @@ typedef struct sqzblock_t sqzblock_t;
 typedef struct {
     //file members
     const char *filename;
-    gzFile     fp;
+    gzFile     fp;      //Rethink this member see footnote 1
     //flags
     char       fmt;
     char       endflag; //Sequece has not completely been read into a buffer flag
     char       cmpflag;
     //data members
     uint64_t   offset;
-    kseq_t     *seq;
+    kseq_t     *seq;    //Rethink this member see footnote 1
     uint8_t    *seqbuffer;
     uint8_t    *qualbuffer;
     uint8_t    *namebuffer;
@@ -63,9 +67,10 @@ typedef struct {
     uint64_t   blksize; //Size of blkbuff
     uint64_t   blkpos;  //Position within blkbuff
     uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
+    uint64_t   prevlen; //How much of current sequence had been decoded
     char       newblk;  //flag
     //Compression members
-    uint8_t   *cmpbuff;
+    uint8_t   *cmpbuff; //Buffer to hold compressed blk data
     uint64_t   cmpsize;
     uint64_t   cmppos;
 } sqzblock_t;
@@ -83,3 +88,7 @@ typedef struct {
 
 
 
+/*
+ * 1. Explicityly adding a kseq_t* memeber is what made me make sqz*_t objects
+      opaque. This brings some added complexity I do not know how to handle.
+ */

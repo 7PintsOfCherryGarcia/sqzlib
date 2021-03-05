@@ -396,27 +396,17 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
                        char           qflag,
                        uint64_t      *wbytes)
 {
-    //TODO: Add feature to decode at most N bytes
-    /*
-      Currently, output buffer must be large enough to store entire fastX
-      sequence. This has the limitation of allowing a maximum sequence length of
-      LOAD_SIZE - 6 - sequence name size for fastA and
-      (LOAD_SIZE - 6 - sequence name) / 2 for fastQ sequences
-    */
     uint64_t seqlen     = length;
     uint64_t buffpos    = 0;
     uint64_t blklen     = 0;
     uint64_t prevblk    = 0;
     uint64_t seqpos     = 0;
     uint8_t nflag;
+    uint64_t nnum;
+    uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + buffpos);
         buffpos += B64;
-        //Compute how much sequence can be decoded
-        /*
-          With blk size, the amount of sequence to be decoded can be computed
-          use this to partialy decode a sequence
-        */
         buffpos += sqz_blkdecode(codebuff + buffpos,
                                  decodebuff + seqpos,
                                  &seqpos,
@@ -426,17 +416,11 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
             nflag = *(codebuff + buffpos);
             buffpos++;
             if (nflag) {  //Check if it is an N block
-                //TODO move to function
-                while (1) {
-                    nflag = *(codebuff + buffpos);
-                    unsigned char numn = nflag & ~(1<<7);
-                    sqz_writens(numn, decodebuff + seqpos);
-                    seqpos += numn;
-                    length -= numn;
-                    buffpos++;
-                    if (nflag & 128)
-                        break;
-                }
+                nnum = countnblk(codebuff + buffpos, &nbytes);
+                buffpos += nbytes;
+                writens(nnum, decodebuff + seqpos);
+                seqpos += nn;
+                length -= nn;
             }
             else {
                 if (qflag) {
@@ -464,7 +448,10 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     prevblk = blklen;
                 }
             }
+            continue;
         }
+        nflag = *(codebuff + buffpos);
+        buffpos++;
     }
     //Decode quality strings for fastq data
     if (qflag) {

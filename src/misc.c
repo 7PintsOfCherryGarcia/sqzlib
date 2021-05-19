@@ -112,6 +112,27 @@ size_t zlibpunch(void *cmpbuff, size_t cmplen, uint8_t *dest, size_t destlen)
 }
 
 
+
+uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen)
+{
+    //Compute how much buffer is available
+    uint64_t l = sqz->seq->seq.l;
+    //Copy sequence length data
+    memcpy(sqz->seqbuffer + offset, &l, B64);
+    offset += B64;
+    //Copy as much seq data as we can fit in remaining buffer
+    memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, maxlen);
+    memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, maxlen);
+    offset += maxlen;
+    //Add null byte after loading data into buffers
+    sqz->seqbuffer[offset] = '\0';
+    sqz->qualbuffer[offset] = '\0';
+    offset++;
+    sqz->rem = l - maxlen;
+    //Store length of sequence that could not complete loading
+    sqz->prevlen = l;
+    return offset;
+}
 int sqz_cmpnflush(sqzfastx_t *sqz)
 {
     fprintf(stderr, "Code buffer size: %lu\n", sqz->codeblk->offset);

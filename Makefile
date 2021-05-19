@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS= -Wall -std=c11 -pedantic -O2
-CFLAGSB= -Wall -g -std=c11 -pedantic
+CFLAGS=  -Wall -std=c11 -pedantic -O2
+CFLAGSB= -Wall -std=c11 -pedantic -g
 CSHFLAG= -shared
 
 SRCDIR= src

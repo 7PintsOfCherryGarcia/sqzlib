@@ -16,37 +16,6 @@ uint64_t sqz_filesize(FILE *fp)
 }
 
 
-sqzblock_t *sqz_sqzblkinit(uint64_t size)
-{
-    sqzblock_t *blk = malloc(sizeof(sqzblock_t));
-    if (!blk) return NULL;
-    //Encoding buffer
-    blk->blkbuff = malloc(2*size);
-    if (!blk->blkbuff) {
-        free(blk);
-        return NULL;
-    }
-    blk->blksize = 2*size;
-    blk->blkpos  = 0;
-
-    blk->namepos = 0;
-    blk->prevlen = 0;
-    blk->newblk  = 1;
-
-    //Compression buffer
-    blk->cmpbuff = malloc(2*size);
-    if (!blk->cmpbuff) {
-        free(blk->blkbuff);
-        free(blk);
-        return NULL;
-    }
-    blk->cmpsize = 2*size;
-    blk->cmppos  = 0;
-
-    return blk;
-}
-
-
 void sqzrewind(sqz_File *sqzfp)
 {
     sqz_fastxreset(sqzfp->sqz);

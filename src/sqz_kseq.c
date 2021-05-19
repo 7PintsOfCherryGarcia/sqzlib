@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <zlib.h>
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
@@ -10,7 +9,8 @@ uint8_t  sqz_getformat(const char *filename)
 {
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
-
+    ret = 0;
+    //TODO: Adjust to other compression libraries
     gzFile fp = gzopen(filename, "r");
     if (!fp) return ret;
 
@@ -20,22 +20,57 @@ uint8_t  sqz_getformat(const char *filename)
         return ret;
     }
     int l = kseq_read(seq);
+
+    //TODO: Add error signaling as this is a library so it should not print
     //ERROR
-    if (l < 0) {
-        fprintf(stderr, "[sqzlib ERROR]: sequence file format not recognized\n");
+    if (l < 0)
         goto exit;
-    }
+
     //FASTQ
     if (seq->qual.l > 0) {
         ret = 2;
         goto exit;
     }
+
     //FASTA
     ret = 1;
     exit:
         gzclose(fp);
         kseq_destroy(seq);
         return ret;
+}
+
+
+uint8_t  sqz_checksqz(const char *filename)
+{
+    size_t   tmp = 0;
+    uint32_t magic;
+    uint8_t  fmt = 0;
+    char     sqz;
+
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return 0;
+    //Read magic
+    tmp += fread(&magic, 1, 4, fp);
+    if (MAGIC ^ magic) {
+        //Return 0 if not an sqz file
+        fclose(fp);
+        return 0;
+    }
+    //Set sqz flag (bit 6)
+    fmt |= 4;
+
+    //TODO: Check for valid entries. A file may have the magic number
+    //but still not be an sqz file
+
+    //Read format: 1 - fastA or 2 - fastQ (bit 5)
+    tmp += fread(&sqz, 1, 1, fp);
+    fmt |= sqz;
+    //Read compression library: 1 - zlib (bits 4, 3, and 2)
+    tmp += fread(&sqz, 1, 1, fp);
+    fmt |= sqz << 3;
+    fclose(fp);
+    return fmt;
 }
 
 
@@ -65,36 +100,50 @@ uint64_t sqz_loadfastq(sqzfastx_t *sqz)
 uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
 {
     uint64_t offset = 0;
-    uint64_t n = 0;
+    uint64_t n      = 0;
     uint64_t l;
+    uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    //TODO remove pointer references inside loop
+    kseq_t   *seq   = sqz->seq;
+    uint8_t  *seqbuffer = sqz->seqbuffer;
+    uint8_t  *qltbuffer = sqz->qualbuffer;
     while ( kseq_read(sqz->seq) >= 0 ) {
-        l = sqz->seq->seq.l;
-        sqz->bases += l;
+        l = seq->seq.l;
         n++;
-        if (!sqz_loadname(sqz, sqz->seq, n)) {
+        if (!sqz_loadname(sqz, seq, n)) {
             offset = 0;
             goto exit;
         }
         //Determine if current sequence can be loaded completely
         if ( l + 1  > maxlen) {
-            sqz->n = n;
-            offset = sqz_fastqwrap(sqz, offset, maxlen);
+            memcpy(seqbuffer + offset, &l, B64);
+            offset += B64;
+            memcpy(seqbuffer + offset, seq->seq.s, maxlen);
+            memcpy(qltbuffer + offset, seq->qual.s, maxlen);
+            offset += maxlen;
+            seqbuffer[offset] = 0;
+            qltbuffer[offset] = 0;
+            offset++;
+            bases += maxlen;
             sqz->endflag = 1;
+            sqz->seqread = maxlen;
+            sqz->prevlen = l;
             goto exit;
         }
-        memcpy(sqz->seqbuffer + offset, &l, B64);
+        bases += l;
+        memcpy(seqbuffer + offset, &l, B64);
         offset += B64;
-        memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, l + 1);
-        memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, l + 1);
+        memcpy(seqbuffer + offset, seq->seq.s, l + 1);
+        memcpy(qltbuffer + offset, seq->qual.s, l + 1);
         offset += l + 1;
         if ( maxlen <= l + 1 + B64 ) break;
         maxlen -= l + 1 + B64;
     }
     exit:
         sqz->n = n;
+        sqz->bases = bases;
         sqz->offset = offset;
+        //fprintf(stderr, "Loaded %lu bases\n", bases);
         return offset;
 }
 
@@ -104,11 +153,8 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
     uint8_t ret = 0;
     uint8_t *namebuffer = sqz->namebuffer;
     uint64_t pos = sqz->namepos;
-    //uint64_t ogpos = pos;
-    //fprintf(stderr, "%lu\n", pos);
     memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
     pos += seq->name.l + 1;
-    //fprintf(stderr, "%lu\n", pos);
     //If comment exists
     if (seq->comment.s) {
         //Substitute terminating null with space
@@ -116,17 +162,11 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
         //Append comment including terminating null
         memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
         pos += seq->comment.l + 1;
-        //fprintf(stderr, "%lu\n", pos);
     }
-    //fprintf(stderr, "len %lu\n", strlen(namebuffer + ogpos) );
-    //sleep(1);
-
     if (pos + 100 >= sqz->namesize) {
         namebuffer = realloc(namebuffer, sqz->namesize*2);
-        if (!(namebuffer)) {
-            fprintf(stderr, "Name error\n");
+        if (!(namebuffer))
             goto exit;
-        }
         sqz->namesize *= 2;
     }
     ret = 1;
@@ -136,52 +176,36 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
 }
 
 
-uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen)
-{
-    //Compute how much buffer is available
-    uint64_t l = sqz->seq->seq.l;
-    //Copy sequence length data
-    memcpy(sqz->seqbuffer + offset, &l, B64);
-    offset += B64;
-    //Copy as much seq data as we can fit in remaining buffer
-    memcpy(sqz->seqbuffer + offset, sqz->seq->seq.s, maxlen);
-    memcpy(sqz->qualbuffer + offset, sqz->seq->qual.s, maxlen);
-    offset += maxlen;
-    //Add null byte after loading data into buffers
-    sqz->seqbuffer[offset] = '\0';
-    sqz->qualbuffer[offset] = '\0';
-    offset++;
-    sqz->rem = l - maxlen;
-    //Store length of sequence that could not complete loading
-    sqz->prevlen = l;
-    return offset;
-}
-
-
 uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 {
-    uint64_t l = sqz->seq->seq.l;
+    uint64_t l = sqz->prevlen;
+    uint64_t seqleft = l - sqz->seqread;
+
     //buffer can be completely filled with current sequence
-    if (sqz->rem >= LOAD_SIZE) {
+    if (seqleft >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,
-               sqz->seq->seq.s + (l + 1 - sqz->rem),
+               sqz->seq->seq.s + sqz->seqread,
                LOAD_SIZE);
         memcpy(sqz->qualbuffer,
-               sqz->seq->qual.s + (l + 1 - sqz->rem),
+               sqz->seq->qual.s + sqz->seqread,
                LOAD_SIZE);
-        sqz->rem -= LOAD_SIZE;
-        sqz->offset = LOAD_SIZE;
+        sqz->seqread += LOAD_SIZE;
+        //fprintf(stderr, "Loaded_e %lu bases\n", LOAD_SIZE);
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
+    //fprintf(stderr, "Detail: %lu\n", sqz->seqread);
     memcpy(sqz->seqbuffer,
-           sqz->seq->seq.s + sqz->toread,
-           sqz->rem + 1);
+           sqz->seq->seq.s + sqz->seqread,
+           seqleft);
     memcpy(sqz->qualbuffer,
-           sqz->seq->qual.s + sqz->toread,
-           sqz->rem + 1);
-    sqz->offset = sqz->rem + 1;
+           sqz->seq->qual.s + sqz->seqread,
+           seqleft);
+    sqz->seqbuffer[seqleft] = 0;
+    sqz->qualbuffer[seqleft] = 0;
+    seqleft++;
     sqz->endflag = 0;
+    //fprintf(stderr, "Loaded_e %lu bases\n", seqleft);
     return sqz->offset;
 }
 
@@ -196,12 +220,13 @@ uint64_t sqz_loadfasta(sqzfastx_t *sqz)
 uint64_t sqz_fastanblock(sqzfastx_t *sqz)
 {
     uint64_t offset = 0;
-    uint64_t n = 0;
+    uint64_t n      = 0;
     uint64_t l;
-    uint64_t bases = 0;
+    uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    kseq_t *seq = sqz->seq;
+    kseq_t *seq     = sqz->seq;
     uint8_t *seqbuffer = sqz->seqbuffer;
+
     while ( (kseq_read(seq) >= 0) ) {
         l = seq->seq.l;
         n++;
@@ -215,7 +240,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
             offset += B64;
             memcpy(seqbuffer + offset, seq->seq.s, maxlen);
             offset += maxlen;
-            seqbuffer[offset++] = '\0';
+            seqbuffer[offset++] = 0;
             bases += maxlen;
             sqz->endflag = 1;
             sqz->seqread = maxlen;
@@ -223,11 +248,10 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
             goto exit;
         }
         bases += l;
-        memcpy(seqbuffer + offset, &l, B64);
+        memcpy(seqbuffer + offset, &l, B64); //Copy sequence length
         offset += B64;
-        memcpy(seqbuffer + offset, seq->seq.s, l + 1);
+        memcpy(seqbuffer + offset, seq->seq.s, l + 1); //Copy sequence + NULL
         offset += l + 1;
-
         if ( maxlen <= l + 1 + B64 ) break;
         maxlen -= l + 1 + B64;
     }
@@ -286,34 +310,7 @@ void     sqz_killblk(sqzblock_t *blk)
 }
 
 
-uint8_t sqz_checksqz(const char *filename)
-{
-    size_t   tmp = 0;
-    uint32_t magic;
-    uint8_t  fmt = 0;
-    char     sqz;
 
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) return 0;
-    //Read magic
-    tmp += fread(&magic, 1, 4, fp);
-    if (MAGIC ^ magic) {
-        //Return 0 if not an sqz file
-        fclose(fp);
-        return 0;
-    }
-    //Set sqz flag
-    fmt |= 4;
-
-    //Read format (fastA or fastQ)
-    tmp += fread(&sqz, 1, 1, fp);
-    fmt |= sqz;
-    //Read compression library (zlib or ...)
-    tmp += fread(&sqz, 1, 1, fp);
-    fmt |= sqz << 3;
-    fclose(fp);
-    return fmt;
-}
 
 
 sqz_File sqz_sqzopen(char *filename)
@@ -463,20 +460,14 @@ void     sqz_sqzclose(sqz_File file)
 
 char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
 {
-    //TODO Error handling
-    /*
-      Handling of blk buffers is weird. Sizes are being changed without keeping
-      track of original size. This might prove confusing.
-    */
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;
-    uint64_t cbytes;
-
+    //uint64_t cbytes;
     uint64_t nelem;
     nelem =  fread(&dcpsize, B64, 1, fp);
     nelem += fread(&cmpsize, B64, 1, fp);
-
+    fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n", dcpsize, cmpsize);
     if ( cmpsize > (blk->cmpsize) ) {
         blk->cmpbuff = realloc(blk->cmpbuff, cmpsize);
         if ( !(blk->cmpbuff) ) goto exit;
@@ -488,12 +479,12 @@ char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
         blk->blksize = dcpsize;
     }
 
-    if ((cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) || (nelem != 2))
+    if ( (cmpsize != fread(blk->cmpbuff, 1, cmpsize, fp)) || (nelem != 2) )
         goto exit;
     blk->cmpsize = cmpsize;
 
-    cbytes = sqz_inflate(blk);
-    if (cbytes != dcpsize)
+    //cbytes = sqz_inflate(blk);
+    if (dcpsize != sqz_inflate(blk))
         goto exit;
     blk->blksize = dcpsize;
     blk->newblk = 1;

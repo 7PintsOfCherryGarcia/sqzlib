@@ -215,12 +215,15 @@ char sqz_spreadfastq(FILE *ifp, FILE *ofp)
         do {
             dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 1);
             fwrite(outbuff, 1, dsize, ofp);
-            //fprintf(stderr, "|| %lu\n", blk->blkpos);
+            fflush(ofp);
+            //fprintf(stderr, "WAITING\n\n");
+            //sleep(2);
         } while (blk->newblk);
     }
     ret = 1;
     exit:
         sqz_blkdestroy(blk);
+        free(outbuff);
     return ret;
 }
 

@@ -167,6 +167,7 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
         namebuffer = realloc(namebuffer, sqz->namesize*2);
         if (!(namebuffer))
             goto exit;
+        sqz->namebuffer = namebuffer;
         sqz->namesize *= 2;
     }
     ret = 1;
@@ -467,7 +468,7 @@ char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
     uint64_t nelem;
     nelem =  fread(&dcpsize, B64, 1, fp);
     nelem += fread(&cmpsize, B64, 1, fp);
-    fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n", dcpsize, cmpsize);
+  //fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n", dcpsize, cmpsize);
     if ( cmpsize > (blk->cmpsize) ) {
         blk->cmpbuff = realloc(blk->cmpbuff, cmpsize);
         if ( !(blk->cmpbuff) ) goto exit;

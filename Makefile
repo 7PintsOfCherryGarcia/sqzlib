@@ -8,7 +8,8 @@ INC= -Ilibs
 LIB= -L.
 LIBS= -lz
 
-SRC=sqz_kseq.c sqz_init.c sqz_coding.c sqz_zlib.c sqz_cmp.c sqz_dcp.c\
+SRC=sqz_kseq.c sqz_init.c sqz_coding.c\
+    sqz_zlib.c sqz_cmp.c sqz_dcp.c\
     sqz_filefun.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)

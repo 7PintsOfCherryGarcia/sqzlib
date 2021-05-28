@@ -201,10 +201,13 @@ char sqz_decompress(const char *filename, const char *outname)
 char sqz_spreadfastq(FILE *ifp, FILE *ofp)
 {
     char ret = 0;
+    uint8_t *outbuff = NULL;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     long size = sqz_filesize(ifp);
-    uint8_t *outbuff = malloc(LOAD_SIZE);
+    outbuff = malloc(LOAD_SIZE);
+    if (!outbuff)
+        goto exit;
     uint64_t dsize = 0;
     if (!outbuff) goto exit;
     fseek(ifp, HEADLEN, SEEK_SET);
@@ -216,8 +219,6 @@ char sqz_spreadfastq(FILE *ifp, FILE *ofp)
             dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 1);
             fwrite(outbuff, 1, dsize, ofp);
             fflush(ofp);
-            //fprintf(stderr, "WAITING\n\n");
-            //sleep(2);
         } while (blk->newblk);
     }
     ret = 1;

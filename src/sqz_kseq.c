@@ -90,10 +90,14 @@ char     sqz_kseqinit(sqzfastx_t *sqz)
 }
 
 
-uint64_t sqz_loadfastq(sqzfastx_t *sqz)
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag)
 {
-    if (sqz->endflag) return sqz_fastqeblock(sqz);
-    return sqz_fastqnblock(sqz);
+    if (sqz->endflag) {
+        if (fqflag) return sqz_fastqeblock(sqz);
+        return sqz_fastaeblock(sqz);
+    }
+    if (fqflag) return sqz_fastqnblock(sqz);
+    return sqz_fastanblock(sqz);
 }
 
 
@@ -208,13 +212,6 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     sqz->endflag = 0;
     //fprintf(stderr, "Loaded_e %lu bases\n", seqleft);
     return sqz->offset;
-}
-
-
-uint64_t sqz_loadfasta(sqzfastx_t *sqz)
-{
-    if (sqz->endflag) return sqz_fastaeblock(sqz);
-    return sqz_fastanblock(sqz);
 }
 
 
@@ -468,7 +465,8 @@ char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
     uint64_t nelem;
     nelem =  fread(&dcpsize, B64, 1, fp);
     nelem += fread(&cmpsize, B64, 1, fp);
-  //fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n", dcpsize, cmpsize);
+    //fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n",
+    //        dcpsize, cmpsize);
     if ( cmpsize > (blk->cmpsize) ) {
         blk->cmpbuff = realloc(blk->cmpbuff, cmpsize);
         if ( !(blk->cmpbuff) ) goto exit;

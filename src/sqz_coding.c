@@ -507,15 +507,20 @@ static uint64_t sqz_rdecode(uint8_t  *blkbuff,
         }
     }
     else {
-        bleft = buffsize - todecode;
+        bleft = buffsize;
         if (!qdecoded) {
+            //Add fastq separator if no qualities have been decoded
             buff[0] = NL;
             bleft--;
+            buff[1] = '+';
+            bleft--;
+            buff[2] = NL;
+            bleft--;
+            spacer = 3;
         }
     }
     if (bleft && fqflag) {
-        //BUG here, newline is not taken care of
-        qdecoded = seqlen < prevbytes ? prevbytes - seqlen - 3 : 0;
+        //qdecoded = seqlen < prevbytes ? prevbytes - seqlen - 3 : 0;
         qtodecode = seqlen - qdecoded < bleft ? seqlen - qdecoded : bleft;
         sqz_blkqdecode(blkbuff,                  //data buffer
                        buff + todecode + spacer, //output buffer

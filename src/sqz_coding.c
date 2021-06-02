@@ -484,7 +484,8 @@ static uint64_t sqz_rdecode(uint8_t  *blkbuff,
     //Compute how much sequence can be decoded
     todecode = seqlen < prevbytes ? 0 : seqlen - prevbytes;
     qdecoded = seqlen < prevbytes ? prevbytes - seqlen - 3 : 0;
-    //sleep(1);
+    //fprintf(stderr, "%lu bases need decoding\n", todecode);
+    //fprintf(stderr, "%lu qualities have been decoding\n", qdecoded);
     if (todecode) {
         pdecode(blkbuff,
                 prevbytes,
@@ -578,6 +579,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         buff[wbytes++] = NL;
         prevbytes = 0;
         blkpos += sqz_codeblksize(blkbuff + blkpos, fqflag);
+        //fprintf(stderr, "From incomplete B\n");
         //Update buffer size
         //Get new sequence length, sequence name, sequence name lenght, needed
         //buffer size, and name position
@@ -622,6 +624,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                                  seqlen,
                                  fqflag,
                                  &wbytes);
+        //fprintf(stderr, "From complete B\n");
         buffsize -= buffneed;
         namepos += namelen + 1;
         //New sequence
@@ -629,6 +632,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         namelen  = strlen(namebuff + namepos);
         buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     }
+    //fprintf(stderr, "Done with block\n");
     blk->newblk  = 0;
     blk->blkpos  = 0;
     blk->namepos = 0;

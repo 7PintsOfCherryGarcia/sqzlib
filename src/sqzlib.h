@@ -72,11 +72,10 @@ char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
  */
 uint64_t sqz_filesize(FILE *fp);
 
-
 /*
-    Load fasta data into sqz struct
+    Load fasta | fastq data into sqz struct
 */
-size_t sqz_loadfasta(sqzfastx_t *sqz);
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag);
 
 
 /*
@@ -88,12 +87,6 @@ char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
     Compress data already loaded in blk struct
 */
 size_t sqz_deflate(sqzblock_t *blk, int level);
-
-
-/*
-    Load fastq data into sqz struct
-*/
-uint64_t sqz_loadfastq(sqzfastx_t *sqz);
 
 
 /*

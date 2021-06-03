@@ -14,3 +14,7 @@ General:
 sqz.c - TODO check for no file overwriting
 
 
+
+Code Review
+Change sqz_cmp name - To reflect what it does
+Change sqz_coding name - sqz_codec

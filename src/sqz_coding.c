@@ -28,15 +28,18 @@ uint64_t sqz_getblkbytes(uint8_t *blkbuff, uint64_t seqlength);
 uint64_t countqbytes(uint8_t *blkbuff, uint64_t bases);
 
 
-char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk)
+char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
 {
-    if (blk->newblk) return sqz_headblk(sqz, blk);
-    return sqz_tailblk(sqz, blk);
+    if (blk->newblk) {
+        if (fqflag) return sqz_fastqheadblk(sqz, blk);
+        return sqz_fastaheadblk(sqz, blk);
+    }
+    if (fqflag) return sqz_fastqtailblk(sqz, blk);
+    return sqz_fastatailblk(sqz, blk);
 }
 
 
-char sqz_headblk(sqzfastx_t *sqz,
-                 sqzblock_t *blk)
+char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = blk->blkpos;
@@ -77,8 +80,7 @@ char sqz_headblk(sqzfastx_t *sqz,
 }
 
 
-char sqz_tailblk(sqzfastx_t *sqz,
-                 sqzblock_t *blk)
+char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;
@@ -123,13 +125,6 @@ char sqz_tailblk(sqzfastx_t *sqz,
 }
 
 
-char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk)
-{
-    if (blk->newblk) return sqz_fastaheadblk(sqz, blk);
-    return sqz_fastatailblk(sqz, blk);
-}
-
-
 char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t *blkbuff   = blk->blkbuff;
@@ -167,8 +162,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 }
 
 
-char sqz_fastatailblk(sqzfastx_t *sqz,
-                      sqzblock_t *blk)
+char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;

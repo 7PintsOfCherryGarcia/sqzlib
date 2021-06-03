@@ -65,10 +65,10 @@ uint64_t sqz_bit2encode(const uint8_t *seq, size_t seqlen);
 sqzblock_t *sqz_sqzblkinit(size_t size);
 
 
-char sqz_headblk(sqzfastx_t *sqz, sqzblock_t *blk);
+char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
-char sqz_tailblk(sqzfastx_t *sqz, sqzblock_t *blk);
+char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
 char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk);

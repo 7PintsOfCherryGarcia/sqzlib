@@ -4,6 +4,7 @@
 typedef struct  {
     char ifile[256];
     char ofile[256];
+    int nthread;
 } sqzopts_t;
 
 
@@ -17,7 +18,7 @@ char sqz_squeezefastX(sqzfastx_t *sqz, FILE *ofp, char fqflag)
     if (!blk) goto exit;
     if ( !sqz_filehead(sqz, ofp) ) goto exit;
     while ( (lbytes += sqz_loadfastX(sqz, fqflag)) > 0 ) {
-        if (!sqz_fastqencode(sqz, blk)) {
+        if (!sqz_fastXencode(sqz, blk, fqflag)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
             goto exit;
         }
@@ -50,8 +51,9 @@ char sqz_squeezefastX(sqzfastx_t *sqz, FILE *ofp, char fqflag)
 }
 
 
-char sqz_compress(const char *filename, const char *outname)
+char sqz_compress(const char *filename, const char *outname, int nthread)
 {
+    fprintf(stderr, "%d compression threads\n", nthread);
     char ret = 0;
     FILE *ofp = fopen(outname, "wb");
     if (!ofp) return ret;
@@ -152,10 +154,12 @@ char sqz_decompress(const char *filename, const char *outname)
 void sqz_usage()
 {
     fprintf(stderr, "[sqz]: Usage:\n\n");
-    fprintf(stderr, "\tsqz [options] <file>\n");
+    fprintf(stderr, "\tsqz [options] <file>\n\n");
     fprintf(stderr, "\t\tOptions:\n");
     fprintf(stderr, "\t\t-d \t\tDecompress previously sqz compressed file.\n");
     fprintf(stderr, "\t\t-o <file>\tWrite to outputfile <file>.\n");
+    fprintf(stderr,
+            "\t\t-t <n>\t\tUse <n> compression/decompression threads.\n");
     fprintf(stderr, "\t\t-h \t\tThis help message.\n\n");
 }
 
@@ -172,11 +176,13 @@ char *sqz_basename(char *namestr)
 
 char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 {
+    //TODO Fix input comand check
     int elem;
-    char ret   = 1;      //Defaults to encode and compress
-    char dflag = 0;      //Decompression flag
-    char oflag = 1;      //Output flag
-    while (( elem = getopt(argc, argv, "o:hd") ) >= 0) {
+    char ret    = 1;      //Defaults to encode and compress
+    char dflag  = 0;      //Decompression flag
+    char oflag  = 1;      //Output flag
+    int nthread = 1;
+    while (( elem = getopt(argc, argv, "o:t:hd") ) >= 0) {
         switch(elem) {
             case 'd':
                 dflag = 1;
@@ -185,6 +191,9 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
             case 'o':
                 oflag = 0;
                 strcpy(opts->ofile, optarg);
+                continue;
+            case 't':
+                nthread = atoi(optarg);
                 continue;
             case 'h':
                 ret = 0;
@@ -198,6 +207,11 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 
     }
     if (dflag) {
+        if (argc < 3) {
+            fprintf(stderr, "[sqz]: Please provide input file.\n");
+            sqz_usage();
+            goto exit;
+        }
         if (oflag) strcpy(opts->ofile,"/dev/stdout");
     }
     else {
@@ -208,6 +222,8 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
             strcat(opts->ofile, ".sqz");
         }
     }
+    if (nthread <= 0) opts->nthread = 1;
+    else opts->nthread = nthread;
     exit:
         return ret;
 }
@@ -226,14 +242,13 @@ int main(int argc, char *argv[])
         case 0:
             goto exit;
         case 1:
-            if (!sqz_compress(opts.ifile, opts.ofile)) goto exit;
+            if (!sqz_compress(opts.ifile, opts.ofile, opts.nthread)) goto exit;
             break;
         case 2:
             if (!sqz_decompress(opts.ifile, opts.ofile)) goto exit;
+            break;
     }
     ret = 0;
     exit:
-        if (ret)
-            fprintf(stderr, "[sqz]: sqz failed.\n");
         return ret;
 }

@@ -308,9 +308,6 @@ void     sqz_killblk(sqzblock_t *blk)
 }
 
 
-
-
-
 sqz_File sqz_sqzopen(char *filename)
 {
     sqz_File sqzfile = {NULL, NULL, NULL, 0, 0, 0};

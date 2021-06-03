@@ -90,6 +90,13 @@ size_t sqz_deflate(sqzblock_t *blk, int level);
 
 
 /*
+  Load fastQ|A data already loaded in sqz struct and encode it,
+  store it in blk struct
+*/
+char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
+
+
+/*
     Load fastq data already loaded in sqz struct and store it in blk struct
 */
 char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);

@@ -34,6 +34,7 @@ typedef struct sqzblock_t sqzblock_t;
   reading sequencing data into.
 */
 typedef struct {
+    uint8_t    nthread;
     //file members
     const char *filename;
     gzFile     fp;      //Rethink this member see footnote 1

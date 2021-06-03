@@ -17,6 +17,9 @@ char sqz_squeezefastX(sqzfastx_t *sqz, FILE *ofp, char fqflag)
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     if ( !sqz_filehead(sqz, ofp) ) goto exit;
+
+
+    //Loop will be moved to multithread
     while ( (lbytes += sqz_loadfastX(sqz, fqflag)) > 0 ) {
         if (!sqz_fastXencode(sqz, blk, fqflag)) {
             fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
@@ -39,6 +42,8 @@ char sqz_squeezefastX(sqzfastx_t *sqz, FILE *ofp, char fqflag)
             lbytes = 0;
         }
     }
+
+
     fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
     if ( !sqz_filetail(numseqs, ofp) ) {
         fprintf(stderr, "[sqz ERROR]: Failed to finish sqz file.\n");
@@ -60,6 +65,7 @@ char sqz_compress(const char *filename, const char *outname, int nthread)
 
     sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
     if (!sqz) goto exit;
+    sqz->nthread = nthread;
     switch (sqz->fmt & 7) {
         case 1:
             if (!sqz_squeezefastX(sqz, ofp, 0)) goto exit;

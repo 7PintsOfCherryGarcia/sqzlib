@@ -6,7 +6,6 @@
 
 char zbytes[4] = {0, 0, 0, 0};
 char magic[4] = {5, 8, 5, 9};
-
 unsigned char cmpflag = 1;
 
 char sqz_filetail(size_t numseqs, FILE *ofp)
@@ -24,13 +23,13 @@ char sqz_filetail(size_t numseqs, FILE *ofp)
 }
 
 
-char sqz_filehead(sqzfastx_t *sqz, FILE *ofp)
+char sqz_filehead(unsigned char fmt, FILE *ofp)
 {
     char wbytes = 0;
-    if ( 4 != (wbytes += fwrite(magic, 1, 4, ofp)) )       return 0;
-    if ( 5 != (wbytes += fwrite(&(sqz->fmt), 1, 1, ofp)) ) return 0;
+    if ( 4 != (wbytes += fwrite(magic, 1, 4, ofp)) ) return 0;
+    if ( 5 != (wbytes += fwrite(&fmt,  1, 1, ofp)) ) return 0;
     //Compression library
-    if ( 6 != (wbytes += fwrite(&cmpflag, 1, 1, ofp)) )    return 0;
-    if ( 8 != (wbytes += fwrite(zbytes, 1, 2, ofp)) )      return 0;
+    if ( 6 != (wbytes += fwrite(&cmpflag, 1, 1, ofp)) ) return 0;
+    if ( 8 != (wbytes += fwrite(zbytes,   1, 2, ofp)) ) return 0;
     return wbytes;
 }

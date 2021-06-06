@@ -4,86 +4,76 @@
 typedef struct  {
     char ifile[256];
     char ofile[256];
-    int nthread;
+    FILE *ofp;
+    int  nthread;
+    char fqflag;
+    unsigned char fmt;
 } sqzopts_t;
 
 
-char sqz_squeezefastX(sqzfastx_t *sqz, FILE *ofp, char fqflag)
+char sqz_threadlauncher(FILE *ofp,
+                        char *filename,
+                        char fqflag,
+                        int nthread,
+                        unsigned char fmt);
+
+
+char sqz_squeezefastX(sqzopts_t opts)
 {
     char ret = 0;
-    uint64_t lbytes = 0;
-    uint64_t cbytes = 0;
-    uint64_t numseqs = 0;
-    sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
-    if (!blk) goto exit;
-    if ( !sqz_filehead(sqz, ofp) ) goto exit;
 
-
-    //Loop will be moved to multithread
-    while ( (lbytes += sqz_loadfastX(sqz, fqflag)) > 0 ) {
-        if (!sqz_fastXencode(sqz, blk, fqflag)) {
-            fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
-            goto exit;
-        }
-        if (sqz->cmpflag) {
-            numseqs += sqz->n;
-            cbytes = sqz_deflate(blk, 9);
-            if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
-                fprintf(stderr, "[sqz ERROR]: Failed to write to output.\n");
-                goto exit;
-            }
-            blk->blkpos  = 0;
-            sqz->bases   = 0;
-            sqz->namepos = 0;
-            sqz->endflag = 0;
-            sqz->cmpflag = 0;
-            blk->newblk  = 1;
-            sqz->n = 0;
-            lbytes = 0;
-        }
-    }
-
-
-    fprintf(stderr, "[sqz INFO]: processed %lu sequences\n", numseqs);
-    if ( !sqz_filetail(numseqs, ofp) ) {
-        fprintf(stderr, "[sqz ERROR]: Failed to finish sqz file.\n");
+    if ( !sqz_filehead(opts.fmt, opts.ofp) )
         goto exit;
-    }
+
+    sqz_threadlauncher(opts.ofp,
+                       opts.ifile,
+                       opts.fqflag,
+                       opts.nthread,
+                       opts.fmt);
+
+    //TODO Replace the 0 sequence writting
+    if ( !sqz_filetail(0, opts.ofp) )
+        goto exit;
+
     ret = 1;
     exit:
-        sqz_blkdestroy(blk);
         return ret;
+
 }
 
 
-char sqz_compress(const char *filename, const char *outname, int nthread)
+char sqz_compress(sqzopts_t opts)
 {
-    fprintf(stderr, "%d compression threads\n", nthread);
+    fprintf(stderr, "%d compression threads\n", opts.nthread);
     char ret = 0;
-    FILE *ofp = fopen(outname, "wb");
-    if (!ofp) return ret;
+    opts.ofp = fopen(opts.ofile, "wb");
+    if ( !(opts.ofp) ) return ret;
 
-    sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    if (!sqz) goto exit;
-    sqz->nthread = nthread;
-    switch (sqz->fmt & 7) {
+    //sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
+    //if (!sqz) goto exit;
+    unsigned char fmt = sqz_getformat(opts.ifile);
+    opts.fmt = fmt;
+    //sqz->nthread = nthread;
+    switch (fmt & 7) {
         case 1:
-            if (!sqz_squeezefastX(sqz, ofp, 0)) goto exit;
+            opts.fqflag = 0;
+            if (!sqz_squeezefastX(opts)) goto exit;
             break;
         case 2:
-            if (!sqz_squeezefastX(sqz, ofp, 1)) goto exit;
+            opts.fqflag = 1;
+            if (!sqz_squeezefastX(opts)) goto exit;
             break;
         case 5:
-            fprintf(stderr, "File %s alredy sqz encoded.\n", filename);
+            fprintf(stderr, "File %s alredy sqz encoded.\n", opts.ifile);
             goto exit;
         case 6:
-            fprintf(stderr, "File %s alredy sqz encoded.\n", filename);
+            fprintf(stderr, "File %s alredy sqz encoded.\n", opts.ifile);
             goto exit;
     }
     ret = 1;
     exit:
-        fclose(ofp);
-        sqz_kill(sqz);
+        fclose(opts.ofp);
+        //sqz_kill(sqz);
         return ret;
 }
 
@@ -248,7 +238,7 @@ int main(int argc, char *argv[])
         case 0:
             goto exit;
         case 1:
-            if (!sqz_compress(opts.ifile, opts.ofile, opts.nthread)) goto exit;
+            if ( !sqz_compress(opts) ) goto exit;
             break;
         case 2:
             if (!sqz_decompress(opts.ifile, opts.ofile)) goto exit;

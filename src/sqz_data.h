@@ -14,20 +14,12 @@
 #define FQS       '+'
 #define NL        '\n'
 
-#ifdef KLIB
-typedef struct kseq_t kseq_t;
-#endif
 
 
 /*sqzfastx_t and sqzblock_t are opaque structures the user needs not to concern
   about what they do or have
 */
-#ifndef SQZLIB
-typedef struct sqzfastx_t sqzfastx_t;
-typedef struct sqzblock_t sqzblock_t;
-#endif
 
-#ifdef SQZLIB
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -35,23 +27,18 @@ typedef struct sqzblock_t sqzblock_t;
 */
 typedef struct {
     uint8_t    nthread;
-    //file members
-    const char *filename;
-    gzFile     fp;      //Rethink this member see footnote 1
     //flags
-    char       fmt;
     char       endflag; //Sequece has not completely been read into a buffer flag
     char       cmpflag;
     //data members
     uint64_t   offset;
-    kseq_t     *seq;    //Rethink this member see footnote 1
     uint8_t    *seqbuffer;
     uint8_t    *qualbuffer;
     uint8_t    *namebuffer;
     uint8_t    *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
-
+    //return members
     uint64_t    n;
     uint64_t    bases;
     //miscelaneous
@@ -76,7 +63,7 @@ typedef struct {
     uint64_t   cmppos;
 } sqzblock_t;
 
-#endif
+//#endif
 
 typedef struct {
     FILE       *fp;
@@ -86,10 +73,3 @@ typedef struct {
     uint8_t    ff;
     uint64_t   filepos;
 } sqz_File;
-
-
-
-/*
- * 1. Explicityly adding a kseq_t* memeber is what made me make sqz*_t objects
-      opaque. This brings some added complexity I do not know how to handle.
- */

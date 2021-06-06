@@ -6,7 +6,7 @@
 
 
 
-sqzfastx_t *sqz_fastxinit(const char *filename, size_t buffersize);
+char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize);
 
 
 char sqz_getformat(const char *filename);

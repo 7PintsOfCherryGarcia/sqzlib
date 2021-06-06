@@ -77,41 +77,44 @@ uint8_t  sqz_checksqz(const char *filename)
 char     sqz_kseqinit(sqzfastx_t *sqz)
 {
     char ret = 0;
-    sqz->fp = gzopen(sqz->filename, "r");
-    if (!sqz->fp) goto exit;
-    sqz->seq = kseq_init(sqz->fp);
-    if (!sqz->seq) {
-        gzclose(sqz->fp);
-        goto exit;
-    }
+    //TODO Adjust comented code to reflect changes in sqzfastx_t struct
+    //TODO Code was comented while reworking code to use multiple threads
+    //sqz->fp = gzopen(sqz->filename, "r");
+    //if (!sqz->fp) goto exit;
+    //sqz->seq = kseq_init(sqz->fp);
+    //if (!sqz->seq) {
+    //    gzclose(sqz->fp);
+    //    goto exit;
+    //}
     ret = 1;
-    exit:
-        return ret;
+    //exit:
+        //if (!ret) fprintf(stderr, "What is happening\n");
+    return ret;
 }
 
 
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag)
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {
     if (sqz->endflag) {
-        if (fqflag) return sqz_fastqeblock(sqz);
-        return sqz_fastaeblock(sqz);
+        if (fqflag) return sqz_fastqeblock(sqz, seq);
+        return sqz_fastaeblock(sqz, seq);
     }
-    if (fqflag) return sqz_fastqnblock(sqz);
-    return sqz_fastanblock(sqz);
+    if (fqflag) return sqz_fastqnblock(sqz, seq);
+    return sqz_fastanblock(sqz, seq);
 }
 
 
-uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
+static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint64_t offset = 0;
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    kseq_t   *seq   = sqz->seq;
+    //kseq_t   *seq   = sqz->seq;
     uint8_t  *seqbuffer = sqz->seqbuffer;
     uint8_t  *qltbuffer = sqz->qualbuffer;
-    while ( kseq_read(sqz->seq) >= 0 ) {
+    while ( kseq_read(seq) >= 0 ) {
         l = seq->seq.l;
         n++;
         if (!sqz_loadname(sqz, seq, n)) {
@@ -147,7 +150,6 @@ uint64_t sqz_fastqnblock(sqzfastx_t *sqz)
         sqz->n = n;
         sqz->bases = bases;
         sqz->offset = offset;
-        //fprintf(stderr, "Loaded %lu bases\n", bases);
         return offset;
 }
 
@@ -181,7 +183,7 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
 }
 
 
-uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
+static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
@@ -189,10 +191,10 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,
-               sqz->seq->seq.s + sqz->seqread,
+               seq->seq.s + sqz->seqread,
                LOAD_SIZE);
         memcpy(sqz->qualbuffer,
-               sqz->seq->qual.s + sqz->seqread,
+               seq->qual.s + sqz->seqread,
                LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
         //fprintf(stderr, "Loaded_e %lu bases\n", LOAD_SIZE);
@@ -201,10 +203,10 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     //Rest of sequence can go into buffer
     //fprintf(stderr, "Detail: %lu\n", sqz->seqread);
     memcpy(sqz->seqbuffer,
-           sqz->seq->seq.s + sqz->seqread,
+           seq->seq.s + sqz->seqread,
            seqleft);
     memcpy(sqz->qualbuffer,
-           sqz->seq->qual.s + sqz->seqread,
+           seq->qual.s + sqz->seqread,
            seqleft);
     sqz->seqbuffer[seqleft] = 0;
     sqz->qualbuffer[seqleft] = 0;
@@ -215,14 +217,14 @@ uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 }
 
 
-uint64_t sqz_fastanblock(sqzfastx_t *sqz)
+static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint64_t offset = 0;
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    kseq_t *seq     = sqz->seq;
+    //kseq_t *seq     = sqz->seq;
     uint8_t *seqbuffer = sqz->seqbuffer;
 
     while ( (kseq_read(seq) >= 0) ) {
@@ -261,7 +263,7 @@ uint64_t sqz_fastanblock(sqzfastx_t *sqz)
 }
 
 
-uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
+static uint64_t sqz_fastaeblock(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
@@ -269,14 +271,14 @@ uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,
-               sqz->seq->seq.s + sqz->seqread,
+               seq->seq.s + sqz->seqread,
                LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
     memcpy(sqz->seqbuffer,
-           sqz->seq->seq.s + sqz->seqread,
+           seq->seq.s + sqz->seqread,
            seqleft);
     sqz->seqbuffer[seqleft++] = '\0';
     sqz->endflag = 0;
@@ -284,17 +286,17 @@ uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 }
 
 
-void     sqz_kill(sqzfastx_t *sqz)
+void sqz_kill(sqzfastx_t *sqz)
 {
     if (sqz) {
-        if (sqz->fp)
-            gzclose(sqz->fp);
-        if (sqz->seq)
-            kseq_destroy(sqz->seq);
+        //if (sqz->fp)
+        //    gzclose(sqz->fp);
+        //if (sqz->seq)
+        //    kseq_destroy(sqz->seq);
         free(sqz->seqbuffer);
         free(sqz->namebuffer);
         free(sqz->readbuffer);
-        if ( (sqz->fmt == 2) | (sqz->fmt == 14) ) free(sqz->qualbuffer);
+        free(sqz->qualbuffer);
         free(sqz);
     }
 }
@@ -320,12 +322,14 @@ sqz_File sqz_sqzopen(char *filename)
     fseek(sqzfile.fp, HEADLEN, SEEK_SET);
     sqzfile.filepos = ftell(sqzfile.fp);
 
-    sqzfile.sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    if ( !sqzfile.sqz || !(sqzfile.sqz->fmt & 4) ) {
-        sqz_kill(sqzfile.sqz);
-        sqzfile.sqz = NULL;
-        goto exit;
-    }
+    //TODO Adjust comented code to reflect changes in sqzfastx_t struct
+    //TODO Code was comented while reworking code to use multiple threads
+    //sqzfile.sqz = sqz_fastxinit(filename, LOAD_SIZE);
+    //if ( !sqzfile.sqz || !(sqzfile.sqz->fmt & 4) ) {
+    //    sqz_kill(sqzfile.sqz);
+    //    sqzfile.sqz = NULL;
+    //    goto exit;
+    //}
 
     sqzfile.blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!sqzfile.blk) {
@@ -492,7 +496,11 @@ char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
 
 void     sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl)
 {
-    switch (sqz->fmt) {
+    //TODO The changes below are non functionsl and only thereto permit building
+    //while reworking code to use multiple threads
+    int fmt = 1;
+    switch (fmt) {
+    //switch (sqz->fmt) {
     case 14:
         {
         sqz->offset = sqz_fastXdecode(blk, sqz->readbuffer, klibl, 1);

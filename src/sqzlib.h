@@ -54,7 +54,7 @@ sqzblock_t *sqz_sqzblkinit(size_t size);
 /*
     Write sqz file header
 */
-char sqz_filehead(sqzfastx_t *sqz, FILE *ofp);
+char sqz_filehead(unsigned char fmt, FILE *ofp);
 
 
 //!SQZLIB file function
@@ -75,7 +75,7 @@ uint64_t sqz_filesize(FILE *fp);
 /*
     Load fasta | fastq data into sqz struct
 */
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag);
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 
 
 /*

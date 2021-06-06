@@ -1,6 +1,5 @@
 src/*o
 src/misc
-src/pthread
 sqz
 testdata
 testing

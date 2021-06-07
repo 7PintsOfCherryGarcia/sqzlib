@@ -87,14 +87,14 @@ examplesB:exampleflag
 
 
 
-build:wipe libsqzB sqzB examplesB
+build:wipe libsqzB sqzB #examplesB
 
 
 clean:
-	rm -rf $(SRCDIR)/*.o
+	rm -rf $(SRCDIR)/*.o $(SRCDIR)/pthread/*.o
 
 wipe:
-	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/*.o
-	make clean -C examples
+	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/*.o $(SRCDIR)/pthread/*.o
+	#make clean -C examples
 
 # makedepend line not in use in current compilation enviroanment

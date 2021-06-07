@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-//#define SQZLIB
-//#define KLIB
 #include "../sqz_data.h"
+#include "klib/kseq.h"
+KSEQ_INIT(gzFile, gzread)
 
 sqzblock_t *sqz_sqzblkinit(uint64_t size);
 char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize);
-
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -23,7 +23,7 @@ typedef struct {
     int nthread;
     const char *filename;
     sqzfastx_t *sqzqueue;
-    unsigned char fmt;
+    char fqflag;
 } sqzthread_t;
 
 
@@ -74,12 +74,14 @@ void *sqz_consumerthread(void *thread_data)
     if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
     fprintf(stderr, "Thread with ID %d\n", id);
+    fprintf(stderr, "\tLet's rumble!!!!\n");
     sqzfastx_t sqz = sqzthread->sqzqueue[id-1];
-    fprintf(stderr, "Initializing sqz structs\n");
     fprintf(stderr, "\ttest: %d\n", sqz.endflag);
     //Do some work
-    while (1)
+    while (1) {
+        fprintf(stderr, "\nWorking\n");
         sleep(10);
+    }
     exit:
         return NULL;
 }
@@ -102,11 +104,16 @@ void sqz_wakeconsumers(sqzthread_t *sqzthread)
 void *sqz_readerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
-    int id = sqzthread->threadid++;
+    sqzfastx_t *sqzqueue   = sqzthread->sqzqueue;
+    int id      = sqzthread->threadid++;
     int nthread = sqzthread->nthread;
-    sqzfastx_t *sqzqueue = sqzthread->sqzqueue;
-    fprintf(stderr, "This is printed from a thread. %d\n", id);
+    char fqflag = sqzthread->fqflag;
     fprintf(stderr, "\tWe have %d threads\n", nthread);
+    //Initialize kseq object
+    gzFile fp = gzopen(sqzthread->filename, "r");
+    if (!fp) return NULL;
+    kseq_t *seq = kseq_init(fp);
+    if (!seq) return NULL;
     //Start consumer pool
     //TODO indicate error
     pthread_t *consumer_pool = malloc(nthread * sizeof(pthread_t));
@@ -118,20 +125,22 @@ void *sqz_readerthread(void *thread_data)
                            sqz_consumerthread,
                            thread_data))
             goto exit;
-
-    //Initialize kseq object
-    gzFile fp = gzopen(sqzthread->filename, "r");
-    kseq_t *seq = kseq_init();
     int thcounter = 0;
     //While there is data to read
-    while (1) {
+    while (sqz_loadfastX(&(sqzqueue[thcounter]), fqflag, seq)) {
+        fprintf(stderr, "Loaded in sqz #%d\n", thcounter);
         thcounter++;
+        sleep(2);
         if (nthread == thcounter) {
             thcounter = 0;
+            fprintf(stderr, "This is when threads will be woken up\n");
             sqz_wakeconsumers(sqzthread);
         }
         //Read data in blocks accorind to number of threads
     }
+    fprintf(stderr, "Done with the reader loop\n");
+    if (thcounter % nthread)
+        fprintf(stderr, "%d threads were not woken up\n", thcounter % nthread);
     //int counter = 0;
     //while (1) {
     //    counter++;
@@ -148,6 +157,8 @@ void *sqz_readerthread(void *thread_data)
         for (int i = 0; i < nthread; i++)
             if (pthread_join(consumer_pool[i], NULL))
                 fprintf(stderr, "Thread error join\n");
+        kseq_destroy(seq);
+        gzclose(fp);
         fprintf(stderr, "Cleaning up\n");
         sleep(10);
         return NULL;
@@ -168,13 +179,13 @@ char sqz_threadlauncher(FILE *ofp,
     sqzthread.doneq  = 0;
     sqzthread.wakethreadn = 0;
     sqzthread.threadid    = 0;
-    sqzthread.fmt         = fmt;
+    sqzthread.fqflag      = fqflag;
     sqzthread.filename    = filename;
     sqzthread.sqzqueue    = calloc(nthread, sizeof(sqzfastx_t));
+    if (!sqzthread.sqzqueue) return 1;
     for (int i = 0; i < nthread; i++)
         if (!sqz_fastxinit(sqzthread.sqzqueue + i, fmt, LOAD_SIZE))
             return 1;
-    if (!sqzthread.sqzqueue) return 1;
 
     pthread_mutex_init(&(sqzthread.mtx), NULL);
     pthread_cond_init(&(sqzthread.conscond), NULL);
@@ -229,4 +240,10 @@ char sqz_threadlauncher(FILE *ofp,
         }
     }
     */
+}
+
+
+static void sqz_singleread(kseq_t *seq)
+{
+    kseq_read(seq);
 }

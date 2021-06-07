@@ -4,8 +4,8 @@
 #include <zlib.h>
 #include <stdint.h>
 
-#define SQZLIB
-#define KLIB
+//#define SQZLIB
+//#define KLIB
 #include "sqz_coding.h"
 
 uint64_t sqz_codeblksize(uint8_t *blkbuff, uint8_t fqflag);

@@ -1,7 +1,7 @@
 #include <zlib.h>
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
-#define SQZLIB
+//#define SQZLIB
 #include "sqz_kseq.h"
 
 
@@ -106,12 +106,12 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 
 static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
 {
+    fprintf(stderr, "Loading new block\n");
     uint64_t offset = 0;
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    //kseq_t   *seq   = sqz->seq;
     uint8_t  *seqbuffer = sqz->seqbuffer;
     uint8_t  *qltbuffer = sqz->qualbuffer;
     while ( kseq_read(seq) >= 0 ) {
@@ -128,13 +128,15 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
             memcpy(seqbuffer + offset, seq->seq.s, maxlen);
             memcpy(qltbuffer + offset, seq->qual.s, maxlen);
             offset += maxlen;
+            //TODO this is not strictly necessary, but it brings me peaceof mind
             seqbuffer[offset] = 0;
             qltbuffer[offset] = 0;
-            offset++;
+            offset++; //From previous TODO, offset should be LOAD_SIZE + 1 after this increment
             bases += maxlen;
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
+            fprintf(stderr, "\tExiting from partial\n");
             goto exit;
         }
         bases += l;
@@ -146,10 +148,12 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
         if ( maxlen <= l + 1 + B64 ) break;
         maxlen -= l + 1 + B64;
     }
+    fprintf(stderr, "\tWe are donsies my friend\n");
     exit:
         sqz->n = n;
         sqz->bases = bases;
         sqz->offset = offset;
+        fprintf(stderr, "\tReturning %lu\n", offset);
         return offset;
 }
 
@@ -185,9 +189,9 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
 
 static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq)
 {
+    fprintf(stderr, "Finishing block loading\n");
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
-
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
         memcpy(sqz->seqbuffer,
@@ -197,11 +201,9 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq)
                seq->qual.s + sqz->seqread,
                LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
-        //fprintf(stderr, "Loaded_e %lu bases\n", LOAD_SIZE);
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
-    //fprintf(stderr, "Detail: %lu\n", sqz->seqread);
     memcpy(sqz->seqbuffer,
            seq->seq.s + sqz->seqread,
            seqleft);
@@ -212,7 +214,6 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq)
     sqz->qualbuffer[seqleft] = 0;
     seqleft++;
     sqz->endflag = 0;
-    //fprintf(stderr, "Loaded_e %lu bases\n", seqleft);
     return sqz->offset;
 }
 

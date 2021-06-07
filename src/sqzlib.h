@@ -75,7 +75,7 @@ uint64_t sqz_filesize(FILE *fp);
 /*
     Load fasta | fastq data into sqz struct
 */
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
+//uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 
 
 /*

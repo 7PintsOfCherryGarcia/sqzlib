@@ -1,7 +1,7 @@
 #include <zlib.h>
 #include <stdint.h>
 
-#define LOAD_SIZE 8L*1024L*1024L
+#define LOAD_SIZE 16L*1024L*1024L
 #define NAME_SIZE 1L*1024L*1024L
 #define B64       sizeof(uint64_t)
 #define HEADLEN   8
@@ -13,12 +13,6 @@
 #define FAH       '>'
 #define FQS       '+'
 #define NL        '\n'
-
-
-
-/*sqzfastx_t and sqzblock_t are opaque structures the user needs not to concern
-  about what they do or have
-*/
 
 /*
   "sqzfastx_t"
@@ -38,6 +32,10 @@ typedef struct {
     uint8_t    *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
+    //Partially loaded sequence and qualities
+    char       *pseq;
+    char       *pqlt;
+    uint64_t    plen;
     //return members
     uint64_t    n;
     uint64_t    bases;
@@ -63,7 +61,6 @@ typedef struct {
     uint64_t   cmppos;
 } sqzblock_t;
 
-//#endif
 
 typedef struct {
     FILE       *fp;

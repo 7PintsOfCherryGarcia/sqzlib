@@ -19,7 +19,7 @@ char sqz_kseqinit(sqzfastx_t *sqz);
 static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq);
 
 
-static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq);
+static uint64_t sqz_fastqeblock(sqzfastx_t *sqz);
 
 
 static size_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq);
@@ -34,14 +34,7 @@ void sqz_kill(sqzfastx_t *sqz);
 unsigned char sqz_checksqz(const char *buf);
 
 
-uint64_t sqz_fastqwrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen);
-
-
-uint64_t sqz_fastawrap(sqzfastx_t *sqz, uint64_t offset, uint64_t maxlen);
-
-
 uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n);
-//char sqz_loadname(sqzfastx_t *sqz, kstring_t name);
 
 
 sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize);
@@ -69,3 +62,6 @@ size_t sqz_fastXdecode(sqzblock_t *blk,
                        uint8_t *klibbuff,
                        uint64_t klibl,
                        char fastqflag);
+
+
+static void sqz_rememberseq(sqzfastx_t *sqz, kseq_t *seq, char fqflag);

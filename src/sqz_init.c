@@ -10,22 +10,27 @@
 char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
 {
     char ret = 0;
+    sqz->seqbuffer  = NULL;
+    sqz->qualbuffer = NULL;
+    sqz->namebuffer = NULL;
+    sqz->readbuffer = NULL;
+    sqz->pseq       = NULL;
+    sqz->pqlt       = NULL;
     sqz->namesize   = NAME_SIZE;
+    sqz->plen = 10240;
     //Get file format if reading an sqz file
     switch (fmt & 7) {
         case 0:
             goto exit;
         case 1:
             //FASTA
-            sqz->qualbuffer = NULL;
             sqz->seqbuffer = malloc(bsize + 1);
-            if (!sqz->seqbuffer) goto exit;
+            if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[bsize] = '\0';
+            sqz->pseq = malloc(10240);
+            if (!sqz->pseq)       goto exit;
             sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) {
-                free(sqz->seqbuffer);
-                sqz->seqbuffer = NULL;
-            }
+            if (!sqz->namebuffer) goto exit;
             break;
         case 2:
             //FASTQ
@@ -33,70 +38,44 @@ char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
             if (!sqz->qualbuffer) goto exit;
             sqz->qualbuffer[bsize] = 0;
             sqz->seqbuffer = malloc(bsize + 1);
-            if (!sqz->seqbuffer) {
-                free(sqz->qualbuffer);
-                sqz->qualbuffer = NULL;
-                goto exit;
-            }
+            if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[bsize] = 0;
+            sqz->pseq = malloc(10240);
+            sqz->pqlt = malloc(10240);
+            if (!sqz->pseq || !sqz->pqlt) goto exit;
             sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) {
-                free(sqz->qualbuffer);
-                free(sqz->seqbuffer);
-                sqz->qualbuffer = NULL, sqz->seqbuffer  = NULL;
-                goto exit;
-            }
+            if (!sqz->namebuffer) goto exit;
             break;
         case 5:
             sqz->readbuffer = malloc(bsize + 1);
             if (!sqz->readbuffer) goto exit;
             sqz->readbuffer[bsize] = 0;
             sqz->seqbuffer = malloc(bsize + 1);
-            if (!sqz->seqbuffer) {
-                free(sqz->readbuffer);
-                sqz->readbuffer = NULL;
-                goto exit;
-            }
+            if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) {
-                free(sqz->readbuffer);
-                free(sqz->seqbuffer);
-                sqz->readbuffer = NULL, sqz->seqbuffer = NULL;
-                goto exit;
-            }
+            if (!sqz->namebuffer) goto exit;
             break;
         case 6:
             sqz->readbuffer = malloc(bsize + 1);
             if (!sqz->readbuffer) goto exit;
             sqz->readbuffer[bsize] = '\0';
             sqz->qualbuffer = malloc(bsize + 1);
-            if (!sqz->qualbuffer) {
-                free(sqz->readbuffer);
-                sqz->readbuffer = NULL;
-                goto exit;
-            }
+            if (!sqz->qualbuffer) goto exit;
             sqz->qualbuffer[bsize] = 0;
             sqz->seqbuffer = malloc(bsize + 1);
-            if (!sqz->seqbuffer) {
-                free(sqz->readbuffer);
-                free(sqz->qualbuffer);
-                sqz->readbuffer = NULL, sqz->qualbuffer = NULL;
-                goto exit;
-            }
+            if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[bsize] = 0;
             sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) {
-                free(sqz->readbuffer);
-                free(sqz->qualbuffer);
-                free(sqz->seqbuffer);
-                sqz->readbuffer=NULL,sqz->qualbuffer=NULL;sqz->seqbuffer=NULL;
-                goto exit;
-            }
+            if (!sqz->namebuffer) goto exit;
             break;
     }
     ret = 1;
     exit:
+        if (!ret) {
+            free(sqz->seqbuffer),free(sqz->qualbuffer),free(sqz->namebuffer);
+            free(sqz->readbuffer),free(sqz->pseq),free(sqz->pqlt);
+        }
         return ret;
 }
 

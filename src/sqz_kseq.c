@@ -96,11 +96,40 @@ char     sqz_kseqinit(sqzfastx_t *sqz)
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {
     if (sqz->endflag) {
-        if (fqflag) return sqz_fastqeblock(sqz, seq);
+        if (fqflag) return sqz_fastqeblock(sqz);
         return sqz_fastaeblock(sqz, seq);
     }
     if (fqflag) return sqz_fastqnblock(sqz, seq);
     return sqz_fastanblock(sqz, seq);
+}
+
+
+uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
+{
+    uint8_t ret = 0;
+    uint8_t *namebuffer = sqz->namebuffer;
+    uint64_t pos = sqz->namepos;
+    memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
+    pos += seq->name.l + 1;
+    //If comment exists
+    if (seq->comment.s) {
+        //Substitute terminating null with space
+        namebuffer[pos - 1] = ' ';
+        //Append comment including terminating null
+        memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
+        pos += seq->comment.l + 1;
+    }
+    if (pos + 100 >= sqz->namesize) {
+        namebuffer = realloc(namebuffer, sqz->namesize*2);
+        if (!(namebuffer))
+            goto exit;
+        sqz->namebuffer = namebuffer;
+        sqz->namesize *= 2;
+    }
+    ret = 1;
+ exit:
+    sqz->namepos = pos;
+    return ret;
 }
 
 
@@ -131,11 +160,21 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
             //TODO this is not strictly necessary, but it brings me peaceof mind
             seqbuffer[offset] = 0;
             qltbuffer[offset] = 0;
-            offset++; //From previous TODO, offset should be LOAD_SIZE + 1 after this increment
+            //From previous TODO
+            //offset should be LOAD_SIZE + 1 after this increment
+            offset++;
             bases += maxlen;
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
+            //TODO
+            /*
+              The sqzfastx_t struct must remember the sequence (and qualities)
+              of this partially decoded record. Thus the contents of seq->seq.s
+              (and seq->qual.s) must be transfered to the corresponding members
+              of sqzfastx_t. Making shure those buffers are big enough.
+            */
+            sqz_rememberseq(sqz, seq, 1);
             fprintf(stderr, "\tExiting from partial\n");
             goto exit;
         }
@@ -158,62 +197,28 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
 }
 
 
-uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
-{
-    uint8_t ret = 0;
-    uint8_t *namebuffer = sqz->namebuffer;
-    uint64_t pos = sqz->namepos;
-    memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
-    pos += seq->name.l + 1;
-    //If comment exists
-    if (seq->comment.s) {
-        //Substitute terminating null with space
-        namebuffer[pos - 1] = ' ';
-        //Append comment including terminating null
-        memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
-        pos += seq->comment.l + 1;
-    }
-    if (pos + 100 >= sqz->namesize) {
-        namebuffer = realloc(namebuffer, sqz->namesize*2);
-        if (!(namebuffer))
-            goto exit;
-        sqz->namebuffer = namebuffer;
-        sqz->namesize *= 2;
-    }
-    ret = 1;
-    exit:
-        sqz->namepos = pos;
-        return ret;
-}
-
-
-static uint64_t sqz_fastqeblock(sqzfastx_t *sqz, kseq_t *seq)
+static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 {
     fprintf(stderr, "Finishing block loading\n");
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
+    char *seq = sqz->pseq;
+    char *qlt = sqz->pqlt;
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
-        memcpy(sqz->seqbuffer,
-               seq->seq.s + sqz->seqread,
-               LOAD_SIZE);
-        memcpy(sqz->qualbuffer,
-               seq->qual.s + sqz->seqread,
-               LOAD_SIZE);
+        memcpy(sqz->seqbuffer, seq + sqz->seqread, LOAD_SIZE);
+        memcpy(sqz->qualbuffer, qlt + sqz->seqread, LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
-    memcpy(sqz->seqbuffer,
-           seq->seq.s + sqz->seqread,
-           seqleft);
-    memcpy(sqz->qualbuffer,
-           seq->qual.s + sqz->seqread,
-           seqleft);
+    memcpy(sqz->seqbuffer, seq + sqz->seqread, seqleft);
+    memcpy(sqz->qualbuffer, qlt + sqz->seqread, seqleft);
     sqz->seqbuffer[seqleft] = 0;
     sqz->qualbuffer[seqleft] = 0;
     seqleft++;
     sqz->endflag = 0;
+    //TODO offset is unchanged,why am I returning it?
     return sqz->offset;
 }
 
@@ -513,4 +518,16 @@ void     sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint64_t klibl)
         break;
         }
     }
+}
+
+
+static void sqz_rememberseq(sqzfastx_t *sqz, kseq_t *seq, char fqflag)
+{
+    if (sqz->plen < seq->seq.l) {
+        sqz->plen = seq->seq.l + 1024;
+        if (fqflag) sqz->pqlt = realloc(sqz->pqlt, sqz->plen);
+        sqz->pseq = realloc(sqz->pseq, sqz->plen);
+    }
+    if (fqflag) strcpy(sqz->pqlt, seq->qual.s);
+    strcpy(sqz->pseq, seq->seq.s);
 }

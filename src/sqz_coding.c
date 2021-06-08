@@ -89,16 +89,14 @@ char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint8_t *blkbuff = blk->blkbuff;
     uint64_t blksize = blk->blksize;
     uint64_t blkpos  = blk->blkpos;
-
     if (sqz->endflag) seqleft = LOAD_SIZE;
-
     if ( (blkpos + getblkbytesize(seqleft)) > blksize ) {
         blksize *= 2;
-        blkbuff = realloc(blk->blkbuff, blksize);
-        blk->blkbuff = blkbuff;
-        blk->blksize = blksize;
+        blkbuff  = realloc(blk->blkbuff, blksize);
+        blk->blkbuff  = blkbuff;
+        blk->blksize  = blksize;
         blk->cmpsize *= 2;
-        blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
+        blk->cmpbuff  = realloc(blk->cmpbuff, blk->cmpsize);
     }
     blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos, blksize-blkpos);
     blkpos += sqz_qualencode(qltbuff, seqleft, blkbuff+blkpos, blksize-blkpos);

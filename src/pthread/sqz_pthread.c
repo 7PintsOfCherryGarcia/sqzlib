@@ -8,6 +8,7 @@ KSEQ_INIT(gzFile, gzread)
 sqzblock_t *sqz_sqzblkinit(uint64_t size);
 char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize);
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
+char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -73,14 +74,24 @@ void *sqz_consumerthread(void *thread_data)
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
-    fprintf(stderr, "Thread with ID %d\n", id);
     fprintf(stderr, "\tLet's rumble!!!!\n");
-    sqzfastx_t sqz = sqzthread->sqzqueue[id-1];
-    fprintf(stderr, "\ttest: %d\n", sqz.endflag);
+    sqzfastx_t *sqz = sqzthread->sqzqueue + (id-1);
+    if (sqz->endflag) fprintf(stderr, "\t\tThis thread %d has partial data\n",id);
+    else fprintf(stderr, "\t\tThis thread %d has complete data\n", id);
+    char fqflag = sqzthread->fqflag;
     //Do some work
     while (1) {
-        fprintf(stderr, "\nWorking\n");
-        sleep(10);
+        //Encode data
+        sqz_fastXencode(sqz, blk, fqflag);
+        //Check if there is leftover sequence that needs loading
+        if (sqz->endflag) {
+            fprintf(stderr, "Finishing sequece loading %d\n", id);
+            fprintf(stderr, "Finishing encoding %d\n",id);
+        }
+        //Compress block
+        fprintf(stderr, "Compressing %d\n", id);
+        //We are done, we can signal reader and go to sleep while new data arrives
+        sleep(100);
     }
     exit:
         return NULL;
@@ -130,11 +141,11 @@ void *sqz_readerthread(void *thread_data)
     while (sqz_loadfastX(&(sqzqueue[thcounter]), fqflag, seq)) {
         fprintf(stderr, "Loaded in sqz #%d\n", thcounter);
         thcounter++;
-        sleep(2);
         if (nthread == thcounter) {
             thcounter = 0;
             fprintf(stderr, "This is when threads will be woken up\n");
             sqz_wakeconsumers(sqzthread);
+            fprintf(stderr, "The BEAST shall wakeup!!!\n");
         }
         //Read data in blocks accorind to number of threads
     }
@@ -206,8 +217,6 @@ char sqz_threadlauncher(FILE *ofp,
     //Wait for reader thred to finish
     if (pthread_join(rthread, NULL))
         fprintf(stderr, "\t[ERROR]: Thread error join.\n");
-
-
     //Clean up
     pthread_attr_destroy(&(sqzthread.thatt));
     pthread_mutex_destroy(&(sqzthread.mtx));

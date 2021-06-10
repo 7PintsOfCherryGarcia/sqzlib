@@ -36,16 +36,10 @@ unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 char sqz_fastqencode(sqzfastx_t *sqz, sqzblock_t *blk);
 
 
-uint64_t sqz_seqencode(const uint8_t *seq,
-                       uint64_t seqlen,
-                       uint8_t *blkbuff,
-                       uint64_t seqlenOG);
+uint64_t sqz_seqencode(const uint8_t *seq, uint64_t lentocode, uint8_t *blkbuff);
 
 
-uint64_t sqz_qualencode(const uint8_t *qual,
-                        uint64_t quallen,
-                        uint8_t *blkbuff,
-                        uint64_t seqlen);
+uint64_t sqz_qualencode(const uint8_t *qual, uint8_t *blkbuff);
 
 
 char sqz_fastaencode(sqzfastx_t *sqz, sqzblock_t *blk);
@@ -82,8 +76,7 @@ void sqz_blkdestroy(sqzblock_t *blk);
 
 size_t sqz_qualdecode(const uint8_t *codebuff,
                       uint8_t *qualstr,
-                      size_t length,
-                      uint64_t *wbytes);
+                      size_t length);
 
 
 unsigned char sqz_bit2decode(const uint64_t *mer,

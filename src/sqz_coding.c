@@ -41,6 +41,7 @@ char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
 
 char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
+    fprintf(stderr, "Encoding from head\n");
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = blk->blkpos;
     uint8_t  *seqbuffer  = sqz->seqbuffer;
@@ -60,8 +61,8 @@ char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         qlt  = qltbuffer + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
-        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, seqlen);
-        blkpos += sqz_qualencode(qlt, seqread, blkbuff + blkpos, seqlen);
+        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos);
+        blkpos += sqz_qualencode(qlt, blkbuff + blkpos);
     }
     //More sequence to encode?
     if (sqz->endflag) {
@@ -82,6 +83,7 @@ char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
 char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
+
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;
     uint8_t *seqbuff = sqz->seqbuffer;
@@ -98,8 +100,8 @@ char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpsize *= 2;
         blk->cmpbuff  = realloc(blk->cmpbuff, blk->cmpsize);
     }
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos, blksize-blkpos);
-    blkpos += sqz_qualencode(qltbuff, seqleft, blkbuff+blkpos, blksize-blkpos);
+    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos);
+    blkpos += sqz_qualencode(qltbuff, blkbuff+blkpos);
     if (sqz->endflag) {
         blk->newblk = 0;
         goto exit;
@@ -141,7 +143,7 @@ char sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         seq = seqbuffer + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
-        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, seqlen);
+        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos);
     }
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
@@ -180,7 +182,7 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
     }
     //encode sequence
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos, blksize-blkpos);
+    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos);
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
         blk->newblk = 0;
@@ -205,10 +207,7 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 }
 
 
-uint64_t sqz_seqencode(const uint8_t *seq,
-                       uint64_t lentocode,
-                       uint8_t *blkbuff,
-                       uint64_t blksize)
+uint64_t sqz_seqencode(const uint8_t *seq, uint64_t lentocode, uint8_t *blkbuff)
 {
     uint64_t       blkpos = 0;
     const uint8_t *lstop = seq;            //Track position in sequence
@@ -273,10 +272,7 @@ uint64_t sqz_seqencode(const uint8_t *seq,
 }
 
 
-uint64_t sqz_qualencode(const uint8_t *qual,
-                        uint64_t quallen,
-                        uint8_t *blkbuff,
-                        uint64_t seqlen)
+uint64_t sqz_qualencode(const uint8_t *qual, uint8_t *blkbuff)
 {
     uint64_t blkpos = 0;
     uint8_t q       = sqz_8binqual(*qual);
@@ -387,10 +383,8 @@ static uint64_t sqz_gotoqblk(uint8_t *blkbuff,
 
 static void sqz_blkqdecode(uint8_t *blkbuff,
                            uint8_t *buff,
-                           uint64_t buffsize,
                            uint64_t nquals,
-                           uint64_t qoffset,
-                           uint64_t seqlen)
+                           uint64_t qoffset)
 {
     uint64_t ndecoded  = 0;
     uint64_t blkpos    = 0;
@@ -451,10 +445,8 @@ static uint64_t sqz_pdecode(uint8_t *blkbuff,
         buffsize -= 3;
         sqz_blkqdecode(blkbuff,         //data buffer
                        buff + wbytes,   //output buffer
-                       buffsize,        //output buffer size
                        buffsize,        //requested qualities
-                       0,               //already decoded qualities
-                       seqlen);         //sequence length
+                       0);               //already decoded qualities
         wbytes += buffsize;
     }
     return wbytes;
@@ -516,10 +508,8 @@ static uint64_t sqz_rdecode(uint8_t  *blkbuff,
         qtodecode = seqlen - qdecoded < bleft ? seqlen - qdecoded : bleft;
         sqz_blkqdecode(blkbuff,                  //data buffer
                        buff + todecode + spacer, //output buffer
-                       bleft,                    //output buffer size
                        qtodecode,                //requested qualities
-                       qdecoded,                 //already decoded qualities
-                       seqlen);                  //sequence length
+                       qdecoded);                 //already decoded qualities
     }
     return todecode + qtodecode + spacer;
 }
@@ -688,8 +678,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     //TODO Completely change this hacky way of decoding
                     buffpos += sqz_qualdecode(codebuff + buffpos,
                                               decodebuff + seqlen + 3,
-                                              blklen,
-                                              wbytes);
+                                              blklen);
                     //Change sequence length to reflect part of the quality
                     //string has been decoded
                     seqlen -= blklen;
@@ -710,8 +699,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
         decodebuff[seqpos++] = NL;
         buffpos += sqz_qualdecode(codebuff + buffpos,
                                   decodebuff + seqpos + prevblk,
-                                  seqlen,
-                                  wbytes);
+                                  seqlen);
         seqpos += seqlen + prevblk;
     }
     decodebuff[seqpos++] = NL;
@@ -722,8 +710,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
 
 size_t sqz_qualdecode(const uint8_t *codebuff,
                       uint8_t *qualstr,
-                      uint64_t length,
-                      uint64_t *wbytes)
+                      uint64_t length)
 {
     size_t byte = 0;
     size_t offset = 0;

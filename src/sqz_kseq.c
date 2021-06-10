@@ -1,7 +1,6 @@
 #include <zlib.h>
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
-//#define SQZLIB
 #include "sqz_kseq.h"
 
 
@@ -74,9 +73,9 @@ uint8_t  sqz_checksqz(const char *filename)
 }
 
 
-char     sqz_kseqinit(sqzfastx_t *sqz)
-{
-    char ret = 0;
+//char     sqz_kseqinit(sqzfastx_t *sqz)
+//{
+//    char ret = 0;
     //TODO Adjust comented code to reflect changes in sqzfastx_t struct
     //TODO Code was comented while reworking code to use multiple threads
     //sqz->fp = gzopen(sqz->filename, "r");
@@ -86,11 +85,11 @@ char     sqz_kseqinit(sqzfastx_t *sqz)
     //    gzclose(sqz->fp);
     //    goto exit;
     //}
-    ret = 1;
+//    ret = 1;
     //exit:
         //if (!ret) fprintf(stderr, "What is happening\n");
-    return ret;
-}
+//    return ret;
+//}
 
 
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
@@ -104,7 +103,7 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 }
 
 
-uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
+static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint8_t ret = 0;
     uint8_t *namebuffer = sqz->namebuffer;
@@ -127,9 +126,9 @@ uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n)
         sqz->namesize *= 2;
     }
     ret = 1;
- exit:
-    sqz->namepos = pos;
-    return ret;
+    exit:
+        sqz->namepos = pos;
+        return ret;
 }
 
 
@@ -146,7 +145,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
     while ( kseq_read(seq) >= 0 ) {
         l = seq->seq.l;
         n++;
-        if (!sqz_loadname(sqz, seq, n)) {
+        if (!sqz_loadname(sqz, seq)) {
             offset = 0;
             goto exit;
         }
@@ -167,7 +166,6 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
-            //TODO
             /*
               The sqzfastx_t struct must remember the sequence (and qualities)
               of this partially decoded record. Thus the contents of seq->seq.s
@@ -192,7 +190,6 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
         sqz->n = n;
         sqz->bases = bases;
         sqz->offset = offset;
-        fprintf(stderr, "\tReturning %lu\n", offset);
         return offset;
 }
 
@@ -209,6 +206,8 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
         memcpy(sqz->seqbuffer, seq + sqz->seqread, LOAD_SIZE);
         memcpy(sqz->qualbuffer, qlt + sqz->seqread, LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
+        sqz->offset = LOAD_SIZE;
+        sqz->bases += LOAD_SIZE;
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
@@ -218,8 +217,9 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     sqz->qualbuffer[seqleft] = 0;
     seqleft++;
     sqz->endflag = 0;
-    //TODO offset is unchanged,why am I returning it?
-    return sqz->offset;
+    sqz->offset = seqleft;
+    sqz->bases += seqleft;
+    return seqleft;
 }
 
 
@@ -236,7 +236,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
     while ( (kseq_read(seq) >= 0) ) {
         l = seq->seq.l;
         n++;
-        if (!sqz_loadname(sqz, seq, n)) {
+        if (!sqz_loadname(sqz, seq)) {
             offset = 0;
             goto exit;
         }
@@ -363,7 +363,7 @@ int64_t  sqz_sqzread(sqz_File *file, void *buff, size_t len)
         // Decompress sqz block
         if (!sqz_readblksize(file->blk, file->fp)) goto error;
         // Check if we have reached end of file
-        if (ftell(file->fp) == file->size) {
+        if (ftell(file->fp) == (long)file->size) {
             //Set bit 7
             file->ff |= 128;
         }
@@ -426,7 +426,7 @@ int64_t  sqz_sqzread(sqz_File *file, void *buff, size_t len)
             }
             else {
                 if (!sqz_readblksize(file->blk, file->fp)) goto error;
-                if (ftell(file->fp) == file->size) {
+                if (ftell(file->fp) == (long)file->size) {
                     //Set bit 7
                     file->ff |= 128;
                 }

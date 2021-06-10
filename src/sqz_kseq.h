@@ -34,9 +34,6 @@ void sqz_kill(sqzfastx_t *sqz);
 unsigned char sqz_checksqz(const char *buf);
 
 
-uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq, uint64_t n);
-
-
 sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize);
 
 

@@ -62,7 +62,8 @@ void blkdecode(const uint8_t *codebuff,
     //Compute start position within mer
     uint8_t  startpos = blkoffset % 32;
     //Number of bases to decode from these first 64 bits
-    uint8_t  nbases   = len < (32 - startpos) ? len : (32 - startpos);
+    //TODO check these casts
+    uint8_t  nbases   = len < (uint64_t)(32 - startpos) ? (uint8_t)len : (32 - startpos);
     if (nbases) blknum++;
     //Compute how many blks encode the number of bases requested
     blknum += ( (len - nbases) / 32) + ( ( (len - nbases)  % 32) > 0 ) - 1;

@@ -24,7 +24,7 @@ char sqz_squeezefastX(sqzopts_t opts)
 
     if ( !sqz_filehead(opts.fmt, opts.ofp) )
         goto exit;
-
+    fflush(opts.ofp);
     sqz_threadlauncher(opts.ofp,
                        opts.ifile,
                        opts.fqflag,

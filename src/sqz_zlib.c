@@ -47,12 +47,11 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
 
 char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 {
-    size_t bytes = sizeof(size_t);
     size_t wbytes = 0;
     //Write uncompressed number of bytes in block
-    wbytes += fwrite(&(blk->blkpos), bytes, 1, ofp);
+    wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
     //Write compressed number of bytes in block
-    wbytes += fwrite(&(size), bytes, 1, ofp);
+    wbytes += fwrite(&(size), B64, 1, ofp);
     //Write block
     wbytes += fwrite(blk->cmpbuff, 1, size, ofp);
     if (wbytes != size+2) return 0;
@@ -87,8 +86,11 @@ size_t sqz_inflate(sqzblock_t *blk)
         switch (ret) {
             case Z_NEED_DICT:
                 ret = Z_DATA_ERROR;
+                break;
             case Z_DATA_ERROR:
+                break;
             case Z_MEM_ERROR:
+                break;
             case Z_STREAM_ERROR:
                 fprintf(stderr, "[sqzlib ZLIB ERROR]: inflate error.\n");
                 return (size_t)ret;  /* state not clobbered */

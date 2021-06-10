@@ -9,6 +9,9 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size);
 char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize);
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
+size_t sqz_deflate(sqzblock_t *blk, int level);
+char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
+
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -25,6 +28,7 @@ typedef struct {
     const char *filename;
     sqzfastx_t *sqzqueue;
     char fqflag;
+    FILE *ofp;
 } sqzthread_t;
 
 
@@ -55,7 +59,7 @@ int sqz_getthreadid(sqzthread_t *sqzthread)
     sqz_threadwait(&(sqzthread->gocons),
                    &(sqzthread->conscond),
                    &(sqzthread->mtx));
-    //Thread wakes up, now it has to wait for all other threadsto wake up
+    //Thread wakes up, now it has to wait for all other threads to wake up
     sqzthread->wakethreadn++;
     fprintf(stderr, "Thread %d wokeup\n", id);
     //Go to sleep again until all threads have woken up
@@ -68,37 +72,76 @@ int sqz_getthreadid(sqzthread_t *sqzthread)
 }
 
 
+static void sqz_wakereader(sqzthread_t *sqzthread, int id)
+{
+    pthread_mutex_lock(&(sqzthread->mtx));
+    sqzthread->doneq++;
+    if (sqzthread->nthread == sqzthread->doneq) {
+        fprintf(stderr, "\tthread: %d waking reader\n", id);
+        sqzthread->doneq = 0;
+        sqzthread->goread = 1;
+        pthread_cond_signal(&(sqzthread->readcond));
+    }
+    sqzthread->gocons = 0;
+    fprintf(stderr, "\tthread %d done\n", id);
+    sqz_threadwait(&(sqzthread->gocons),
+                   &(sqzthread->conscond),
+                   &(sqzthread->mtx));
+    //Thread wakes up and increases flag
+    sqzthread->wakethreadn++;
+    fprintf(stderr, "%d threads awake %d\n", sqzthread->wakethreadn, id);
+    //Thread goes to sleep again until all threads have woken up
+    sqz_syncwakeup(&(sqzthread->wakethreadn),
+                   &(sqzthread->intraconscond),
+                   &(sqzthread->mtx),
+                   sqzthread->nthread);
+    pthread_mutex_unlock(&(sqzthread->mtx));
+}
+
+
 void *sqz_consumerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
+    uint64_t cbytes = 0;
     sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
-    fprintf(stderr, "\tLet's rumble!!!!\n");
-    sqzfastx_t *sqz = sqzthread->sqzqueue + (id-1);
-    if (sqz->endflag) fprintf(stderr, "\t\tThis thread %d has partial data\n",id);
-    else fprintf(stderr, "\t\tThis thread %d has complete data\n", id);
+    sqzfastx_t *sqz = sqzthread->sqzqueue + (id - 1);
     char fqflag = sqzthread->fqflag;
-    //Do some work
+    //Do some work if there is available data
     while (1) {
         //Encode data
         sqz_fastXencode(sqz, blk, fqflag);
         //Check if there is leftover sequence that needs loading
-        if (sqz->endflag) {
-            fprintf(stderr, "Finishing sequece loading %d\n", id);
-            fprintf(stderr, "Finishing encoding %d\n",id);
+        while (sqz->endflag) {
+            sqz_loadfastX(sqz, fqflag, NULL);
+            sqz_fastXencode(sqz, blk, fqflag);
         }
         //Compress block
-        fprintf(stderr, "Compressing %d\n", id);
+        cbytes = sqz_deflate(blk, 9);
+        fprintf(stderr, "Compressed %d to %lu bytes\n", id, cbytes);
+        //Write compressed block to output file
+        pthread_mutex_lock(&(sqzthread->mtx));
+        sqz_zlibcmpdump(blk, cbytes, sqzthread->ofp);
+        fflush(sqzthread->ofp);
+        fprintf(stderr, "Thread %d done writing\n", id);
+        blk->blkpos  = 0;
+        sqz->namepos = 0;
+        sqz->endflag = 0;
+        blk->newblk  = 1;
+        pthread_mutex_unlock(&(sqzthread->mtx));
         //We are done, we can signal reader and go to sleep while new data arrives
-        sleep(100);
+        sqz_wakereader(sqzthread, id);
+        fprintf(stderr, "Now what %d?!?\n", id);
+        sleep(10);
     }
+    fprintf(stderr, "Thread %d is out!!!\n", id);
     exit:
         return NULL;
 }
 
 
-void sqz_wakeconsumers(sqzthread_t *sqzthread)
+static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 {
     pthread_mutex_lock(&(sqzthread->mtx));
     sqzthread->goread = 0;
@@ -116,10 +159,9 @@ void *sqz_readerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
     sqzfastx_t *sqzqueue   = sqzthread->sqzqueue;
-    int id      = sqzthread->threadid++;
+    sqzthread->threadid++;
     int nthread = sqzthread->nthread;
     char fqflag = sqzthread->fqflag;
-    fprintf(stderr, "\tWe have %d threads\n", nthread);
     //Initialize kseq object
     gzFile fp = gzopen(sqzthread->filename, "r");
     if (!fp) return NULL;
@@ -138,6 +180,7 @@ void *sqz_readerthread(void *thread_data)
             goto exit;
     int thcounter = 0;
     //While there is data to read
+    //Read data in blocks accorind to number of threads
     while (sqz_loadfastX(&(sqzqueue[thcounter]), fqflag, seq)) {
         fprintf(stderr, "Loaded in sqz #%d\n", thcounter);
         thcounter++;
@@ -147,23 +190,19 @@ void *sqz_readerthread(void *thread_data)
             sqz_wakeconsumers(sqzthread);
             fprintf(stderr, "The BEAST shall wakeup!!!\n");
         }
-        //Read data in blocks accorind to number of threads
     }
+    //TODO
+    /*
+      Now that reader is done, some signal must be sent to consumer threads
+      indicating that they should exit once there is no more data. Problem is
+      that there might be a mixture of consumers with data and others without.
+      Those without should just terminate,while those with, should finish their
+      consuming and then terminate.
+    */
     fprintf(stderr, "Done with the reader loop\n");
     if (thcounter % nthread)
         fprintf(stderr, "%d threads were not woken up\n", thcounter % nthread);
-    //int counter = 0;
-    //while (1) {
-    //    counter++;
-    //    fprintf(stderr, "counter: %d\n", counter);
-    //    sleep(1);
-    //    if (10 == counter) {
-    //        counter = 0;
-    //        fprintf(stderr, "Wake up consumers!!!\n");
-    //        sqz_wakeconsumers(sqzthread);
-    //        sleep(100);
-    //    }
-    //}
+    sleep(100);
     exit:
         for (int i = 0; i < nthread; i++)
             if (pthread_join(consumer_pool[i], NULL))
@@ -171,7 +210,7 @@ void *sqz_readerthread(void *thread_data)
         kseq_destroy(seq);
         gzclose(fp);
         fprintf(stderr, "Cleaning up\n");
-        sleep(10);
+        sleep(100);
         return NULL;
 }
 
@@ -192,6 +231,7 @@ char sqz_threadlauncher(FILE *ofp,
     sqzthread.threadid    = 0;
     sqzthread.fqflag      = fqflag;
     sqzthread.filename    = filename;
+    sqzthread.ofp         = ofp;
     sqzthread.sqzqueue    = calloc(nthread, sizeof(sqzfastx_t));
     if (!sqzthread.sqzqueue) return 1;
     for (int i = 0; i < nthread; i++)

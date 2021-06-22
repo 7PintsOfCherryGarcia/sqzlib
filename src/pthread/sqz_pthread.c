@@ -29,6 +29,7 @@ typedef struct {
     sqzfastx_t *sqzqueue;
     char fqflag;
     FILE *ofp;
+    //unsigned char endflag;
 } sqzthread_t;
 
 
@@ -99,7 +100,7 @@ static void sqz_wakereader(sqzthread_t *sqzthread, int id)
 }
 
 
-void *sqz_consumerthread(void *thread_data)
+static void *sqz_consumerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
     uint64_t cbytes = 0;
@@ -109,7 +110,7 @@ void *sqz_consumerthread(void *thread_data)
     sqzfastx_t *sqz = sqzthread->sqzqueue + (id - 1);
     char fqflag = sqzthread->fqflag;
     //Do some work if there is available data
-    while (1) {
+    while (sqz->endthread & 128) { //bit 7 is on if there is still data
         //Encode data
         sqz_fastXencode(sqz, blk, fqflag);
         //Check if there is leftover sequence that needs loading
@@ -130,6 +131,7 @@ void *sqz_consumerthread(void *thread_data)
         sqz->endflag = 0;
         blk->newblk  = 1;
         pthread_mutex_unlock(&(sqzthread->mtx));
+        if (sqz->endthread & 1) break; //bit 1 is off if thread had data, but reader has finished
         //We are done, we can signal reader and go to sleep while new data arrives
         sqz_wakereader(sqzthread, id);
         fprintf(stderr, "Now what %d?!?\n", id);
@@ -155,7 +157,7 @@ static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 }
 
 
-void *sqz_readerthread(void *thread_data)
+static void *sqz_readerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
     sqzfastx_t *sqzqueue   = sqzthread->sqzqueue;
@@ -200,8 +202,19 @@ void *sqz_readerthread(void *thread_data)
       consuming and then terminate.
     */
     fprintf(stderr, "Done with the reader loop\n");
-    if (thcounter % nthread)
+    if (thcounter % nthread) {
         fprintf(stderr, "%d threads were not woken up\n", thcounter % nthread);
+        //Set bit 1 of threads that got some data
+        for (int i = 0; i < thcounter; i++)
+            sqzqueue[thcounter].endthread |= 1;
+    }
+    //Unset bit 7 from all threads
+    for (int i = 0 ; i < nthread; i++) {
+        fprintf(stderr, "1 %d - %u\n", i, (unsigned char)sqzqueue[thcounter].endthread);
+        sqzqueue[thcounter].endthread ^= 128;
+        fprintf(stderr, "2 %d - %u\n", i, (unsigned char)sqzqueue[thcounter].endthread);
+    }
+    fprintf(stderr, "Final waking should happen here\n");
     sleep(100);
     exit:
         for (int i = 0; i < nthread; i++)

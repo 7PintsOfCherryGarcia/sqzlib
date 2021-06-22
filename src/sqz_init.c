@@ -18,6 +18,7 @@ char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
     sqz->pqlt       = NULL;
     sqz->namesize   = NAME_SIZE;
     sqz->plen = 10240;
+    sqz->endthread = 128;
     //Get file format if reading an sqz file
     switch (fmt & 7) {
         case 0:

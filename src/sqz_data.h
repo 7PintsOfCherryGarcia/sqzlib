@@ -21,6 +21,7 @@
 */
 typedef struct {
     uint8_t    nthread;
+    uint8_t    endthread;
     //flags
     char       endflag; //Sequece has not completely been read into a buffer flag
     char       cmpflag;

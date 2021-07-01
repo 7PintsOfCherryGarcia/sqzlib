@@ -131,11 +131,10 @@ static void *sqz_consumerthread(void *thread_data)
         sqz->endflag = 0;
         blk->newblk  = 1;
         pthread_mutex_unlock(&(sqzthread->mtx));
-        if (sqz->endthread & 1) break; //bit 1 is off if thread had data, but reader has finished
+        if (sqz->endthread & 1) break; //bit 1 is on if thread had data, but reader has finished
         //We are done, we can signal reader and go to sleep while new data arrives
         sqz_wakereader(sqzthread, id);
-        fprintf(stderr, "Now what %d?!?\n", id);
-        sleep(10);
+        //fprintf(stderr, "Now what %d %u?!?\n", id, sqz->endthread);
     }
     fprintf(stderr, "Thread %d is out!!!\n", id);
     exit:
@@ -193,6 +192,7 @@ static void *sqz_readerthread(void *thread_data)
             fprintf(stderr, "The BEAST shall wakeup!!!\n");
         }
     }
+
     //TODO
     /*
       Now that reader is done, some signal must be sent to consumer threads
@@ -206,24 +206,28 @@ static void *sqz_readerthread(void *thread_data)
         fprintf(stderr, "%d threads were not woken up\n", thcounter % nthread);
         //Set bit 1 of threads that got some data
         for (int i = 0; i < thcounter; i++)
-            sqzqueue[thcounter].endthread |= 1;
+            sqzqueue[i].endthread |= 1;
     }
-    //Unset bit 7 from all threads
-    for (int i = 0 ; i < nthread; i++) {
-        fprintf(stderr, "1 %d - %u\n", i, (unsigned char)sqzqueue[thcounter].endthread);
-        sqzqueue[thcounter].endthread ^= 128;
-        fprintf(stderr, "2 %d - %u\n", i, (unsigned char)sqzqueue[thcounter].endthread);
+
+    //Unset bit 7 from rest of threads
+    for (int i = thcounter; i < nthread; i++) {
+        //fprintf(stderr, "1 %d - %u\n", i, (unsigned char)sqzqueue[i].endthread);
+        sqzqueue[i].endthread &= 127;
+        //fprintf(stderr, "2 %d - %u\n\n", i, (unsigned char)sqzqueue[i].endthread);
     }
     fprintf(stderr, "Final waking should happen here\n");
-    sleep(100);
+    sqzthread->goread = 0;
+    sqzthread->gocons = 1;
+    sqzthread->wakethreadn = 0;
+    pthread_cond_broadcast(&(sqzthread->conscond));
+
     exit:
         for (int i = 0; i < nthread; i++)
             if (pthread_join(consumer_pool[i], NULL))
                 fprintf(stderr, "Thread error join\n");
         kseq_destroy(seq);
         gzclose(fp);
-        fprintf(stderr, "Cleaning up\n");
-        sleep(100);
+        fprintf(stderr, "Cleaning up, GTFO!!!\n");
         return NULL;
 }
 

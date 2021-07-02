@@ -25,7 +25,7 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz);
 static size_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq);
 
 
-static size_t sqz_fastaeblock(sqzfastx_t *sqz, kseq_t *seq);
+static uint64_t sqz_fastaeblock(sqzfastx_t *sqz);
 
 
 void sqz_kill(sqzfastx_t *sqz);

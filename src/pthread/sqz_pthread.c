@@ -11,6 +11,8 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
 size_t sqz_deflate(sqzblock_t *blk, int level);
 char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
+void sqz_blkdestroy(sqzblock_t *blk);
+void sqz_kill(sqzfastx_t *sqz);
 
 
 typedef struct {
@@ -120,24 +122,25 @@ static void *sqz_consumerthread(void *thread_data)
         }
         //Compress block
         cbytes = sqz_deflate(blk, 9);
-        fprintf(stderr, "Compressed %d to %lu bytes\n", id, cbytes);
+        //fprintf(stderr, "Compressed %d to %lu bytes\n", id, cbytes);
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
         sqz_zlibcmpdump(blk, cbytes, sqzthread->ofp);
         fflush(sqzthread->ofp);
-        fprintf(stderr, "Thread %d done writing\n", id);
+        //fprintf(stderr, "Thread %d done writing\n", id);
         blk->blkpos  = 0;
         sqz->namepos = 0;
         sqz->endflag = 0;
         blk->newblk  = 1;
         pthread_mutex_unlock(&(sqzthread->mtx));
-        if (sqz->endthread & 1) break; //bit 1 is on if thread had data, but reader has finished
+        //bit 1 is on if thread had data, but reader has finished
+        if (sqz->endthread & 1) break;
         //We are done, we can signal reader and go to sleep while new data arrives
         sqz_wakereader(sqzthread, id);
-        //fprintf(stderr, "Now what %d %u?!?\n", id, sqz->endthread);
     }
     fprintf(stderr, "Thread %d is out!!!\n", id);
     exit:
+        sqz_blkdestroy(blk);
         return NULL;
 }
 
@@ -220,11 +223,11 @@ static void *sqz_readerthread(void *thread_data)
     sqzthread->gocons = 1;
     sqzthread->wakethreadn = 0;
     pthread_cond_broadcast(&(sqzthread->conscond));
-
+    for (int i = 0; i < nthread; i++)
+        if (pthread_join(consumer_pool[i], NULL))
+            fprintf(stderr, "Thread error join\n");
     exit:
-        for (int i = 0; i < nthread; i++)
-            if (pthread_join(consumer_pool[i], NULL))
-                fprintf(stderr, "Thread error join\n");
+        free(consumer_pool);
         kseq_destroy(seq);
         gzclose(fp);
         fprintf(stderr, "Cleaning up, GTFO!!!\n");
@@ -275,6 +278,9 @@ char sqz_threadlauncher(FILE *ofp,
     if (pthread_join(rthread, NULL))
         fprintf(stderr, "\t[ERROR]: Thread error join.\n");
     //Clean up
+    for (int i = 0; i < nthread; i++)
+        sqz_kill(sqzthread.sqzqueue + i);
+    free(sqzthread.sqzqueue);
     pthread_attr_destroy(&(sqzthread.thatt));
     pthread_mutex_destroy(&(sqzthread.mtx));
     pthread_cond_destroy(&(sqzthread.conscond));

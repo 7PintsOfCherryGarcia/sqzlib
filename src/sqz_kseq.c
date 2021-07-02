@@ -96,7 +96,7 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {
     if (sqz->endflag) {
         if (fqflag) return sqz_fastqeblock(sqz);
-        return sqz_fastaeblock(sqz, seq);
+        return sqz_fastaeblock(sqz);
     }
     if (fqflag) return sqz_fastqnblock(sqz, seq);
     return sqz_fastanblock(sqz, seq);
@@ -206,8 +206,8 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
         memcpy(sqz->seqbuffer, seq + sqz->seqread, LOAD_SIZE);
         memcpy(sqz->qualbuffer, qlt + sqz->seqread, LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
-        sqz->offset = LOAD_SIZE;
-        sqz->bases += LOAD_SIZE;
+        sqz->offset   = LOAD_SIZE;
+        sqz->bases   += LOAD_SIZE;
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
@@ -225,12 +225,12 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 
 static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
 {
+
     uint64_t offset = 0;
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = LOAD_SIZE - B64;
-    //kseq_t *seq     = sqz->seq;
     uint8_t *seqbuffer = sqz->seqbuffer;
 
     while ( (kseq_read(seq) >= 0) ) {
@@ -245,12 +245,26 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
             memcpy(seqbuffer + offset, &l, B64);
             offset += B64;
             memcpy(seqbuffer + offset, seq->seq.s, maxlen);
+
             offset += maxlen;
+
             seqbuffer[offset++] = 0;
+
+
+
+
             bases += maxlen;
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
+            /*
+              The sqzfastx_t struct must remember the sequence (and qualities)
+              of this partially decoded record. Thus the contents of seq->seq.s
+              (and seq->qual.s) must be transfered to the corresponding members
+              of sqzfastx_t. Making shure those buffers are big enough.
+            */
+            sqz_rememberseq(sqz, seq, 0);
+            fprintf(stderr, "\tExiting from partial\n");
             goto exit;
         }
         bases += l;
@@ -269,25 +283,25 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
 }
 
 
-static uint64_t sqz_fastaeblock(sqzfastx_t *sqz, kseq_t *seq)
+static uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 {
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
-
+    char *seq = sqz->pseq;
     //buffer can be completely filled with current sequence
     if (seqleft >= LOAD_SIZE) {
-        memcpy(sqz->seqbuffer,
-               seq->seq.s + sqz->seqread,
-               LOAD_SIZE);
+        memcpy(sqz->seqbuffer, seq + sqz->seqread, LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
+        sqz->offset   = LOAD_SIZE;
+        sqz->bases   += LOAD_SIZE;
         return LOAD_SIZE;
     }
     //Rest of sequence can go into buffer
-    memcpy(sqz->seqbuffer,
-           seq->seq.s + sqz->seqread,
-           seqleft);
+    memcpy(sqz->seqbuffer, seq + sqz->seqread, seqleft);
     sqz->seqbuffer[seqleft++] = '\0';
     sqz->endflag = 0;
+    sqz->offset = seqleft;
+    sqz->bases += seqleft;
     return seqleft;
 }
 
@@ -303,6 +317,8 @@ void sqz_kill(sqzfastx_t *sqz)
         free(sqz->namebuffer);
         free(sqz->readbuffer);
         free(sqz->qualbuffer);
+        free(sqz->pseq);
+        free(sqz->pqlt);
         free(sqz);
     }
 }

@@ -34,8 +34,8 @@ typedef struct {
     uint64_t    namesize;
     uint64_t    namepos;
     //Partially loaded sequence and qualities
-    char       *pseq;
-    char       *pqlt;
+    char       *pseq; //previous seq
+    char       *pqlt; //previous quality
     uint64_t    plen;
     //return members
     uint64_t    n;

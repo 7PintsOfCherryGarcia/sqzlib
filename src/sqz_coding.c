@@ -83,7 +83,6 @@ char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
 char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;
     uint8_t *seqbuff = sqz->seqbuffer;
@@ -100,8 +99,8 @@ char sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpsize *= 2;
         blk->cmpbuff  = realloc(blk->cmpbuff, blk->cmpsize);
     }
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos);
-    blkpos += sqz_qualencode(qltbuff, blkbuff+blkpos);
+    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff + blkpos);
+    blkpos += sqz_qualencode(qltbuff, blkbuff + blkpos);
     if (sqz->endflag) {
         blk->newblk = 0;
         goto exit;
@@ -172,7 +171,6 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t blkpos  = blk->blkpos;
 
     if (sqz->endflag) seqleft = LOAD_SIZE;
-
     if ( (blkpos + getblkbytesize(seqleft)) > blksize ) {
         blksize *= 2;
         blkbuff = realloc(blk->blkbuff, blksize);
@@ -182,7 +180,7 @@ char sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
     }
     //encode sequence
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff+blkpos);
+    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff + blkpos);
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
         blk->newblk = 0;

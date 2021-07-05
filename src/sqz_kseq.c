@@ -319,7 +319,9 @@ void sqz_kill(sqzfastx_t *sqz)
         free(sqz->qualbuffer);
         free(sqz->pseq);
         free(sqz->pqlt);
-        free(sqz);
+        //TODO: When calling this function in multithreaded mode.
+        //This last free does not apply
+        //free(sqz);
     }
 }
 

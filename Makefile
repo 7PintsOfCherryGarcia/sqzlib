@@ -4,12 +4,12 @@ CFLAGSB= -Wall -Wextra -std=c11 -pedantic -g
 CSHFLAG= -shared
 
 SRCDIR= src
-INC= -Ilibs
+INC= -Ilibs -I.
 LIB= -L.
 LIBS= -lz -lpthread
 
-SRC=sqz_init.c sqz_kseq.c sqz_coding.c\
-    sqz_zlib.c sqz_filefun.c pthread/sqz_pthread.c
+SRC=sqzlib/sqz_init.c sqzlib/sqz_kseq.c sqzlib/sqz_coding.c\
+    sqzlib/sqz_zlib.c sqzlib/sqz_filefun.c pthread/sqz_pthread.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
@@ -50,23 +50,20 @@ exampleflag:
 
 libsqz:libsqzflag $(OBJS)
 	ar rcs $@.a $(OBJS)
-	cp src/sqzlib.h .
+	cp src/sqzlib/sqzlib.h .
 
 libsqz_shared:libsqzflag $(SOBJS)
 	$(CC) $(CSHFLAG) $(SOBJS) -o libsqz.so
-	cp src/sqzlib.h .
-	cp src/sqz_data.h .
+	cp src/sqzlib/sqzlib.h .
 
 
 libsqzB:libsqzflag $(OBJSB)
 	ar rcs libsqz.a $(OBJSB)
-	cp src/sqzlib.h .
-	cp src/sqz_data.h .
+	cp src/sqzlib/sqzlib.h .
 
 libsqz_sharedB:libsqzflag $(SOBJSB)
 	$(CC) $(CSHFLAG) $(SOBJSB) -o libsqz.so
-	cp src/sqzlib.h .
-	cp src/sqz_data.h .
+	cp src/sqzlib/sqzlib.h .
 
 
 sqz:sqzflag
@@ -92,7 +89,7 @@ clean:
 	rm -rf $(SRCDIR)/*.o $(SRCDIR)/pthread/*.o
 
 wipe:
-	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/*.o $(SRCDIR)/pthread/*.o
+	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o
 	#make clean -C examples
 
 # makedepend line not in use in current compilation enviroanment

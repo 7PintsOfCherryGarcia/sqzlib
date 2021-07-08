@@ -4,7 +4,7 @@
 #include <zlib.h>
 #include <pthread.h>
 
-#include "../sqz_data.h"
+#include "../sqzlib/sqz_data.h"
 #include "klib/kseq.h"
 KSEQ_INIT(gzFile, gzread)
 

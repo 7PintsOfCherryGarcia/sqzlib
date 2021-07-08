@@ -8,9 +8,8 @@ INC= -Ilibs
 LIB= -L.
 LIBS= -lz -lpthread
 
-SRC=sqz_kseq.c sqz_init.c sqz_coding.c\
-    sqz_zlib.c sqz_cmp.c sqz_dcp.c\
-    sqz_filefun.c pthread/sqz_pthread.c
+SRC=sqz_init.c sqz_kseq.c sqz_coding.c\
+    sqz_zlib.c sqz_filefun.c pthread/sqz_pthread.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
@@ -52,7 +51,6 @@ exampleflag:
 libsqz:libsqzflag $(OBJS)
 	ar rcs $@.a $(OBJS)
 	cp src/sqzlib.h .
-	cp src/sqz_data.h .
 
 libsqz_shared:libsqzflag $(SOBJS)
 	$(CC) $(CSHFLAG) $(SOBJS) -o libsqz.so

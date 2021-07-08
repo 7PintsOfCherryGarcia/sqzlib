@@ -1,12 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define SQZLIB
-#define KLIB
 #include "sqz_filefun.h"
 
 #define TWO_BIT_MASK (3)
+
+char zbytes[4] = {0, 0, 0, 0};
+char magic[4] = {5, 8, 5, 9};
+unsigned char cmpflag = 1;
+
 
 //Table to change "ACGT" to 0123 else to 4
 unsigned char seq_nt4_tableSQZ2[128] = {
@@ -372,4 +371,77 @@ uint64_t sqz_codeblksize(uint8_t *blkbuff, uint8_t fqflag)
         }
     }
     return blkpos;
+}
+
+
+/*
+From dcp and cmp
+*/
+
+uint64_t sqz_filesize(FILE *fp)
+{
+    fseek(fp, 0, SEEK_END);
+    long s = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    return s - 16;
+}
+
+
+void sqzrewind(sqz_File *sqzfp)
+{
+    sqz_fastxreset(sqzfp->sqz);
+    sqz_blkreset(sqzfp->blk);
+    fseek(sqzfp->fp, HEADLEN, SEEK_SET);
+    sqzfp->filepos = ftell(sqzfp->fp);
+    sqzfp->ff = 0;
+}
+
+
+static void sqz_fastxreset(sqzfastx_t *sqz)
+{
+    sqz->endflag    = 0;
+    sqz->cmpflag    = 0;
+    sqz->offset     = 0;
+    sqz->namepos    = 0;
+    sqz->n          = 0;
+    sqz->bases      = 0;
+    sqz->rem        = 0;
+    sqz->toread     = 0;
+    sqz->prevlen    = 0;
+}
+
+
+static void sqz_blkreset(sqzblock_t *blk)
+{
+    blk->blkpos  = 0;
+    blk->namepos = 0;
+    blk->newblk  = 1;
+    blk->cmppos  = 0;
+}
+
+
+char sqz_filehead(unsigned char fmt, FILE *ofp)
+{
+    char wbytes = 0;
+    if ( 4 != (wbytes += fwrite(magic, 1, 4, ofp)) ) return 0;
+    if ( 5 != (wbytes += fwrite(&fmt,  1, 1, ofp)) ) return 0;
+    //Compression library
+    if ( 6 != (wbytes += fwrite(&cmpflag, 1, 1, ofp)) ) return 0;
+    if ( 8 != (wbytes += fwrite(zbytes,   1, 2, ofp)) ) return 0;
+    return wbytes;
+}
+
+
+char sqz_filetail(uint64_t numseqs, FILE *ofp)
+{
+    if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
+        return 0;
+    }
+    if ( 1 != fwrite(&numseqs, sizeof(numseqs), 1, ofp) ) {
+        return 0;
+    }
+    if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
+        return 0;
+    }
+    return 1;
 }

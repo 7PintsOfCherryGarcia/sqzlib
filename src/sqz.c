@@ -1,13 +1,13 @@
-#define SQZLIB
-#define KLIB
 #include "sqzlib.h"
+
+
 typedef struct  {
     char ifile[256];
     char ofile[256];
     FILE *ofp;
     int  nthread;
     char fqflag;
-    unsigned char fmt;
+    char fmt;
 } sqzopts_t;
 
 
@@ -18,7 +18,7 @@ char sqz_threadlauncher(FILE *ofp,
                         unsigned char fmt);
 
 
-char sqz_squeezefastX(sqzopts_t opts)
+char sqz_deflatefastX(sqzopts_t opts)
 {
     char ret = 0;
 
@@ -44,24 +44,20 @@ char sqz_squeezefastX(sqzopts_t opts)
 
 char sqz_compress(sqzopts_t opts)
 {
-    fprintf(stderr, "%d compression threads\n", opts.nthread);
     char ret = 0;
     opts.ofp = fopen(opts.ofile, "wb");
     if ( !(opts.ofp) ) return ret;
 
-    //sqzfastx_t *sqz = sqz_fastxinit(filename, LOAD_SIZE);
-    //if (!sqz) goto exit;
     unsigned char fmt = sqz_getformat(opts.ifile);
     opts.fmt = fmt;
-    //sqz->nthread = nthread;
     switch (fmt & 7) {
         case 1:
             opts.fqflag = 0;
-            if (!sqz_squeezefastX(opts)) goto exit;
+            if (!sqz_deflatefastX(opts)) goto exit;
             break;
         case 2:
             opts.fqflag = 1;
-            if (!sqz_squeezefastX(opts)) goto exit;
+            if (!sqz_deflatefastX(opts)) goto exit;
             break;
         case 5:
             fprintf(stderr, "File %s alredy sqz encoded.\n", opts.ifile);
@@ -73,7 +69,6 @@ char sqz_compress(sqzopts_t opts)
     ret = 1;
     exit:
         fclose(opts.ofp);
-        //sqz_kill(sqz);
         return ret;
 }
 
@@ -100,31 +95,31 @@ char sqz_inflatefastX(FILE *ifp, FILE *ofp, char fqflag)
         }
     ret = 1;
     exit:
-        sqz_blkdestroy(blk);
+        sqz_sqzblkkill(blk);
         free(outbuff);
         return ret;
 }
 
 
-char sqz_decompress(const char *filename, const char *outname)
+char sqz_decompress(sqzopts_t opts)
 {
     char ret = 0;
     FILE *ifp = NULL;
     FILE *ofp = NULL;
-    ofp = fopen(outname, "wb");
+    ofp = fopen(opts.ofile, "wb");
     if (!ofp)
         goto exit;
-    ifp = fopen(filename, "rb");
+    ifp = fopen(opts.ifile, "rb");
     if (!ifp)
         goto exit;
-    uint8_t fmt = sqz_getformat(filename);
+    uint8_t fmt = sqz_getformat(opts.ifile);
     //Check for format
     switch (fmt & 7) {
         case 1:
-            fprintf(stderr, "File %s already decoded.\n", filename);
+            fprintf(stderr, "File %s already decoded.\n", opts.ifile);
             goto exit;
         case 2:
-            fprintf(stderr, "File %s already decoded.\n", filename);
+            fprintf(stderr, "File %s already decoded.\n", opts.ifile);
             goto exit;
         case 5:
             if (!sqz_inflatefastX(ifp, ofp, 0)) {
@@ -172,24 +167,27 @@ char *sqz_basename(char *namestr)
 
 char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 {
-    //TODO Fix input comand check
     int elem;
     char ret    = 1;      //Defaults to encode and compress
     char dflag  = 0;      //Decompression flag
     char oflag  = 1;      //Output flag
     int nthread = 1;
+    int minargs = 2;
     while (( elem = getopt(argc, argv, "o:t:hd") ) >= 0) {
         switch(elem) {
             case 'd':
                 dflag = 1;
                 ret   = 2;
+                minargs += 1;
                 continue;
             case 'o':
                 oflag = 0;
                 strcpy(opts->ofile, optarg);
+                minargs += 2;
                 continue;
             case 't':
                 nthread = atoi(optarg);
+                minargs += 2;
                 continue;
             case 'h':
                 ret = 0;
@@ -198,22 +196,30 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
             case '?':
                 sqz_usage();
                 ret = 0;
-                break;
+                goto exit;
         }
 
     }
+    if (argc < minargs) {
+        fprintf(stderr, "[sqz]: Please provide input file.\n\n");
+        sqz_usage();
+        ret = 0;
+        goto exit;
+    }
+    if ( access(argv[argc - 1], F_OK) ) {
+        fprintf(stderr, "[sqz]: %s, no such file.\n\n", argv[argc - 1]);
+        sqz_usage();
+        ret = 0;
+        goto exit;
+    }
+    strcpy(opts->ifile, argv[argc - 1]);
+
     if (dflag) {
-        if (argc < 3) {
-            fprintf(stderr, "[sqz]: Please provide input file.\n");
-            sqz_usage();
-            goto exit;
-        }
-        if (oflag) strcpy(opts->ofile,"/dev/stdout");
+        if (oflag) strcpy(opts->ofile, "/dev/stdout");
     }
     else {
         if (oflag) {
-            char *bname;
-            bname = sqz_basename( argv[argc - 1] );
+            char *bname = sqz_basename( argv[argc - 1] );
             strcpy(opts->ofile, bname);
             strcat(opts->ofile, ".sqz");
         }
@@ -233,7 +239,6 @@ int main(int argc, char *argv[])
         goto exit;
     }
     sqzopts_t opts;
-    strcpy(opts.ifile, argv[argc - 1]);
     switch (sqz_ropts(argc, argv, &opts)) {
         case 0:
             goto exit;
@@ -241,7 +246,7 @@ int main(int argc, char *argv[])
             if ( !sqz_compress(opts) ) goto exit;
             break;
         case 2:
-            if (!sqz_decompress(opts.ifile, opts.ofile)) goto exit;
+            if ( !sqz_decompress(opts)) goto exit;
             break;
     }
     ret = 0;

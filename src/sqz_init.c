@@ -1,15 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <zlib.h>
-
-#define SQZLIB
-#define KLIB
 #include "sqz_init.h"
 
 
-char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
+sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
 {
-    char ret = 0;
+    uint8_t ret = 1;
+    sqzfastx_t *sqz = calloc(1, sizeof(sqzfastx_t));
+    if (!sqz) return NULL;
     sqz->seqbuffer  = NULL;
     sqz->qualbuffer = NULL;
     sqz->namebuffer = NULL;
@@ -25,9 +21,9 @@ char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
             goto exit;
         case 1:
             //FASTA
-            sqz->seqbuffer = malloc(bsize + 1);
+            sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
-            sqz->seqbuffer[bsize] = '\0';
+            sqz->seqbuffer[size] = '\0';
             sqz->pseq = malloc(10240);
             if (!sqz->pseq)       goto exit;
             sqz->namebuffer = malloc(NAME_SIZE);
@@ -35,12 +31,12 @@ char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
             break;
         case 2:
             //FASTQ
-            sqz->qualbuffer = malloc(bsize + 1);
+            sqz->qualbuffer = malloc(size + 1);
             if (!sqz->qualbuffer) goto exit;
-            sqz->qualbuffer[bsize] = 0;
-            sqz->seqbuffer = malloc(bsize + 1);
+            sqz->qualbuffer[size] = 0;
+            sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
-            sqz->seqbuffer[bsize] = 0;
+            sqz->seqbuffer[size] = 0;
             sqz->pseq = malloc(10240);
             sqz->pqlt = malloc(10240);
             if (!sqz->pseq || !sqz->pqlt) goto exit;
@@ -48,36 +44,52 @@ char sqz_fastxinit(sqzfastx_t *sqz, unsigned char fmt, uint64_t bsize)
             if (!sqz->namebuffer) goto exit;
             break;
         case 5:
-            sqz->readbuffer = malloc(bsize + 1);
+            sqz->readbuffer = malloc(size + 1);
             if (!sqz->readbuffer) goto exit;
-            sqz->readbuffer[bsize] = 0;
-            sqz->seqbuffer = malloc(bsize + 1);
+            sqz->readbuffer[size] = 0;
+            sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
-            sqz->seqbuffer[bsize] = 0;
+            sqz->seqbuffer[size] = 0;
             sqz->namebuffer = malloc(NAME_SIZE);
             if (!sqz->namebuffer) goto exit;
             break;
         case 6:
-            sqz->readbuffer = malloc(bsize + 1);
+            sqz->readbuffer = malloc(size + 1);
             if (!sqz->readbuffer) goto exit;
-            sqz->readbuffer[bsize] = '\0';
-            sqz->qualbuffer = malloc(bsize + 1);
+            sqz->readbuffer[size] = '\0';
+            sqz->qualbuffer = malloc(size + 1);
             if (!sqz->qualbuffer) goto exit;
-            sqz->qualbuffer[bsize] = 0;
-            sqz->seqbuffer = malloc(bsize + 1);
+            sqz->qualbuffer[size] = 0;
+            sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
-            sqz->seqbuffer[bsize] = 0;
+            sqz->seqbuffer[size] = 0;
             sqz->namebuffer = malloc(NAME_SIZE);
             if (!sqz->namebuffer) goto exit;
             break;
     }
-    ret = 1;
+    ret = 0;
     exit:
-        if (!ret) {
+        if (ret) {
             free(sqz->seqbuffer),free(sqz->qualbuffer),free(sqz->namebuffer);
             free(sqz->readbuffer),free(sqz->pseq),free(sqz->pqlt);
+            return NULL;
         }
-        return ret;
+        return sqz;
+}
+
+
+void sqz_fastxkill(sqzfastx_t *sqz)
+{
+    if (sqz) {
+        free(sqz->seqbuffer);
+        free(sqz->namebuffer);
+        free(sqz->readbuffer);
+        free(sqz->qualbuffer);
+        free(sqz->readbuffer);
+        free(sqz->pseq);
+        free(sqz->pqlt);
+        free(sqz);
+    }
 }
 
 
@@ -109,4 +121,14 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     blk->cmppos  = 0;
 
     return blk;
+}
+
+
+void sqz_sqzblkkill(sqzblock_t *blk)
+{
+    if (blk) {
+        free(blk->blkbuff);
+        free(blk->cmpbuff);
+        free(blk);
+    }
 }

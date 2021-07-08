@@ -73,25 +73,6 @@ uint8_t  sqz_checksqz(const char *filename)
 }
 
 
-//char     sqz_kseqinit(sqzfastx_t *sqz)
-//{
-//    char ret = 0;
-    //TODO Adjust comented code to reflect changes in sqzfastx_t struct
-    //TODO Code was comented while reworking code to use multiple threads
-    //sqz->fp = gzopen(sqz->filename, "r");
-    //if (!sqz->fp) goto exit;
-    //sqz->seq = kseq_init(sqz->fp);
-    //if (!sqz->seq) {
-    //    gzclose(sqz->fp);
-    //    goto exit;
-    //}
-//    ret = 1;
-    //exit:
-        //if (!ret) fprintf(stderr, "What is happening\n");
-//    return ret;
-//}
-
-
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {
     if (sqz->endflag) {
@@ -134,7 +115,6 @@ static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 
 static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
 {
-    fprintf(stderr, "Loading new block\n");
     uint64_t offset = 0;
     uint64_t n      = 0;
     uint64_t l;
@@ -173,7 +153,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
               of sqzfastx_t. Making shure those buffers are big enough.
             */
             sqz_rememberseq(sqz, seq, 1);
-            fprintf(stderr, "\tExiting from partial\n");
+            //fprintf(stderr, "\tExiting from partial\n");
             goto exit;
         }
         bases += l;
@@ -185,7 +165,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
         if ( maxlen <= l + 1 + B64 ) break;
         maxlen -= l + 1 + B64;
     }
-    fprintf(stderr, "\tWe are donsies my friend\n");
+    //fprintf(stderr, "\tWe are donsies my friend\n");
     exit:
         sqz->n = n;
         sqz->bases = bases;
@@ -196,7 +176,6 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
 
 static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 {
-    fprintf(stderr, "Finishing block loading\n");
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
     char *seq = sqz->pseq;
@@ -264,7 +243,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq)
               of sqzfastx_t. Making shure those buffers are big enough.
             */
             sqz_rememberseq(sqz, seq, 0);
-            fprintf(stderr, "\tExiting from partial\n");
+            //fprintf(stderr, "\tExiting from partial\n");
             goto exit;
         }
         bases += l;
@@ -306,32 +285,7 @@ static uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 }
 
 
-void sqz_kill(sqzfastx_t *sqz)
-{
-    if (sqz) {
-        //if (sqz->fp)
-        //    gzclose(sqz->fp);
-        //if (sqz->seq)
-        //    kseq_destroy(sqz->seq);
-        free(sqz->seqbuffer);
-        free(sqz->namebuffer);
-        free(sqz->readbuffer);
-        free(sqz->qualbuffer);
-        free(sqz->pseq);
-        free(sqz->pqlt);
-        //TODO: When calling this function in multithreaded mode.
-        //This last free does not apply
-        //free(sqz);
-    }
-}
 
-
-void     sqz_killblk(sqzblock_t *blk)
-{
-    free(blk->blkbuff);
-    free(blk->cmpbuff);
-    free(blk);
-}
 
 
 sqz_File sqz_sqzopen(char *filename)
@@ -357,7 +311,7 @@ sqz_File sqz_sqzopen(char *filename)
 
     sqzfile.blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!sqzfile.blk) {
-        sqz_kill(sqzfile.sqz);
+        sqz_fastxkill(sqzfile.sqz);
         sqzfile.sqz = NULL;
         sqzfile.blk = NULL;
         goto exit;
@@ -475,8 +429,8 @@ int64_t  sqz_sqzread(sqz_File *file, void *buff, size_t len)
 
 void     sqz_sqzclose(sqz_File file)
 {
-    sqz_kill(file.sqz);
-    sqz_killblk(file.blk);
+    sqz_fastxkill(file.sqz);
+    sqz_sqzblkkill(file.blk);
     fclose(file.fp);
 }
 
@@ -486,12 +440,9 @@ char     sqz_readblksize(sqzblock_t *blk, FILE *fp)
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;
-    //uint64_t cbytes;
     uint64_t nelem;
     nelem =  fread(&dcpsize, B64, 1, fp);
     nelem += fread(&cmpsize, B64, 1, fp);
-    //fprintf(stderr, "Reading block: size: %lu cmpsize: %lu\n",
-    //        dcpsize, cmpsize);
     if ( cmpsize > (blk->cmpsize) ) {
         blk->cmpbuff = realloc(blk->cmpbuff, cmpsize);
         if ( !(blk->cmpbuff) ) goto exit;

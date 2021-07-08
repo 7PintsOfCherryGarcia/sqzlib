@@ -1,7 +1,4 @@
-#include <zlib.h>
-#include <stdint.h>
-
-#define LOAD_SIZE 16L*1024L*1024L
+#define LOAD_SIZE 4L*1024L*1024L
 #define NAME_SIZE 1L*1024L*1024L
 #define B64       sizeof(uint64_t)
 #define HEADLEN   8

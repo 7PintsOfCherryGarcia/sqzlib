@@ -41,7 +41,7 @@ char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
 
 char sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-    fprintf(stderr, "Encoding from head\n");
+    //fprintf(stderr, "Encoding from head\n");
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = blk->blkpos;
     uint8_t  *seqbuffer  = sqz->seqbuffer;
@@ -764,15 +764,6 @@ uint64_t sqz_bit2encode(const uint8_t *seq,
     return result;
 }
 
-
-void sqz_blkdestroy(sqzblock_t *blk)
-{
-    if (blk) {
-        free(blk->blkbuff);
-        free(blk->cmpbuff);
-        free(blk);
-    }
-}
 
 
 unsigned char sqz_bit2decode(const uint64_t *mer,

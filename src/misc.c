@@ -418,3 +418,30 @@ sqzcodeblock_t *sqz_codeblkinit(size_t size);
 
 
 int sqz_cmpnflush(sqzfastx_t *sqz);
+
+
+/*
+//Loop will be moved to multithread
+while ( (lbytes += sqz_loadfastX(sqz, fqflag)) > 0 ) {
+if (!sqz_fastXencode(sqz, blk, fqflag)) {
+fprintf(stderr, "[sqz ERROR]: Encoding error.\n");
+goto exit;
+}
+if (sqz->cmpflag) {
+numseqs += sqz->n;
+cbytes = sqz_deflate(blk, 9);
+if ( !sqz_zlibcmpdump(blk, cbytes, ofp) ) {
+fprintf(stderr, "[sqz ERROR]: Failed to write to output.\n");
+goto exit;
+}
+blk->blkpos  = 0;
+sqz->bases   = 0;
+sqz->namepos = 0;
+sqz->endflag = 0;
+sqz->cmpflag = 0;
+blk->newblk  = 1;
+sqz->n = 0;
+lbytes = 0;
+}
+}
+*/

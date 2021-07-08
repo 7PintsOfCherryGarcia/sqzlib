@@ -28,7 +28,7 @@ static size_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *seq);
 static uint64_t sqz_fastaeblock(sqzfastx_t *sqz);
 
 
-void sqz_kill(sqzfastx_t *sqz);
+void sqz_fastxkill(sqzfastx_t *sqz);
 
 
 unsigned char sqz_checksqz(const char *buf);
@@ -39,6 +39,8 @@ sqzfastx_t *sqz_fastxinit(const char *filename, uint64_t bsize);
 
 sqzblock_t *sqz_sqzblkinit(size_t size);
 
+
+void sqz_sqzblkkill(sqzblock_t *blk);
 
 uint64_t sqz_filesize(FILE *fp);
 

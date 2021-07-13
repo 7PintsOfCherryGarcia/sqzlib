@@ -7,7 +7,7 @@ testing
 *.a
 *.so
 *.o
-sqzlib.h
+/sqzlib.h
 examples
 docs/*.pdf
 docs/auto

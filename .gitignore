@@ -6,8 +6,8 @@ testdata
 testing
 *.a
 *.so
-*.h
 *.o
+sqzlib.h
 examples
 docs/*.pdf
 docs/auto

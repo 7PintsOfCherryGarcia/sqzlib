@@ -9,7 +9,7 @@ LIB= -L.
 LIBS= -lz -lpthread
 
 SRC=sqzlib/sqz_init.c sqzlib/sqz_kseq.c sqzlib/sqz_coding.c\
-    sqzlib/sqz_zlib.c sqzlib/sqz_filefun.c pthread/sqz_pthread.c
+    sqzlib/sqz_zlib.c sqzlib/sqz_filefun.c #pthread/sqz_pthread.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)
@@ -26,6 +26,12 @@ all:libsqz sqz
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+
+pthr:
+	$(CC) $(CFLAGS) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
+
+pthrB:
+	$(CC) $(CFLAGSB) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
 
 %S.o:%.c
 	$(CC) $(CFLAGS) $(INC) -c -fPIC $< -o $@
@@ -48,7 +54,7 @@ exampleflag:
 
 
 
-libsqz:libsqzflag $(OBJS)
+libsqz:libsqzflag $(OBJS) pthr
 	ar rcs $@.a $(OBJS)
 	cp src/sqzlib/sqzlib.h .
 
@@ -57,7 +63,7 @@ libsqz_shared:libsqzflag $(SOBJS)
 	cp src/sqzlib/sqzlib.h .
 
 
-libsqzB:libsqzflag $(OBJSB)
+libsqzB:libsqzflag $(OBJSB) pthrB
 	ar rcs libsqz.a $(OBJSB)
 	cp src/sqzlib/sqzlib.h .
 
@@ -67,29 +73,17 @@ libsqz_sharedB:libsqzflag $(SOBJSB)
 
 
 sqz:sqzflag
-	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c libsqz.a $(LIBS)
+	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
 
 sqzB:sqzflag
-	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c libsqz.a $(LIBS)
+	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
 
-
-examples:exampleflag
-	make -C examples
-
-examplesB:exampleflag
-	make build -C examples
-
-
-
-
-build:wipe libsqzB sqzB #examplesB
-
+build:wipe libsqzB sqzB
 
 clean:
-	rm -rf $(SRCDIR)/*.o $(SRCDIR)/pthread/*.o
+	rm -rf $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o
 
 wipe:
 	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o
-	#make clean -C examples
 
 # makedepend line not in use in current compilation enviroanment

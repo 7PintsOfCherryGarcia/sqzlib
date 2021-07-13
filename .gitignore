@@ -7,8 +7,8 @@ testing
 *.a
 *.so
 *.h
-examples/countseqs
-examples/seqstats/seqstats
+*.o
+examples
 docs/*.pdf
 docs/auto
 docs/*.aux

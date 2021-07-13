@@ -55,7 +55,6 @@ static void sqz_syncwakeup(int *flag,
                            int n)
 {
     if (n == *flag) {
-        //fprintf(stderr, "broadcasting!!!\n");
         pthread_cond_broadcast(cond);
         return;
     }
@@ -73,7 +72,6 @@ static int sqz_getthreadid(sqzthread_t *sqzthread)
                    &(sqzthread->mtx));
     //Thread wakes up, now it has to wait for all other threads to wake up
     sqzthread->wakethreadn++;
-    //fprintf(stderr, "Thread %d wokeup\n", id);
     //Go to sleep again until all threads have woken up
     sqz_syncwakeup(&(sqzthread->wakethreadn),
                    &(sqzthread->intraconscond),
@@ -128,7 +126,6 @@ static void *sqz_consumerthread(void *thread_data)
         }
         //Compress block
         cbytes = sqz_deflate(blk, 9);
-
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
         sqz_zlibcmpdump(blk, cbytes, sqzthread->ofp);

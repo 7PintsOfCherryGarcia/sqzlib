@@ -1,4 +1,8 @@
-#include "sqz_init.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include "sqz_data.h"
 
 
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
@@ -13,9 +17,9 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqz->pseq       = NULL;
     sqz->pqlt       = NULL;
     sqz->namesize   = NAME_SIZE;
-    sqz->plen = 10240;
-    sqz->endthread = 128;
-    //Get file format if reading an sqz file
+    sqz->plen = 102400L;
+    sqz->endthread = 128L;
+    //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
             goto exit;
@@ -24,7 +28,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
             sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[size] = '\0';
-            sqz->pseq = malloc(10240);
+            sqz->pseq = malloc(102400L);
             if (!sqz->pseq)       goto exit;
             sqz->namebuffer = malloc(NAME_SIZE);
             if (!sqz->namebuffer) goto exit;
@@ -37,8 +41,8 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
             sqz->seqbuffer = malloc(size + 1);
             if (!sqz->seqbuffer)  goto exit;
             sqz->seqbuffer[size] = 0;
-            sqz->pseq = malloc(10240);
-            sqz->pqlt = malloc(10240);
+            sqz->pseq = malloc(102400L);
+            sqz->pqlt = malloc(102400L);
             if (!sqz->pseq || !sqz->pqlt) goto exit;
             sqz->namebuffer = malloc(NAME_SIZE);
             if (!sqz->namebuffer) goto exit;
@@ -104,6 +108,7 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
         return NULL;
     }
     blk->blksize = 2*size;
+    blk->mblksize = 2*size;
     blk->blkpos  = 0;
 
     blk->namepos = 0;
@@ -118,13 +123,13 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
         return NULL;
     }
     blk->cmpsize = 2*size;
+    blk->mcmpsize = 2*size;
     blk->cmppos  = 0;
-
     return blk;
 }
 
 
-void sqz_sqzblkkill(sqzblock_t *blk)
+void sqz_blkkill(sqzblock_t *blk)
 {
     if (blk) {
         free(blk->blkbuff);

@@ -60,7 +60,7 @@ char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 
 
 
-size_t sqz_inflate(sqzblock_t *blk)
+uint64_t sqz_inflate(sqzblock_t *blk)
 {
     //TODO test with internal memory area to put decompressed data + memcpy
     int ret;
@@ -97,6 +97,7 @@ size_t sqz_inflate(sqzblock_t *blk)
         }
         //check there is enough space in buffer
         have = blk->blksize - strm.avail_out;
+        //fprintf(stderr, "**\t\tdcp: %lu\n", blk->blksize);
         if ( (wbytes + have) > blk->blksize) {
             fprintf(stderr,
                     "[sqzlib ZLIB ERROR]: Decompression error %lu.\n", have);

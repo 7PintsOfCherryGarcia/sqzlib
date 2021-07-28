@@ -1128,14 +1128,11 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         namelen  = strlen(namebuff + namepos);
         seqlen   = *(uint64_t *)( codebuff + codepos );
         buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
-        }
     }
     //While there is data to decode
     while ( codepos < datasize ) {
         //Test if there is enough space for current sequence
         if ( buffsize < buffneed ) {
-            fprintf(stderr, "PARTIAL!!!\n");
-            //sleep(1);
             //Test if at least: ">"|"@" + name length + '\n' + 1 base fits
             if (buffsize < namelen + 3) {
                 //Can't decode this sequence, just return buffer

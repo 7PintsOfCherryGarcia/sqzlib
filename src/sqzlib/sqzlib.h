@@ -2,6 +2,7 @@
     TODO: Add low level API interface to initialize a input files
     TODO: Do not write N block length when it's 127. 127 is implied
           if not last N blck
+    TODO: Change member names of sqzblock_t to reflect what is coded data
 */
 
 #include <stdio.h>

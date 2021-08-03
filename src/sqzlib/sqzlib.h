@@ -3,6 +3,9 @@
     TODO: Do not write N block length when it's 127. 127 is implied
           if not last N blck
     TODO: Change member names of sqzblock_t to reflect what is coded data
+    TODO: Significant work is needed in the decoding low level API. Too much
+          code redundancy and therefore inefficiencies.
+    TODO: Change quality binning to mimic qualbin.c from htsbox
 */
 
 #include <stdio.h>
@@ -12,12 +15,12 @@
 #include <stdint.h>
 #include <zlib.h>
 
-#define LOAD_SIZE 4L*1024L*1024L
-#define NAME_SIZE 1L*1024L*1024L
+#define LOAD_SIZE 4L*1024L*1024L   //Sequence buffer size
+#define NAME_SIZE 1L*1024L*1024L   //Sequence name buffer size
 #define B64       sizeof(uint64_t)
 #define HEADLEN   8
 #define NEND      128
-#define MAGIC     151324677
+#define MAGIC     151324677        //4 bytes: 5 8 5 9
 
 #define FQH       '@'
 #define FAH       '>'

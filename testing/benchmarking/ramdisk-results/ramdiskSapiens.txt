@@ -1,0 +1,4 @@
+#	fmt	cmp	dcp	cmp-size
+Sapiens	gzip.9	620.99	14.84	987795964
+Sapiens	sqz.zlib	239.76	7.74	664752600
+Sapiens	gzip.1	41.45	18.00	1193785236

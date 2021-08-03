@@ -3,7 +3,10 @@ src/misc
 src/pthread/*.o
 sqz
 testdata
-testing
+testing/ramdsk
+testing/dbug
+testing/NVMe
+testing/benchmarking/Software
 *.a
 *.so
 *.o

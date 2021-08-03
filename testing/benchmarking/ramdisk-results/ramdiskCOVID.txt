@@ -1,0 +1,4 @@
+#	fmt	cmp	dcp	cmp-size
+covid	gzip.9	135.46	12.88	94755880
+covid	sqz.zlib	34.01	6.30	602265037
+covid	gzip.1	78.28	34.09	1947424008

@@ -960,6 +960,7 @@ static uint64_t sqz_qualdecode(const uint8_t *codebuff,
         decoded += (count + 1); //Count[0-31], real length [1-32]
         byte++;
     }
+    //fprintf(stderr, "\t\treturning %lu bytes decoded\n", byte);
     return byte;
 }
 
@@ -978,32 +979,45 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t codepos    = 0;
     uint64_t blklen     = 0;
     uint64_t qltdecoded = 0;
+    uint64_t qltnum     = 0;
     uint64_t outpos     = 0;
     uint8_t nflag;
-    uint64_t nnum;
+    uint64_t nnum = 0;
     uint64_t nbytes;
+    //fprintf(stderr, "**Decoding sequence of length: %lu\n", length);
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
+        qltnum += blklen;
+        //fprintf(stderr, "\t**blklen: %lu\n", blklen);
+        //fprintf(stderr, "\t\t**prev: %lu\n",
+        //        *(uint64_t *)(codebuff + codepos - 1));
+        //fprintf(stderr, "\t\t**next: %lu\n",
+        //        *(uint64_t *)(codebuff + codepos + 1));
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  &outpos,
                                  blklen);
         length -= blklen;
+        //fprintf(stderr, "\t**length left: %lu\n", length);
         if (length) {     //Partial sequence decoding
             nflag = *(codebuff + codepos); //Read N flag
             codepos++;
             if (nflag) {
                 //Deal with n block
                 nnum = countnblk(codebuff + codepos, &nbytes);
+                qltnum += nnum;
+                //fprintf(stderr, "\t**nblock: %lu\n", nnum);
                 codepos += nbytes;
                 sqz_writens(nnum, outbuff + outpos);
                 outpos += nnum;
                 length -= nnum;
             }
             else {
+                //fprintf(stderr, "\t**not nflag\n");
                 //Deal with something else which can be
                 if (qflag) {
+                    //fprintf(stderr, "\t**qualflag\n");
                     //Deal with quality string
                     /*
                     Even though entire sequence has not been decoded completely,
@@ -1023,13 +1037,18 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     //codepos += sqz_qualdecode(codebuff + codepos,
                     //                          outbuff + seqlen + 3, //!!!!!TODO
                     //                          blklen);
+                    //fprintf(stderr,
+                    //      "\t**decoding %lu qualities nnum: %lu qltnum: %lu\n",
+                    //        blklen, nnum, qltnum);
                     codepos += sqz_qualdecode(codebuff + codepos,
                                               outbuff + seqlen + 3 + qltdecoded,
-                                              blklen);
+                                              qltnum);
                     //Change sequence length to reflect part of the quality
                     //string has been decoded
                     //seqlen -= blklen;
-                    qltdecoded += blklen;
+                    //qltdecoded += blklen;
+                    qltdecoded += qltnum;
+                    qltnum = 0;
                 }
             }
             continue;
@@ -1083,6 +1102,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded
     if (prevbytes) {
+        //fprintf(stderr, "Decoding from middle partial\n");
         prevbytes -= (namelen + 2);
         outpos = sqz_rdecode(codebuff + codepos + B64,
                              outbuff,
@@ -1107,6 +1127,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     }
     //While there is data to decode
+    //fprintf(stderr, "codepos: %lu datasize: %lu\n", codepos, datasize);
     while ( codepos < datasize ) {
         //Test if there is enough space for current sequence
         if ( buffsize < buffneed ) {
@@ -1118,6 +1139,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                 blk->namepos = namepos;
                 goto exit;
             }
+            //fprintf(stderr, "Decoding from beginning partial\n");
             //Decode as much as possible
             prevbytes = sqz_pdecode(codebuff + codepos + B64,
                                     outbuff + outpos,
@@ -1139,11 +1161,16 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outbuff[outpos++] = NL;
         codepos += B64;
         //Decode sequence and quality if fastq
+        //fprintf(stderr, "Decoding from main loop\n");
+        //fprintf(stderr, "%s\n", namebuff + namepos);
+        //fprintf(stderr, "\tbuffsize: %lu buffneed: %lu outpos: %lu\n",
+        //        buffsize, buffneed, outpos);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,
                                  fqflag,
                                  &outpos);
+        //fprintf(stderr, "\tcodepos: %lu\n", codepos);
         buffsize -= buffneed;
         namepos += namelen + 1;
         //New sequence

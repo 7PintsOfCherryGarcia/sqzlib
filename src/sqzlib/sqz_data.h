@@ -62,11 +62,12 @@ typedef struct {
 } sqzblock_t;
 
 
-typedef struct {
+typedef struct sqzFile_s {
     FILE       *fp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;
-    uint64_t   size;
-    uint8_t    ff;
-    uint64_t   filepos;
-} sqz_File;
+    uint64_t    size;
+    uint8_t     ff;
+    uint8_t     fmt;
+    uint64_t    filepos;
+} *sqzFile;

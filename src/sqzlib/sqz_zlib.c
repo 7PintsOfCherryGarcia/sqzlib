@@ -59,7 +59,6 @@ char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 }
 
 
-
 uint64_t sqz_inflate(sqzblock_t *blk)
 {
     //TODO test with internal memory area to put decompressed data + memcpy

@@ -89,7 +89,6 @@ void sqz_fastxkill(sqzfastx_t *sqz)
         free(sqz->namebuffer);
         free(sqz->readbuffer);
         free(sqz->qualbuffer);
-        free(sqz->readbuffer);
         free(sqz->pseq);
         free(sqz->pqlt);
         free(sqz);

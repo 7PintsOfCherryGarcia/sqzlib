@@ -14,7 +14,6 @@ static uint8_t  sqz_checksqz(const char *filename)
     uint32_t magic = 0;
     uint8_t  fmt   = 0;
     uint8_t  sqz   = 0;
-
     FILE *fp = fopen(filename, "rb");
     if (!fp) return 0;
     //Read magic
@@ -24,16 +23,12 @@ static uint8_t  sqz_checksqz(const char *filename)
         fclose(fp);
         return 0;
     }
-    //Set sqz flag (bit 6)
+    //Set sqz flag (bit 6 of fmt)
     fmt |= 4;
-
-    //TODO: Check for valid entries. A file may have the magic number
-    //but still not be an sqz file
-
-    //Read format: 1 - fastA or 2 - fastQ (bit 5)
+    //Read format: 1 - fastA or 2 - fastQ (bits 7 and 8 of fmt)
     tmp += fread(&sqz, 1, 1, fp);
     fmt |= sqz;
-    //Read compression library: 1 - zlib (bits 4, 3, and 2)
+    //Read compression library: 1 - zlib (bits 1,2,3,4,5 of fmt)
     tmp += fread(&sqz, 1, 1, fp);
     fmt |= sqz << 3;
     fclose(fp);
@@ -56,18 +51,14 @@ uint8_t  sqz_getformat(const char *filename)
         return ret;
     }
     int l = kseq_read(seq);
-
-    //TODO: Add error signaling as this is a library so it should not print
     //ERROR
     if (l < 0)
         goto exit;
-
     //FASTQ
     if (seq->qual.l > 0) {
         ret = 2;
         goto exit;
     }
-
     //FASTA
     ret = 1;
     exit:

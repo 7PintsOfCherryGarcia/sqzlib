@@ -86,14 +86,16 @@ typedef struct {
 /*
   Docstring
 */
-typedef struct {
+typedef struct sqzFile_s {
     FILE       *fp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;
-    uint64_t   size;
-    uint8_t    ff;
-    uint64_t   filepos;
-} sqz_File;
+    uint64_t    size;
+    uint8_t     ff;
+    uint8_t     fmt;
+    uint64_t    filepos;
+} *sqzFile;
+
 
 
 /*
@@ -161,3 +163,29 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp);
 */
 uint64_t
 sqz_fastXdecode(sqzblock_t *blk, uint8_t *buff, uint64_t size,char fqflag);
+
+
+/*
+  ##############################################################################
+  kseq compatibility routines
+  ##############################################################################
+*/
+
+
+/*
+  Open sqzfile 
+  Returns sqzFile object or NULL on failure
+*/
+sqzFile sqzopen(char *filename, const char *m);
+
+/*
+  Read len decoded, uncompressed bytes into buff
+  Returns number of bytes written into buff, 0 for end of file -1 on error
+*/
+int64_t sqzread(sqzFile file, void *buff, uint64_t len);
+
+
+/*
+  Close sqzFile
+*/
+void sqzclose(sqzFile file);

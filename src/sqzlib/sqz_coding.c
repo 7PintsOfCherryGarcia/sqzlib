@@ -32,10 +32,9 @@ unsigned char seq_dec_tableSQZ[128] = {
      4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
 };
 
+
 //Table to change 0,1,2,3,4,5,6,7 to quality values
 unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
-
-
 
 
 //TODO Make inline

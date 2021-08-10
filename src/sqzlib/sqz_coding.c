@@ -461,12 +461,12 @@ static uint64_t countnblk(const uint8_t *buff, uint64_t *pos)
 }
 
 
-static uint64_t countqbytes(uint8_t *blkbuff, uint64_t bases)
+static uint64_t countqbytes(uint8_t *codebuff, uint64_t bases)
 {
     uint64_t rbases = 0;
     uint64_t nbytes = 0;
     while (rbases < bases) {
-        rbases += 1 + (*(blkbuff++) & 31);
+        rbases += 1 + (*(codebuff++) & 31);
         nbytes++;
     }
     return nbytes;
@@ -690,14 +690,14 @@ void blkdecode(const uint8_t *codebuff,
 }
 
 
-static uint64_t pdecode(uint8_t *blkbuff,
+static uint64_t pdecode(uint8_t *codebuff,
                         uint64_t seqoffset,
                         uint64_t buffsize,
-                        uint8_t *buff,
+                        uint8_t *outbuff,
                         uint8_t fqflag)
 {
-    uint64_t dbytes; //decoded bases
-    uint64_t nnum;   //decoded Ns
+    uint64_t outpos = 0; //decoded bases
+    uint64_t nnum = 0;   //decoded Ns
     uint64_t availbases  = buffsize; //available bases to decode
     uint64_t blkpos   = 0;
     uint64_t blklen   = 0;
@@ -706,59 +706,60 @@ static uint64_t pdecode(uint8_t *blkbuff,
     uint64_t bases    = 0;
     uint64_t tmpbases = 0;
     //Go to corresponding block (block corresponding to current offset)
-    tmpbases = sqz_gotoblk(blkbuff, &blkpos, fqflag, seqoffset);
+    tmpbases = sqz_gotoblk(codebuff, &blkpos, fqflag, seqoffset);
     //Compute number of bases current offset is from block
     seqoffset -= tmpbases;
     //Main decoding loop. Starting from the beginning of the blk, decode data
     //until number of requested bases is satisfied
-    dbytes  = 0;
-    nnum    = 0;
-    while (dbytes < buffsize) {
+    while (outpos < buffsize) {
         //Determine seq blk, n blk, or quality block
-        blklen = *(uint64_t *)(blkbuff + blkpos);
+        blklen = *(uint64_t *)(codebuff + blkpos);
         if (seqoffset >= blklen) {
-            nflag = *( blkbuff + blkpos + B64 + getblkbytesize(blklen) );
-            //Compute how many Ns have been decoded
-            noffset = seqoffset - blklen;
+            nflag = *( codebuff + blkpos + B64 + getblkbytesize(blklen) );
             if (nflag) {
-                nnum = nblkdecode(blkbuff + blkpos,
-                                  buff + dbytes,
+                //Compute how many Ns have been decoded
+                noffset = seqoffset - blklen;
+                bases += noffset;
+                nnum = nblkdecode(codebuff + blkpos,
+                                  outbuff + outpos,
                                   noffset,
                                   availbases,
                                   &blkpos,
                                   &seqoffset,
                                   blklen);
-                dbytes += nnum;
+                bases += nnum;
+                outpos += nnum;
                 availbases -= nnum;
             }
             else if (fqflag) {
                 blkpos += B64 + getblkbytesize(blklen) + 1;
-                uint64_t qbytes =  countqbytes(blkbuff + blkpos, bases + dbytes);
+                uint64_t qbytes = countqbytes(codebuff + blkpos, bases);
                 blkpos += qbytes;
                 seqoffset = 0;
             }
             else {
                 blkpos += B64 + getblkbytesize(blklen) + 1;
                 seqoffset = 0;
-                blklen = *(uint64_t *)(blkbuff + blkpos);
+                blklen = *(uint64_t *)(codebuff + blkpos);
             }
             continue;
         }
+        bases += blklen;
         //ACGT blk
         //How much of the block is available
         uint64_t blkavail = blklen - seqoffset;
         uint64_t acgt;
-        acgt =  blkavail < buffsize - dbytes ? blkavail : buffsize - dbytes;
-        blkdecode(blkbuff + blkpos + B64,
-                  buff + dbytes,
+        acgt =  blkavail < buffsize - outpos ? blkavail : buffsize - outpos;
+        blkdecode(codebuff + blkpos + B64,
+                  outbuff + outpos,
                   seqoffset,
                   acgt,
                   blklen);
-        dbytes += acgt;
+        outpos += acgt;
         seqoffset += acgt;
         availbases -= acgt;
     }
-    return dbytes;
+    return outpos;
 }
 
 
@@ -1101,7 +1102,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded
     if (prevbytes) {
-        //fprintf(stderr, "Decoding from middle partial\n");
         prevbytes -= (namelen + 2);
         outpos = sqz_rdecode(codebuff + codepos + B64,
                              outbuff,
@@ -1138,7 +1138,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                 blk->namepos = namepos;
                 goto exit;
             }
-            //fprintf(stderr, "Decoding from beginning partial\n");
             //Decode as much as possible
             prevbytes = sqz_pdecode(codebuff + codepos + B64,
                                     outbuff + outpos,
@@ -1159,17 +1158,11 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
-        //Decode sequence and quality if fastq
-        //fprintf(stderr, "Decoding from main loop\n");
-        //fprintf(stderr, "%s\n", namebuff + namepos);
-        //fprintf(stderr, "\tbuffsize: %lu buffneed: %lu outpos: %lu\n",
-        //        buffsize, buffneed, outpos);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,
                                  fqflag,
                                  &outpos);
-        //fprintf(stderr, "\tcodepos: %lu\n", codepos);
         buffsize -= buffneed;
         namepos += namelen + 1;
         //New sequence

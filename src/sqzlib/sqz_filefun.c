@@ -151,7 +151,10 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp)
 }
 
 
-static void sqz_decode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fmt, uint64_t klibl)
+static void sqz_decode(sqzfastx_t *sqz,
+                       sqzblock_t *blk,
+                       uint8_t fmt,
+                       uint64_t klibl)
 {
     switch (fmt) {
         case 14:
@@ -175,7 +178,6 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
     //Take lower 7 bits of flag
     switch (file->ff & 127) {
     case 0: //Buffers are empty
-        {
         // Decompress sqz block
         if (!sqz_readblksize(file->blk, file->fp)) goto error;
         // Check if we have reached end of file
@@ -194,9 +196,10 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
         // Update how much data is left
         sqz->offset -= read;
         if (sqz->offset < len) {
-            //All of leftover data fits in buffer. So more data will be needed
+            //All of leftover data will fit in buffer.
+            //So more data will be needed
             //or reading has finished
-            //Keep bit 7 status, switch flag to 2
+            //Keep bit 7 status, switch bit 2
             file->ff = (file->ff & 128) | 2;
         }
         else {
@@ -204,27 +207,28 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
             //Keep bit 7 status, switch flag to 1
             file->ff = (file->ff & 128) | 1;
         }
-        //fprintf(stderr, "Returning case 0 %ld\n", read);
         return read;
-        }
     case 1: //Data just need to be copied
-        {
         read = sqz->offset > len ? len : sqz->offset;
         memcpy(outbuff, sqz->readbuffer + sqz->rem, read);
         sqz->rem += read;
         sqz->offset -= read;
         if (sqz->offset < len) {
-            //Keep bit 7 status, switch flag to 2
+            //All of leftover data will fit in buffer.
+            //So more data will be needed
+            //or reading has finished
+            //Keep bit 7 status, switch bit 2
             file->ff = (file->ff & 128) | 2;
         }
         return read;
-        }
     case 2: //Data can be copied but entire buffer can't be filled
-        {
+        ;
+        uint64_t outpos;
         //Store how much data needs to be copied
         uint64_t leftover = sqz->offset;
-        //Finish copying remaining data
+        //Finish copying remaining data aka empty sqz->readbuffer
         memcpy(outbuff, sqz->readbuffer + sqz->rem, leftover);
+        outpos = leftover;
         //Check if there is more data to decode
         if (blk->blkpos) {
             //There is more data to decode
@@ -252,21 +256,47 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
         //Determine how much new data can be copied
         read = sqz->offset > ( len - leftover) ? (len - leftover) : sqz->offset;
         //Copy data making sure to not overwrite previously copied data
-        memcpy(outbuff + leftover, sqz->readbuffer, read);
+        memcpy(outbuff + outpos, sqz->readbuffer, read);
         sqz->offset -= read;
+        outpos += read;
         sqz->rem = read;
-        if (sqz->offset < len)
-            //Will need to exit or more decoding
-            file->ff = (file->ff & 128) | 2;
-        else
-            //Can keep loading data
-            file->ff = (file->ff & 128) | 1;
-        return read + leftover;
+        if (outpos < len) {
+            //Buffer still not full, end of file?
+            //There is no more data to decode
+            //We need to know if more data exists in file if there is more data,
+            //data needs to be decompressed and decoded. Otherwise, reading data
+            //has finished and we can exit
+            if (file->ff & 128) {
+                //We can terminate
+                file->ff = 3;
+                return outpos;
+            }
+            else {
+                if (!sqz_readblksize(file->blk, file->fp)) goto error;
+                if (ftell(file->fp) == (long)file->size) {
+                    //Set bit 7
+                    file->ff |= 128;
+                }
+                sqz_decode(sqz, blk, fmt, LOAD_SIZE);
+                read = sqz->offset > (len-outpos) ? (len-outpos) : sqz->offset;
+                memcpy(outbuff + outpos, sqz->readbuffer, read);
+                sqz->offset -= read;
+                sqz->rem = read;
+                outpos += read;
+            }
         }
+        if (sqz->offset < len) {
+            //We remain in case 2
+            file->ff = (file->ff & 128) | 2;
+        }
+        else
+            file->ff = (file->ff & 128) | 1;
+        return outpos;
     case 3:
         return 0;
     }
     error:
+        fprintf(stderr, "\terror\n");
         return -1;
 }
 

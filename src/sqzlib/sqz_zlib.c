@@ -1,7 +1,7 @@
-#define SQZLIB
-#define KLIB
-#include "sqz_zlib.h"
-
+#include <stdio.h>
+#include <stdint.h>
+#include <zlib.h>
+#include "sqz_data.h"
 
 size_t sqz_deflate(sqzblock_t *blk, int level)
 {
@@ -42,20 +42,6 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
     if (ret != Z_STREAM_END) wbytes = 0;
     deflateEnd(&strm);
     return wbytes;
-}
-
-
-char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
-{
-    size_t wbytes = 0;
-    //Write uncompressed number of bytes in block
-    wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
-    //Write compressed number of bytes in block
-    wbytes += fwrite(&(size), B64, 1, ofp);
-    //Write block
-    wbytes += fwrite(blk->cmpbuff, 1, size, ofp);
-    if (wbytes != size+2) return 0;
-    return 1;
 }
 
 

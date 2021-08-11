@@ -18,6 +18,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
                          uint8_t *buff,
                          uint64_t buffsize,
                          uint8_t fqflag);
+uint8_t sqz_getformat(const char *filename);
 
 
 int64_t sqz_filesize(FILE *fp)
@@ -85,6 +86,20 @@ char sqz_filetail(uint64_t numseqs, FILE *ofp)
     if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
         return 0;
     }
+    return 1;
+}
+
+
+char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
+{
+    size_t wbytes = 0;
+    //Write uncompressed number of bytes in block
+    wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
+    //Write compressed number of bytes in block
+    wbytes += fwrite(&(size), B64, 1, ofp);
+    //Write block
+    wbytes += fwrite(blk->cmpbuff, 1, size, ofp);
+    if (wbytes != size+2) return 0;
     return 1;
 }
 

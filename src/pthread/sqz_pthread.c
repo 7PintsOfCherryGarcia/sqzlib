@@ -15,7 +15,7 @@ void sqz_fastxkill(sqzfastx_t *sqz);
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
 char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
 size_t sqz_deflate(sqzblock_t *blk, int level);
-char sqz_zlibcmpdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
+char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
 void sqz_blkdestroy(sqzblock_t *blk);
 
 typedef struct {
@@ -126,7 +126,7 @@ static void *sqz_consumerthread(void *thread_data)
         cbytes = sqz_deflate(blk, 9);
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
-        sqz_zlibcmpdump(blk, cbytes, sqzthread->ofp);
+        sqz_blkdump(blk, cbytes, sqzthread->ofp);
         fflush(sqzthread->ofp);
         blk->blkpos  = 0;
         sqz->namepos = 0;

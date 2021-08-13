@@ -21,19 +21,19 @@ rungzip() {
 }
 
 runcmp() {
-    diff <(md5sum dcpsqz | cut -f1 -d ' ') <(md5sum dcpgz.1 | cut -f1 -d ' ')
-    ls -l $1 | cut -f5 -d ' ' > ogsize
+    diff <(seqstats dcpsqz) <(seqstats dcpgz.1)
     cat $1.9.gzip.time $1.sqz.time $1.1.gzip.time > cmptimes
     cat $1.9.gzip.dtime $1.sqz.dtime $1.1.gzip.dtime > dcptimes
     cat $1.9.gzip.size $1.sqz.size $1.1.gzip.size > cmpsizes
     paste <(printf "gzip.9\nsqz\ngzip.1\n") cmptimes dcptimes cmpsizes > tmp
     mv tmp benchmark
+    ogsize=$(ls -l $1 | cut -f5 -d ' ')
     cat <(printf "#FMT\tcmp.time\tmax.mem\tdcp.time\t$ogsize\n") benchmark > tmp
     mv tmp benchmark
     rm *time *.size
     rm dcpgz.1
     rm dcpsqz
-    rm cmptimes dcptimes cmpsizes ogsize
+    rm cmptimes dcptimes cmpsizes 
 }
 
 if [ -f $1 ]

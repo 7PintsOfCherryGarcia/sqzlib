@@ -781,7 +781,7 @@ static uint64_t sqz_pdecode(uint8_t *codebuff,
     outbuff[outpos++] = NL;                        //newline
     outsize -= outpos;                             //( 2 + strlen(name) );
     //Determine number of bases that fit in buffer
-    uint64_t todecode = (seqlen <= outsize) ? seqlen : outsize;
+    uint64_t todecode = (seqlen < outsize) ? seqlen : outsize;
     pdecode(codebuff,
             0,
             todecode,
@@ -1109,7 +1109,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                              seqlen,
                              prevbytes,
                              fqflag);
-        prevbytes += outpos;
+        prevbytes += outpos + namelen + 2; //Acount for always substracting name
         //Check that no more sequence needs decoding. (Move to next sequence)
         if (prevbytes < buffneed - E - namelen)
             goto exit;
@@ -1139,6 +1139,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                 goto exit;
             }
             //Decode as much as possible
+            
             prevbytes = sqz_pdecode(codebuff + codepos + B64,
                                     outbuff + outpos,
                                     buffsize,

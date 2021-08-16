@@ -137,6 +137,7 @@ sqzFile sqzopen(char *filename, const char *m)
 
 char sqz_readblksize(sqzblock_t *blk, FILE *fp)
 {
+    fprintf(stderr, "INFLATING BLOCK\n");
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;

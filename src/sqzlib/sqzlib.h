@@ -6,6 +6,8 @@
     TODO: Significant work is needed in the decoding low level API. Too much
           code redundancy and therefore inefficiencies.
     TODO: Change quality binning to mimic qualbin.c from htsbox
+    TODO: Incorporate reading modes to sqzFile
+    TODO: Set sqzrewind to only work in reading mode
 */
 
 #include <stdio.h>
@@ -17,7 +19,7 @@
 
 #define LOAD_SIZE 4L*1024L*1024L   //Sequence buffer size
 #define NAME_SIZE 1L*1024L*1024L   //Sequence name buffer size
-#define B64       sizeof(uint64_t)
+#define B64       8                //64bits - 8 bytes
 #define HEADLEN   8
 #define NEND      128
 #define MAGIC     151324677        //4 bytes: 5 8 5 9
@@ -97,6 +99,39 @@ typedef struct sqzFile_s {
 } *sqzFile;
 
 
+/*
+  ##############################################################################
+  kseq compatibility routines
+  ##############################################################################
+*/
+
+
+/*
+  Open sqzFile
+  Returns sqzFile object or NULL on failure
+*/
+sqzFile sqzopen(char *filename, const char *m);
+
+
+/*
+  Read len decoded and decompressed bytes into buff
+  Returns number of bytes written into buff. If returned value is less than
+  len but greater that or equal to 0, end of file has been reached. -1 on error.
+*/
+int64_t sqzread(sqzFile file, void *buff, uint64_t len);
+
+
+/*
+ Rewinds sqzFile. Only suported during reading
+*/
+void sqzrewind(sqzFile file);
+
+
+/*
+  Close sqzFile
+*/
+void sqzclose(sqzFile file);
+
 
 /*
 ##############################################################################
@@ -165,27 +200,3 @@ uint64_t
 sqz_fastXdecode(sqzblock_t *blk, uint8_t *buff, uint64_t size,char fqflag);
 
 
-/*
-  ##############################################################################
-  kseq compatibility routines
-  ##############################################################################
-*/
-
-
-/*
-  Open sqzfile 
-  Returns sqzFile object or NULL on failure
-*/
-sqzFile sqzopen(char *filename, const char *m);
-
-/*
-  Read len decoded, uncompressed bytes into buff
-  Returns number of bytes written into buff, 0 for end of file -1 on error
-*/
-int64_t sqzread(sqzFile file, void *buff, uint64_t len);
-
-
-/*
-  Close sqzFile
-*/
-void sqzclose(sqzFile file);

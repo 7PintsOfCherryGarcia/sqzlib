@@ -53,7 +53,7 @@ static void sqz_blkreset(sqzblock_t *blk)
 }
 
 
-void sqz_rewind(sqzFile sqzfp)
+void sqzrewind(sqzFile sqzfp)
 {
     sqz_fastxreset(sqzfp->sqz);
     sqz_blkreset(sqzfp->blk);

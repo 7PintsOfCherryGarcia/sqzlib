@@ -2,11 +2,7 @@ src/*o
 src/misc
 src/pthread/*.o
 sqz
-testdata
-testing/ramdsk
-testing/dbug
-testing/NVMe
-testing/benchmarking/Software
+tests
 *.a
 *.so
 *.o

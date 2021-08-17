@@ -144,7 +144,7 @@ static uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
     uint64_t seqleft = l - sqz->seqread;
     char *seq = sqz->pseq;
     //buffer can be completely filled with current sequence
-    if (seqleft >= LOAD_SIZE) {
+    if (seqleft > LOAD_SIZE) {
         memcpy(sqz->seqbuffer, seq + sqz->seqread, LOAD_SIZE);
         sqz->seqread += LOAD_SIZE;
         sqz->offset   = LOAD_SIZE;

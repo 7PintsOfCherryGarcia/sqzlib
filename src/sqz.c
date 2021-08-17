@@ -90,12 +90,9 @@ uint8_t sqz_inflatefastX(FILE *ifp, FILE *ofp, char fqflag)
     if (!outbuff) goto exit;
     fseek(ifp, HEADLEN, SEEK_SET);
     //TODO check how to better manage this.
-    uint64_t blki = 0;
     while ( ftell(ifp) < size )
         {
             if (!sqz_readblksize(blk, ifp)) goto exit;
-            blki++;
-            fprintf(stderr, "\t%lu\n", blki);
             do {
                 dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
                 fwrite(outbuff, 1, dsize, ofp);

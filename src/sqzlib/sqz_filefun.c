@@ -104,7 +104,38 @@ char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 }
 
 
-sqzFile sqzopen(char *filename, const char *m)
+sqzFile sqzopen(const char *filename, const char *m)
+{
+    sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
+    sqzfp->ff = 0;
+    sqzfp->fmt = sqz_getformat(filename);
+    sqzfp->fp = fopen(filename, "rb");
+    if (!sqzfp->fp) {
+        free(sqzfp);
+        return NULL;
+    }
+    sqzfp->size = sqz_filesize(sqzfp->fp);
+    fseek(sqzfp->fp, HEADLEN, SEEK_SET);
+    sqzfp->filepos = ftell(sqzfp->fp);
+    sqzfp->blk = sqz_sqzblkinit(LOAD_SIZE);
+    if (!sqzfp->blk) {
+        //TODO: Let killer function take care of this
+        fclose(sqzfp->fp);
+        free(sqzfp);
+        return NULL;
+    }
+    sqzfp->sqz = sqz_fastxinit(sqzfp->fmt, LOAD_SIZE);
+    if (!sqzfp->sqz) {
+        //TODO: Let killer function take care of this
+        fclose(sqzfp->fp);
+        free(sqzfp);
+        return NULL;
+    }
+    return sqzfp;
+}
+
+
+sqzFile sqzdopen(int fd, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
     sqzfp->ff = 0;
@@ -137,7 +168,6 @@ sqzFile sqzopen(char *filename, const char *m)
 
 char sqz_readblksize(sqzblock_t *blk, FILE *fp)
 {
-    fprintf(stderr, "INFLATING BLOCK\n");
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;

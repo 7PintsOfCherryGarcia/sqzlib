@@ -110,7 +110,13 @@ typedef struct sqzFile_s {
   Open sqzFile
   Returns sqzFile object or NULL on failure
 */
-sqzFile sqzopen(char *filename, const char *m);
+sqzFile sqzopen(const char *filename, const char *mode);
+
+
+/*
+  Associate an sqzFile with the file descriptor fd
+*/
+sqzFile sqzdopen(int fd, const char *mode);
 
 
 /*

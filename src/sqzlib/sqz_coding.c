@@ -1094,17 +1094,20 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     */
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded
+
     if (prevbytes) {
-        prevbytes -= (namelen + 2);
+        //prevbytes -= (namelen + 2);
+        uint64_t decoded = prevbytes - namelen - 2;
         outpos = sqz_rdecode(codebuff + codepos + B64,
                              outbuff,
                              buffsize,
                              seqlen,
-                             prevbytes,
+                             //prevbytes,
+                             decoded,
                              fqflag);
-        prevbytes += outpos + namelen + 2; //Acount for always substracting name
+        prevbytes += outpos;
         //Check that no more sequence needs decoding. (Move to next sequence)
-        if (prevbytes < buffneed - E - namelen)
+        if (prevbytes < buffneed - 1) //account for last newline TODO What happens with fq?
             goto exit;
         outbuff[outpos++] = NL;
         buffsize -= outpos;

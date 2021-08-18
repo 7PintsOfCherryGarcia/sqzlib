@@ -19,7 +19,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
                          uint64_t buffsize,
                          uint8_t fqflag);
 uint8_t sqz_getformat(const char *filename);
-
+FILE *fdopen(int fd, const char *mode);
 
 int64_t sqz_filesize(FILE *fp)
 {
@@ -104,7 +104,7 @@ char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 }
 
 
-sqzFile sqzopen(const char *filename, const char *m)
+sqzFile sqzopen(const char *filename, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
     sqzfp->ff = 0;
@@ -139,8 +139,8 @@ sqzFile sqzdopen(int fd, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
     sqzfp->ff = 0;
-    sqzfp->fmt = sqz_getformat(filename);
-    sqzfp->fp = fopen(filename, "rb");
+    //sqzfp->fmt = sqz_getformat(filename);
+    sqzfp->fp = fdopen(fd, "rb");
     if (!sqzfp->fp) {
         free(sqzfp);
         return NULL;

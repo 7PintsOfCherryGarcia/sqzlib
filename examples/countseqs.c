@@ -2,7 +2,7 @@
 
 #include "sqzlib.h"
 #include "klib/kseq.h"
-KSEQ_INIT(sqz_File*, sqz_sqzread)
+KSEQ_INIT(sqzFile, sqzread)
 
 
 int main(int argc, char *argv[])
@@ -13,14 +13,14 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    sqz_File sqzfp;
+    sqzFile sqzfp;
     kseq_t *seq;
     int r, n = 0;
 
-    sqzfp = sqz_sqzopen(argv[1]);
-    if ( !sqzfp.sqz | !sqzfp.blk ) return -1;
+    sqzfp = sqzopen(argv[1], "r");
+    if ( !sqzfp ) return -1;
 
-    seq = kseq_init(&sqzfp);
+    seq = kseq_init(sqzfp);
     while ( (r = kseq_read(seq)) >= 0) {
         ++n;
     }
@@ -32,6 +32,6 @@ int main(int argc, char *argv[])
     ret = 0;
     exit:
         kseq_destroy(seq);
-        sqz_sqzclose(sqzfp);
+        sqzclose(sqzfp);
     return ret;
 }

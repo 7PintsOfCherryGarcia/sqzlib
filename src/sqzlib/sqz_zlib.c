@@ -1,7 +1,25 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <zlib.h>
 #include "sqz_data.h"
+
+int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len)
+{
+    return (int64_t)gzread(fp, buff, len);
+}
+
+
+sqzFile sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
+{
+    sqzfp->gzfp = gzopen(filename, mode);
+    if (!sqzfp->gzfp) {
+        free(sqzfp);
+        return NULL;
+    }
+    return sqzfp;
+}
+
 
 size_t sqz_deflate(sqzblock_t *blk, int level)
 {

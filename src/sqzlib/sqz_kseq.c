@@ -8,7 +8,7 @@ KSEQ_INIT(gzFile, gzread)
 #include "sqz_data.h"
 
 
-static uint8_t  sqz_checksqz(const char *filename)
+static uint8_t sqz_checksqz(const char *filename)
 {
     uint64_t tmp   = 0;
     uint32_t magic = 0;
@@ -41,7 +41,6 @@ uint8_t  sqz_getformat(const char *filename)
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
     ret = 0;
-    //TODO: Adjust to other compression libraries
     gzFile fp = gzopen(filename, "r");
     if (!fp) return ret;
 

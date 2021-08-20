@@ -1,3 +1,5 @@
+#include <zlib.h>
+
 #define LOAD_SIZE 4L*1024L*1024L
 #define NAME_SIZE 1L*1024L*1024L
 #define B64       sizeof(uint64_t)
@@ -64,6 +66,7 @@ typedef struct {
 
 typedef struct sqzFile_s {
     FILE       *fp;
+    gzFile       gzfp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;
     uint64_t    size;

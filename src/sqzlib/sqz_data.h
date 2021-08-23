@@ -72,5 +72,6 @@ typedef struct sqzFile_s {
     uint64_t    size;
     uint8_t     ff;
     uint8_t     fmt;
+    uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;

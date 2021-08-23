@@ -6,10 +6,10 @@ CSHFLAG= -shared
 SRCDIR= src
 INC= -Ilibs -I.
 LIB= -L.
-LIBS= -lz -lpthread
+LIBS= -lz -lzstd -lpthread
 
 SRC=sqzlib/sqz_init.c sqzlib/sqz_kseq.c sqzlib/sqz_coding.c\
-    sqzlib/sqz_zlib.c sqzlib/sqz_filefun.c #pthread/sqz_pthread.c
+    sqzlib/sqz_zlib.c sqzlib/sqz_zstd.c sqzlib/sqz_filefun.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 SOBJS=$(SRC:%.c=$(SRCDIR)/%S.o)

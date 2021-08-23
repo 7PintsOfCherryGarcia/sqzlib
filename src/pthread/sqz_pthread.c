@@ -17,6 +17,8 @@ char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
 size_t sqz_deflate(sqzblock_t *blk, int level);
 char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
 void sqz_blkdestroy(sqzblock_t *blk);
+int64_t sqzcompress(sqzblock_t *blk, int level, uint8_t libfmt);
+
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -34,6 +36,7 @@ typedef struct {
     sqzfastx_t **sqzqueue;
     uint8_t fqflag;
     FILE *ofp;
+    int libfmt;
 } sqzthread_t;
 
 
@@ -112,7 +115,8 @@ static void *sqz_consumerthread(void *thread_data)
     if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
     sqzfastx_t *sqz = sqzthread->sqzqueue[id - 1];
-    uint8_t fqflag = sqzthread->fqflag;
+    uint8_t fqflag  = sqzthread->fqflag;
+    int libfmt      = sqzthread->libfmt;
     //Do some work if there is available data
     while (sqz->endthread & 128) { //bit 7 is on if there is still data
         //Encode data
@@ -123,7 +127,8 @@ static void *sqz_consumerthread(void *thread_data)
             sqz_fastXencode(sqz, blk, fqflag);
         }
         //Compress block
-        cbytes = sqz_deflate(blk, 9);
+        cbytes = sqzcompress(blk, 9, libfmt);
+        //TODO Deal with error
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
         sqz_blkdump(blk, cbytes, sqzthread->ofp);
@@ -225,6 +230,7 @@ static sqzthread_t *sqz_threadinit(FILE *ofp,
                                    const char *filename,
                                    char fqflag,
                                    int nthread,
+                                   uint8_t libfmt,
                                    uint8_t fmt)
 {
     sqzthread_t *sqzthread = calloc(1, sizeof(sqzthread_t));
@@ -238,6 +244,7 @@ static sqzthread_t *sqz_threadinit(FILE *ofp,
     sqzthread->fqflag      = fqflag;
     sqzthread->filename    = filename;
     sqzthread->ofp         = ofp;
+    sqzthread->libfmt      = libfmt;
     sqzthread->sqzqueue    = calloc(nthread, sizeof(sqzfastx_t*));
     if (!(sqzthread->sqzqueue)) {
         free(sqzthread);
@@ -280,11 +287,17 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                            const char *filename,
                            char fqflag,
                            int nthread,
+                           uint8_t libfmt,
                            uint8_t fmt)
 {
     uint8_t ret = 1;
     //Start thread object
-    sqzthread_t *sqzthread = sqz_threadinit(ofp, filename, fqflag, nthread, fmt);
+    sqzthread_t *sqzthread = sqz_threadinit(ofp,
+                                            filename,
+                                            fqflag,
+                                            nthread,
+                                            libfmt,
+                                            fmt);
     //Launch reader thread
     pthread_t rthread;
     if (pthread_create(&rthread,

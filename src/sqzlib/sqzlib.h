@@ -95,6 +95,7 @@ typedef struct sqzFile_s {
     uint64_t    size;
     uint8_t     ff;
     uint8_t     fmt;
+    uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;
 
@@ -148,7 +149,7 @@ void sqzclose(sqzFile file);
 /*
   Write an sqz header
 */
-char sqz_filehead(unsigned char fmt, FILE *ofp);
+char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp);
 
 
 /*
@@ -196,7 +197,13 @@ void sqz_blkkill(sqzblock_t *blk);
 /*
   Read a data block into an sqz block structure
 */
-char sqz_readblksize(sqzblock_t *blk, FILE *fp);
+char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt);
+
+
+/*
+  Compress encoded data block
+*/
+int64_t sqzcompress(sqzblock_t *blk, int level);
 
 
 /*

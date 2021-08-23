@@ -24,6 +24,7 @@ To build sqzlib you will need:
     make
     gcc
     zlib
+    zstd
 
 ### Get it
 
@@ -56,6 +57,9 @@ This will print how to use sqz
 		-d 		Decompress previously sqz compressed file.
 		-o <file>	Write to outputfile <file>.
 		-t <n>		Use <n> compression/decompression threads.
+		-l <lib>        Use <lib> compression library.
+		                        Default: -l zlib
+					Options: zlib, zstd
 		-h 		This help message.
 
 
@@ -77,5 +81,34 @@ This will print the decoded/decompressed data to standard output
 
 ### Link sqzlib 
 
-    //Don't forget zlib
-    gcc yourcode.c libsqz.a -lz
+    //Don't forget zlib and zstd
+    gcc yourcode.c libsqz.a -lz -lzstd
+
+### Using kseq.h with libsqz
+
+libsqz tries to emulate zlibs gz API. For example:
+
+    //Open a gzip formatted file with zlib
+    gzFile fp = gzopen("filename", "rb");
+    
+    //Open a sqz formatted file
+    sqzFile fp = sqzopen("filename", "rb");
+    
+This means that in order parse fastA/Q data stored in sqz format, these emulated functions must be passed to the preprocessor macors.
+    
+    //includes
+    
+    KSEQ_INIT(sqzFile, sqzread)
+    
+    int main(...) {
+        ...
+        sqzFile fp = sqzopen("file", "mode");
+        kseq_t *seq = kseq_init(seq);
+    
+        //Reading with kseq_read()
+        ...
+        //Close file
+        sqzclose(fp);
+    }
+    
+For a complete example, you can look at a [patch](https://github.com/7PintsOfCherryGarcia/sqzlib/tree/master/patches/seqstats) for the [seqstats](https://github.com/clwgg/seqstats) fasta summary statistics program.

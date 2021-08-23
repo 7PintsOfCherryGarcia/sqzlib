@@ -1,0 +1,66 @@
+diff --git a/Makefile b/Makefile
+index 91ccf69..9a0b8f7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,2 +1,2 @@
+ seqstats: seqstats.c klib/kseq.h klib/ksort.h
+-	gcc $< -Wall -O3 -lz -lm -o $@
++	gcc $< -Wall -L. -O3 -lsqz -lz -lzstd -lm -o $@
+diff --git a/seqstats.c b/seqstats.c
+index 8d1deb2..3d4a326 100644
+--- a/seqstats.c
++++ b/seqstats.c
+@@ -8,8 +8,11 @@
+ #include "klib/kseq.h"
+ #include "klib/ksort.h"
+ 
++//7Pint's sqzlib
++#include "sqzlib.h"
++
+ // initialize kseq
+-KSEQ_INIT(gzFile, gzread)
++KSEQ_INIT(sqzFile, sqzread)
+ 
+ // initialize sorting and define types and sorting scheme
+ #define pair_lt(a, b) ((a) < (b))
+@@ -19,7 +22,7 @@ KSORT_INIT_GENERIC(long)
+ 
+ int main(int argc, char *argv[])
+ {
+-  gzFile fp;
++  sqzFile fp;
+   kseq_t *seq;
+   int l;
+   int n = 0;
+@@ -38,7 +41,7 @@ int main(int argc, char *argv[])
+     argv[1] = "/dev/stdin";
+   }
+ 
+-  fp = gzopen(argv[1], "r");
++  fp = sqzopen(argv[1], "r");
+ 
+   if (!fp) {
+     printf("Can't open input file.\n\n");
+@@ -93,19 +96,19 @@ int main(int argc, char *argv[])
+ 
+   kseq_destroy(seq);
+   free(a);
+-  gzclose(fp);
++  sqzclose(fp);
+   return 0;
+ 
+   memerr:
+     printf("\n\tCould not allocate sufficient continuous memory.\n\n");
+     kseq_destroy(seq);
+-    gzclose(fp);
++    sqzclose(fp);
+     return 1;
+ 
+   seqerr:
+     printf("\n\tSequence file is empty.\n\n");
+     kseq_destroy(seq);
+-    gzclose(fp);
++    sqzclose(fp);
+     return 1;
+ 
+ }

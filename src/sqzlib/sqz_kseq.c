@@ -171,6 +171,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *seq)
     uint8_t  *seqbuffer = sqz->seqbuffer;
     uint8_t  *qltbuffer = sqz->qualbuffer;
     while ( kseq_read(seq) >= 0 ) {
+        fprintf(stderr, "%s\n", seq->name.s);
         l = seq->seq.l;
         n++;
         if (!sqz_loadname(sqz, seq)) {

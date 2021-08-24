@@ -184,10 +184,10 @@ sqzFile sqzopen(const char *filename, const char *mode)
 }
 
 
-//sqzFile sqzdopen(int fd, const char *mode)
-//{
-//    return NULL;
-//}
+sqzFile sqzdopen(int fd, const char *mode)
+{
+    return NULL;
+}
 
 
 void sqzclose(sqzFile file)

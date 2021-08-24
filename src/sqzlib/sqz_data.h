@@ -5,13 +5,17 @@
 #define B64       sizeof(uint64_t)
 #define HEADLEN   8
 #define NEND      128
-//#define CHUNK     131072
 #define MAGIC     151324677
+
+#define NBLK      255U
+#define QBLK        0U
+#define TNBLK      15U
 
 #define FQH       '@'
 #define FAH       '>'
 #define FQS       '+'
 #define NL        '\n'
+
 
 /*
   "sqzfastx_t"

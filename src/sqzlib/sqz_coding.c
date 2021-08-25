@@ -43,7 +43,7 @@ unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 
 
 //TODO Make inline
-static  const uint8_t *sqz_findn(const uint8_t *seq)
+static const uint8_t *sqz_findn(const uint8_t *seq)
 {
     while (seq_nt4_tableSQZ[*seq] < 4)
         seq++;
@@ -987,7 +987,7 @@ Loads length bases into decodebuffer
 Returns number of bytes decoded
 Updates wbytes with number of bytes written
 */
-uint64_t sqz_seqdecode(const uint8_t *codebuff,
+static uint64_t sqz_seqdecode(const uint8_t *codebuff,
                        uint8_t       *outbuff,
                        uint64_t       length,
                        char           qflag,
@@ -1004,7 +1004,7 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
-        fprintf(stderr, "^blklen: %lu\n", blklen);
+        //fprintf(stderr, "^blklen: %lu\n", blklen);
         qltnum += blklen;
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
@@ -1018,7 +1018,6 @@ uint64_t sqz_seqdecode(const uint8_t *codebuff,
             switch (nflag) {
                 case NBLK:
                     nnum = countnblk(codebuff + codepos, &nbytes);
-                    fprintf(stderr, "nnum: %lu\n", nnum);
                     qltnum += nnum;
                     codepos += nbytes;
                     sqz_writens(nnum, outbuff + outpos);
@@ -1168,8 +1167,8 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
-        fprintf(stderr, "outsize: %lu\nbuffneed: %lu\n", outsize, buffneed);
-        fprintf(stderr, "%s\n", namebuff + namepos);
+        //fprintf(stderr, "outsize: %lu\nbuffneed: %lu\n", outsize, buffneed);
+        //fprintf(stderr, "%s\n", namebuff + namepos);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,

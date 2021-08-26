@@ -125,9 +125,6 @@ sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
 	  const uint8_t *npos   = NULL;          //Track positions where N occurs
     uint64_t nn     = 0;                   //Number of Ns
 	  uint64_t blen   = 0;                   //Length of segment before first N
-    //uint8_t  flag1 = 255;
-    //uint8_t  flag2 = 0;
-    //uint8_t  flag3 = 15;
     do {
         //Get position of first non ACGTacgt base
 	      npos = sqz_findn(lstop);
@@ -146,12 +143,10 @@ sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
             //Encode sequence
             blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
             //Indicate that a non-ACGT block follows
-            if ( !(nptr - npos) && p) {
-                memcpy(blkbuff + blkpos, &tnblk, 1);
-                fprintf(stderr, "PROBLEM!!\n");
-            }
-            else
-                memcpy(blkbuff + blkpos, &nblk, 1);
+            //quality code will follow
+            if ( !(nptr - npos) && p) memcpy(blkbuff + blkpos, &tnblk, 1);
+            //more sequence code will follow
+            else memcpy(blkbuff + blkpos, &nblk, 1);
             blkpos++;
             //Encode non-ACGT block
             blkpos += sqz_nblkcode(blkbuff + blkpos, nn);
@@ -165,16 +160,7 @@ sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
         memcpy(blkbuff + blkpos, &blen, B64);
         blkpos += B64;
         blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
-        /*
-          When a sequence has only been partialy loaded when encoding loop
-          finishes, a flag with a value of zero is written to the buffer.
-          This is so that when decoding, a quality block can be distinguished
-          from more sequence blocks.
-          This flag is needed only when the loaded
-          sequence is truncated at ACGT bases. If the sequence is truncated at
-          non ACGT bases there will be no trailing bases to decode (blen == 0)
-          and the corresponding flag would have already been written.
-        */
+        //quality nlock will follow
         memcpy(blkbuff + blkpos, &qblk, 1);
         blkpos++;
     }
@@ -1004,7 +990,6 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
-        //fprintf(stderr, "^blklen: %lu\n", blklen);
         qltnum += blklen;
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
@@ -1012,7 +997,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
                                  &outpos,
                                  blklen);
         length -= blklen;
-        if (length) {     //Partial sequence decoding
+        if (length) {
             nflag = *(codebuff + codepos); //Read N flag
             codepos++;
             switch (nflag) {
@@ -1032,38 +1017,20 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     qltnum = 0;
                     continue;
                 case TNBLK:
-                    fprintf(stderr, "OOOOKKKK\n");
-                    fprintf(stderr, "qltnum: %lu %lu\n", qltnum, qltdecoded);
-                    sleep(200);
+                    nnum = countnblk(codebuff + codepos, &nbytes);
+                    codepos += nbytes;
+                    qltnum += nnum;
+                    sqz_writens(nnum, outbuff + outpos);
+                    outpos += nnum;
+                    length -= nnum;
+                    codepos += sqz_qualdecode(codebuff + codepos,
+                                              outbuff + seqlen + 3 + qltdecoded,
+                                              qltnum);
+                    qltdecoded += qltnum;
+                    qltnum = 0;
+                    continue;
             }
-            //else {
-                //Deal with something else which can be
-                //if (qflag) {
-                    //Deal with quality string
-                    /*
-                    Even though entire sequence has not been decoded completely,
-                    there is quality data to be decoded. This happens because in
-                    this particular sequence, during the encoding process a
-                    buffer was filled before entire sequence could be loaded.
-                    In this case, what was loaded of the sequence is encoded,
-                    and then the rest of the sequence finishes loading.
-                    Resulting in the following patter in the code block:
-                        blklen:seqcode:qualcode:blklen:seqcode:qualcode
-                    Instead of:
-                        blklen:seqcode:qualcode
-                    */
-                    //TODO Completely change this hacky way of decoding
-                    //Decode nucleotides first
-                    //Put qualities at end of nucleotides after extra characters
-                    //codepos += sqz_qualdecode(codebuff + codepos,
-                                    //outbuff + seqlen + 3 + qltdecoded,
-                                 //         qltnum);
-                    //qltdecoded += qltnum;
-                    // qltnum = 0;
-            //}
-            }
-        //continue;
-        //}
+        }
         //Skip the nflag
         codepos++;
     }

@@ -31,7 +31,7 @@ static uint8_t sqz_checksqz(const char *filename)
     //Read compression library: 1 - zlib (bits 1,2,3,4,5 of fmt)
     tmp += fread(&sqz, 1, 1, fp);
     //fprintf(stderr, "libfmt: %u\n", sqz);
-    fmt |= sqz << 3;
+    fmt |= (sqz << 3);
     fclose(fp);
     return fmt;
 }

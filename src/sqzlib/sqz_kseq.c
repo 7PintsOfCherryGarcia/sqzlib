@@ -32,7 +32,6 @@ static uint8_t sqz_checksqz(const char *filename)
     tmp += fread(&sqz, 1, 1, fp);
     //fprintf(stderr, "libfmt: %u\n", sqz);
     fmt |= (sqz << 3);
-    fprintf(stderr, "FMT: %u\n", fmt);
     fclose(fp);
     return fmt;
 }

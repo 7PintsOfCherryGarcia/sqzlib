@@ -153,7 +153,6 @@ sqzFile sqzopen(const char *filename, const char *mode)
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
     sqzfp->ff = 0;
     sqzfp->fmt = sqz_getformat(filename);
-    fprintf(stderr, "From sqzopen: %u\n", sqzfp->fmt);
     //Check if not sqz format (bit 6)
     if ( !(sqzfp->fmt & 4) )
         return sqz_gzopen(filename, sqzfp, mode);

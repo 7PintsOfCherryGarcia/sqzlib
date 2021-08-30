@@ -70,7 +70,7 @@ typedef struct {
 
 typedef struct sqzFile_s {
     FILE       *fp;
-    gzFile       gzfp;
+    gzFile      gzfp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;
     uint64_t    size;

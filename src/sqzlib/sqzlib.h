@@ -90,6 +90,7 @@ typedef struct {
 */
 typedef struct sqzFile_s {
     FILE       *fp;
+    gzFile      gzfp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;
     uint64_t    size;
@@ -98,7 +99,6 @@ typedef struct sqzFile_s {
     uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;
-
 
 /*
   ##############################################################################

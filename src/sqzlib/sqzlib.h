@@ -105,6 +105,7 @@ typedef struct sqzFile_s {
   kseq compatibility routines
   ##############################################################################
 */
+typedef struct kseq_t kseq_t;
 
 
 /*

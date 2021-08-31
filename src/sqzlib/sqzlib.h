@@ -177,6 +177,17 @@ uint64_t sqz_filesize(FILE *fp);
 */
 
 /*
+  Initialize sqzfastx structure
+*/
+sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
+
+
+/*
+  Free sqzfastx structure
+*/
+void sqz_fastxkill(sqzfastx_t *sqz);
+
+/*
   Initialize an sqzblock structure
 */
 sqzblock_t *sqz_sqzblkinit(uint64_t size);

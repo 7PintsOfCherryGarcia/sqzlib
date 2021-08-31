@@ -224,3 +224,4 @@ uint64_t
 sqz_fastXdecode(sqzblock_t *blk, uint8_t *buff, uint64_t size,char fqflag);
 
 
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);

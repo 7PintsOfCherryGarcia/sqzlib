@@ -18,20 +18,15 @@ OBJSB=$(SRC:%.c=$(SRCDIR)/%B.o)
 SOBJSB=$(SRC:%.c=$(SRCDIR)/%SB.o)
 
 
-.PHONY:all clean wipe examples
+.PHONY:all clean wipe
 .SUFFIXES:.c .o
 
 
-all:libsqz sqz
+all:libsqz pthr sqz
+
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
-
-pthr:
-	$(CC) $(CFLAGS) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
-
-pthrB:
-	$(CC) $(CFLAGSB) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
 
 %S.o:%.c
 	$(CC) $(CFLAGS) $(INC) -c -fPIC $< -o $@
@@ -43,25 +38,27 @@ pthrB:
 	$(CC) $(CFLAGSB) $(INC) -c -fPIC  $< -o $@
 
 
+pthr:
+	$(CC) $(CFLAGS) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
+
+pthrB:
+	$(CC) $(CFLAGSB) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthreadB.o src/pthread/sqz_pthread.c
+
+
 libsqzflag:
 	$(info >>>>>Building libsqz<<<<<)
 
 sqzflag:
 	$(info >>>>>Building sqz<<<<<)
 
-exampleflag:
-	$(info >>>>>Building examples<<<<<)
 
-
-
-libsqz:libsqzflag $(OBJS) pthr
+libsqz:libsqzflag $(OBJS)
 	ar rcs $@.a $(OBJS)
 	cp src/sqzlib/sqzlib.h .
 
 libsqz_shared:libsqzflag $(SOBJS)
 	$(CC) $(CSHFLAG) $(SOBJS) -o libsqz.so
 	cp src/sqzlib/sqzlib.h .
-
 
 libsqzB:libsqzflag $(OBJSB) pthrB
 	ar rcs libsqz.a $(OBJSB)
@@ -72,11 +69,11 @@ libsqz_sharedB:libsqzflag $(SOBJSB)
 	cp src/sqzlib/sqzlib.h .
 
 
-sqz:sqzflag
-	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
+sqz:sqzflag pthr
+	$(CC) $(CFLAGS) $(INC) $(LIB) -Wno-unused-function -o $@ $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
 
-sqzB:sqzflag
-	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
+sqzB:sqzflag pthrB
+	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c src/pthread/sqz_pthreadB.o libsqz.a $(LIBS)
 
 build:wipe libsqzB sqzB
 

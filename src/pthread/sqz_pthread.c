@@ -6,7 +6,8 @@
 
 #include "../sqzlib/sqz_data.h"
 #include "klib/kseq.h"
-KSEQ_INIT(gzFile, gzread)
+int64_t sqzread(sqzFile file, void *buff, uint64_t len);
+KSEQ_INIT(sqzFile, sqzread)
 
 sqzblock_t *sqz_sqzblkinit(uint64_t size);
 void sqz_blkkill(sqzblock_t *blk);
@@ -18,7 +19,8 @@ size_t sqz_deflate(sqzblock_t *blk, int level);
 char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp);
 void sqz_blkdestroy(sqzblock_t *blk);
 int64_t sqzcompress(sqzblock_t *blk, int level, uint8_t libfmt);
-
+void sqzclose(sqzFile file);
+sqzFile sqzopen(const char *filename, const char *mode);
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -173,11 +175,15 @@ static void *sqz_readerthread(void *thread_data)
     uint8_t fqflag = sqzthread->fqflag;
 
     //Initialize kseq object
-    gzFile fp = gzopen(sqzthread->filename, "r");
-    if (!fp) return NULL;
+    fprintf(stderr, "READING\n");
+    sqzFile fp = sqzopen(sqzthread->filename, "r");
+    if (!fp) {
+        return NULL;
+    }
     kseq_t *seq = kseq_init(fp);
-    if (!seq) return NULL;
-
+    if (!seq) {
+        return NULL;
+    }
     //Start consumer pool
     pthread_t *consumer_pool = malloc(nthread * sizeof(pthread_t));
     if (!consumer_pool) goto exit;
@@ -221,7 +227,7 @@ static void *sqz_readerthread(void *thread_data)
     exit:
         free(consumer_pool);
         kseq_destroy(seq);
-        gzclose(fp);
+        sqzclose(fp);
         return NULL;
 }
 
@@ -290,6 +296,8 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                            uint8_t libfmt,
                            uint8_t fmt)
 {
+    fprintf(stderr, "THREADING\n");
+    fflush(stderr);
     uint8_t ret = 1;
     //Start thread object
     sqzthread_t *sqzthread = sqz_threadinit(ofp,
@@ -298,6 +306,7 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                                             nthread,
                                             libfmt,
                                             fmt);
+    fprintf(stderr, "After init\n");
     //Launch reader thread
     pthread_t rthread;
     if (pthread_create(&rthread,
@@ -320,7 +329,7 @@ uint8_t sqz_threadlauncher(FILE *ofp,
 }
 
 
-static void sqz_singleread(kseq_t *seq)
-{
-    kseq_read(seq);
-}
+//static void sqz_singleread(kseq_t *seq)
+//{
+//    kseq_read(seq);
+//}

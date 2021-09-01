@@ -28,6 +28,7 @@ char sqz_deflatefastX(const char *ifile,
     if ( !sqz_filehead(fmt, libfmt, ofp) )
         goto exit;
     fflush(ofp);
+    fprintf(stderr, "pene\n");
     sqz_threadlauncher(ofp,
                        ifile,
                        fqflag,
@@ -46,10 +47,12 @@ char sqz_deflatefastX(const char *ifile,
 
 char sqz_compress(sqzopts_t opts)
 {
+    fprintf(stderr, "COMPRESS\n");
     char ret = 0;
     FILE *ofp = fopen(opts.ofile, "wb");
     if ( !(ofp) ) return ret;
     unsigned char fmt = sqz_getformat(opts.ifile);
+    fprintf(stderr, "FMT CHECKED\n");
     switch (fmt & 7) {
         case 1:
             if (!sqz_deflatefastX(opts.ifile,
@@ -263,6 +266,7 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 
 int main(int argc, char *argv[])
 {
+    fprintf(stderr, "MAIN\n");
     int ret = 1;
     if (argc < 2) {
         sqz_usage();

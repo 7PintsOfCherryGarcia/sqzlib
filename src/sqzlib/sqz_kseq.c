@@ -2,14 +2,19 @@
 #include <stdint.h>
 #include <zlib.h>
 
-#include "klib/kseq.h"
-KSEQ_INIT(gzFile, gzread)
+
 
 #include "sqz_data.h"
+int64_t sqzread(sqzFile file, void *buff, uint64_t len);
+void sqzclose(sqzFile file);
+sqzFile sqzopen(const char *filename, const char *mode);
 
+#include "klib/kseq.h"
+KSEQ_INIT(sqzFile, sqzread)
 
 static uint8_t sqz_checksqz(const char *filename)
 {
+    fprintf(stderr, "CHECK SQZ\n");
     uint64_t tmp   = 0;
     uint32_t magic = 0;
     uint8_t  fmt   = 0;
@@ -39,15 +44,16 @@ static uint8_t sqz_checksqz(const char *filename)
 
 uint8_t  sqz_getformat(const char *filename)
 {
+    fprintf(stderr, "CHECKING FMT\n");
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
     ret = 0;
-    gzFile fp = gzopen(filename, "r");
+    sqzFile fp = sqzopen(filename, "r");
     if (!fp) return ret;
 
     kseq_t *seq = kseq_init(fp);
     if (!seq) {
-        gzclose(fp);
+        sqzclose(fp);
         return ret;
     }
     int l = kseq_read(seq);
@@ -61,8 +67,9 @@ uint8_t  sqz_getformat(const char *filename)
     }
     //FASTA
     ret = 1;
+    fprintf(stderr, "DONE FMT\n");
     exit:
-        gzclose(fp);
+        sqzclose(fp);
         kseq_destroy(seq);
         return ret;
 }

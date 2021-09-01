@@ -18,7 +18,6 @@
 #include <zlib.h>
 
 
-
 #define LOAD_SIZE 4L*1024L*1024L   //Sequence buffer size
 #define NAME_SIZE 1L*1024L*1024L   //Sequence name buffer size
 #define B64       8                //64bits - 8 bytes
@@ -86,7 +85,6 @@ typedef struct {
 } sqzblock_t;
 
 
-
 /*
   Docstring
 */
@@ -107,8 +105,13 @@ typedef struct sqzFile_s {
   kseq compatibility routines
   ##############################################################################
 */
-#include "klib/kseq.h"
-KSEQ_INIT(gzFile, gzread)
+/*
+  Read len decoded and decompressed bytes into buff
+  Returns number of bytes written into buff. If returned value is less than
+  len but greater that or equal to 0, end of file has been reached. -1 on error.
+*/
+int64_t sqzread(sqzFile file, void *buff, uint64_t len);
+
 
 /*
   Open sqzFile
@@ -121,14 +124,6 @@ sqzFile sqzopen(const char *filename, const char *mode);
   Associate an sqzFile with the file descriptor fd
 */
 sqzFile sqzdopen(int fd, const char *mode);
-
-
-/*
-  Read len decoded and decompressed bytes into buff
-  Returns number of bytes written into buff. If returned value is less than
-  len but greater that or equal to 0, end of file has been reached. -1 on error.
-*/
-int64_t sqzread(sqzFile file, void *buff, uint64_t len);
 
 
 /*
@@ -227,4 +222,4 @@ uint64_t
 sqz_fastXdecode(sqzblock_t *blk, uint8_t *buff, uint64_t size,char fqflag);
 
 
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq);
+uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);

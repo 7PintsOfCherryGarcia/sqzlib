@@ -974,10 +974,11 @@ Returns number of bytes decoded
 Updates wbytes with number of bytes written
 */
 static uint64_t sqz_seqdecode(const uint8_t *codebuff,
-                       uint8_t       *outbuff,
-                       uint64_t       length,
-                       char           qflag,
-                       uint64_t      *wbytes)
+                              uint8_t       *outbuff,
+                              uint64_t       length,
+                              char           qflag,
+                              uint64_t      *wbytes,
+                              uint8_t flg)
 {
     uint64_t seqlen     = length;
     uint64_t codepos    = 0;
@@ -990,6 +991,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
+        if (flg) fprintf(stderr, "\tblklen%lu\n", blklen);
         qltnum += blklen;
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
@@ -1056,6 +1058,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                          uint64_t outsize,  //Size of outbuff
                          char fqflag)       //0 - fasta, 1 - fastq
 {
+    uint8_t flg = 0;
     uint8_t  *codebuff   = blk->blkbuff;
     uint64_t  codepos    = blk->blkpos;
     uint64_t  outpos     = 0;
@@ -1135,12 +1138,21 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outbuff[outpos++] = NL;
         codepos += B64;
         //fprintf(stderr, "outsize: %lu\nbuffneed: %lu\n", outsize, buffneed);
-        //fprintf(stderr, "%s\n", namebuff + namepos);
+        if ( !(strcmp(namebuff + namepos, "D00360:18:H8VC6ADXX:2:1105:9538:44726/2"))) {
+            fprintf(stderr, "HERE:\n\t%s\n", namebuff + namepos);
+            flg = 1;
+        }
+        if ( !(strcmp(namebuff + namepos, "D00360:18:H8VC6ADXX:2:2108:15094:90091/2"))) {
+            fprintf(stderr, "HERE:\n\t%s\n", namebuff + namepos);
+            flg = 1;
+        }
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,
                                  fqflag,
-                                 &outpos);
+                                 &outpos,
+                                 flg);
+        flg = 0;
         outsize -= buffneed;
         namepos += namelen + 1;
         //New sequence

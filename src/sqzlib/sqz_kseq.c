@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <zlib.h>
 
 
 
@@ -8,46 +7,17 @@
 int64_t sqzread(sqzFile file, void *buff, uint64_t len);
 void sqzclose(sqzFile file);
 sqzFile sqzopen(const char *filename, const char *mode);
+uint8_t sqz_checksqz(const char *filename);
 
 #include "klib/kseq.h"
 KSEQ_INIT(sqzFile, sqzread)
 
-static uint8_t sqz_checksqz(const char *filename)
-{
-    fprintf(stderr, "CHECK SQZ\n");
-    uint64_t tmp   = 0;
-    uint32_t magic = 0;
-    uint8_t  fmt   = 0;
-    uint8_t  sqz   = 0;
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) return 0;
-    //Read magic
-    tmp += fread(&magic, 1, 4, fp);
-    if (MAGIC ^ magic) {
-        //Return 0 if not an sqz file
-        fclose(fp);
-        return 0;
-    }
-    //Set sqz flag (bit 6 of fmt)
-    fmt |= 4;
-    //Read format: 1 - fastA or 2 - fastQ (bits 7 and 8 of fmt)
-    tmp += fread(&sqz, 1, 1, fp);
-    fmt |= sqz;
-    //Read compression library: 1 - zlib (bits 1,2,3,4,5 of fmt)
-    tmp += fread(&sqz, 1, 1, fp);
-    //fprintf(stderr, "libfmt: %u\n", sqz);
-    fmt |= (sqz << 3);
-    fclose(fp);
-    return fmt;
-}
-
 
 uint8_t  sqz_getformat(const char *filename)
 {
-    fprintf(stderr, "CHECKING FMT\n");
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
-    ret = 0;
+    //ret = 0;
     sqzFile fp = sqzopen(filename, "r");
     if (!fp) return ret;
 
@@ -67,7 +37,6 @@ uint8_t  sqz_getformat(const char *filename)
     }
     //FASTA
     ret = 1;
-    fprintf(stderr, "DONE FMT\n");
     exit:
         sqzclose(fp);
         kseq_destroy(seq);

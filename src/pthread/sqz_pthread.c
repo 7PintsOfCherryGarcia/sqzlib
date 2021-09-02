@@ -175,15 +175,11 @@ static void *sqz_readerthread(void *thread_data)
     uint8_t fqflag = sqzthread->fqflag;
 
     //Initialize kseq object
-    fprintf(stderr, "READING\n");
     sqzFile fp = sqzopen(sqzthread->filename, "r");
-    if (!fp) {
-        return NULL;
-    }
+    if (!fp) return NULL;
     kseq_t *seq = kseq_init(fp);
-    if (!seq) {
-        return NULL;
-    }
+    if (!seq) return NULL;
+
     //Start consumer pool
     pthread_t *consumer_pool = malloc(nthread * sizeof(pthread_t));
     if (!consumer_pool) goto exit;
@@ -296,7 +292,6 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                            uint8_t libfmt,
                            uint8_t fmt)
 {
-    fprintf(stderr, "THREADING\n");
     fflush(stderr);
     uint8_t ret = 1;
     //Start thread object
@@ -306,7 +301,6 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                                             nthread,
                                             libfmt,
                                             fmt);
-    fprintf(stderr, "After init\n");
     //Launch reader thread
     pthread_t rthread;
     if (pthread_create(&rthread,
@@ -327,9 +321,3 @@ uint8_t sqz_threadlauncher(FILE *ofp,
         sqz_threadkill(sqzthread);
         return ret;
 }
-
-
-//static void sqz_singleread(kseq_t *seq)
-//{
-//    kseq_read(seq);
-//}

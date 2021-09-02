@@ -18,17 +18,19 @@ char sqz_threadlauncher(FILE *ofp,
                         unsigned char fmt);
 
 char sqz_deflatefastX(const char *ifile,
-                      FILE *ofp,
+                      const char *ofile,
                       char fqflag,
                       uint8_t fmt,
                       uint8_t libfmt,
                       int nthread)
 {
     char ret = 0;
+    FILE *ofp = fopen(ofile, "wb");
+    if ( !(ofp) ) return ret;
+
     if ( !sqz_filehead(fmt, libfmt, ofp) )
         goto exit;
     fflush(ofp);
-    fprintf(stderr, "pene\n");
     sqz_threadlauncher(ofp,
                        ifile,
                        fqflag,
@@ -41,22 +43,19 @@ char sqz_deflatefastX(const char *ifile,
 
     ret = 1;
     exit:
+        fclose(ofp);
         return ret;
 }
 
 
 char sqz_compress(sqzopts_t opts)
 {
-    fprintf(stderr, "COMPRESS\n");
     char ret = 0;
-    FILE *ofp = fopen(opts.ofile, "wb");
-    if ( !(ofp) ) return ret;
-    unsigned char fmt = sqz_getformat(opts.ifile);
-    fprintf(stderr, "FMT CHECKED\n");
+    uint8_t fmt = sqz_getformat(opts.ifile);
     switch (fmt & 7) {
         case 1:
             if (!sqz_deflatefastX(opts.ifile,
-                                  ofp,
+                                  opts.ofile,
                                   0,
                                   fmt,
                                   opts.libfmt,
@@ -64,7 +63,7 @@ char sqz_compress(sqzopts_t opts)
             break;
         case 2:
             if (!sqz_deflatefastX(opts.ifile,
-                                  ofp,
+                                  opts.ofile,
                                   1,
                                   fmt,
                                   opts.libfmt,
@@ -79,7 +78,6 @@ char sqz_compress(sqzopts_t opts)
     }
     ret = 1;
     exit:
-        fclose(ofp);
         return ret;
 }
 
@@ -266,7 +264,6 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
 
 int main(int argc, char *argv[])
 {
-    fprintf(stderr, "MAIN\n");
     int ret = 1;
     if (argc < 2) {
         sqz_usage();

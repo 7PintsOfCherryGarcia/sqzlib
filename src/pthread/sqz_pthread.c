@@ -173,7 +173,7 @@ static void *sqz_readerthread(void *thread_data)
     sqzthread->threadid++;
     int nthread = sqzthread->nthread;
     uint8_t fqflag = sqzthread->fqflag;
-
+    fprintf(stderr, "FQFLAG: %u\n", fqflag);
     //Initialize kseq object
     sqzFile fp = sqzopen(sqzthread->filename, "r");
     if (!fp) return NULL;
@@ -287,12 +287,12 @@ static void sqz_threadkill(sqzthread_t *sqzthread)
 
 uint8_t sqz_threadlauncher(FILE *ofp,
                            const char *filename,
-                           char fqflag,
+                           uint8_t fqflag,
                            int nthread,
                            uint8_t libfmt,
                            uint8_t fmt)
 {
-    fflush(stderr);
+    fprintf(stderr, "INIT: %u\n", fqflag);
     uint8_t ret = 1;
     //Start thread object
     sqzthread_t *sqzthread = sqz_threadinit(ofp,

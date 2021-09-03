@@ -71,8 +71,8 @@
 		if (ks->is_eof && ks->begin >= ks->end) return -1;	\
 		if (ks->begin >= ks->end) {							\
 			ks->begin = 0;									\
-			ks->end = __read(ks->f, ks->buf, __bufsize);	\
-			if (ks->end == 0) { ks->is_eof = 1; return -1;}	\
+      ks->end = __read(ks->f, ks->buf, __bufsize);          \
+      if (ks->end == 0) { ks->is_eof = 1; return -1;}         \
 			if (ks->end == -1) { ks->is_eof = 1; return -3;}\
 		}													\
 		return (int)ks->buf[ks->begin++];					\
@@ -102,8 +102,8 @@ typedef struct __kstring_t {
 			if (ks->begin >= ks->end) {									\
 				if (!ks->is_eof) {										\
 					ks->begin = 0;										\
-					ks->end = __read(ks->f, ks->buf, __bufsize);		\
-					if (ks->end == 0) { ks->is_eof = 1; break; }		\
+          ks->end = __read(ks->f, ks->buf, __bufsize);		\
+          if (ks->end == 0) { ks->is_eof = 1; break; }      \
 					if (ks->end == -1) { ks->is_eof = 1; return -3; }	\
 				} else break;											\
 			}															\
@@ -139,9 +139,9 @@ typedef struct __kstring_t {
 			str->m = 1;													\
 			str->s = (char*)calloc(1, 1);								\
 		} else if (delimiter == KS_SEP_LINE && str->l > 1 && str->s[str->l-1] == '\r') --str->l; \
-		str->s[str->l] = '\0';											\
-		return str->l;													\
-	} \
+		str->s[str->l] = '\0';                                              \
+		return str->l;                                                      \
+	}                                                                     \
 	static inline int ks_getuntil(kstream_t *ks, int delimiter, kstring_t *str, int *dret) \
 	{ return ks_getuntil2(ks, delimiter, str, dret, 0); }
 

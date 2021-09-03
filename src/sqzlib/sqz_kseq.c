@@ -17,10 +17,8 @@ uint8_t  sqz_getformat(const char *filename)
 {
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;
-    //ret = 0;
     sqzFile fp = sqzopen(filename, "r");
     if (!fp) return ret;
-
     kseq_t *seq = kseq_init(fp);
     if (!seq) {
         sqzclose(fp);

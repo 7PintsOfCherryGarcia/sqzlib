@@ -4,8 +4,8 @@
 #include <zlib.h>
 
 #include "sqz_data.h"
-#include "klib/kseq.h"
-KSEQ_INIT(gzFile, gzread)
+//#include "klib/kseq.h"
+//KSEQ_INIT(gzFile, gzread)
 
 
 int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len)
@@ -16,28 +16,12 @@ int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len)
 
 sqzFile sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
 {
-    int fmt = 0;
-    kseq_t *seq = NULL;
     sqzfp->gzfp = gzopen(filename, mode);
-    if (!sqzfp->gzfp) goto exit;
-    seq = kseq_init(sqzfp->gzfp);
-    if (!seq) goto exit;
-    int l = kseq_read(seq);
-    //ERROR
-    if (l < 0) goto exit;
-    //FASTQ
-    if (seq->qual.l > 0) fmt = 2;
-    //FASTA
-    else fmt = 1;
-    exit:
-        kseq_destroy(seq);
-        if(!fmt) {
-            gzclose(sqzfp->gzfp);
-            free(sqzfp);
-            return NULL;
-        }
-        sqzfp->fmt = fmt;
-        return sqzfp;
+    if (!sqzfp->gzfp) {
+        free(sqzfp);
+        return NULL;
+    }
+    return sqzfp;
 }
 
 

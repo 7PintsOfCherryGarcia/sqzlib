@@ -185,10 +185,8 @@ sqzFile sqzopen(const char *filename, const char *mode)
     sqzfp->ff = 0;
     sqzfp->fmt = sqz_checksqz(filename);
     //Fall back to zlib if file not in sqz format
-    if ( !(sqzfp->fmt & 4) ) {
-        sqzfp =  sqz_gzopen(filename, sqzfp, mode);
-        return sqzfp;
-    }
+    if ( !(sqzfp->fmt & 4) )
+        return sqz_gzopen(filename, sqzfp, mode);
     //Check compression library
     sqzfp->libfmt = sqzfp->fmt >> 3;
     sqzfp->fp = fopen(filename, "rb");
@@ -267,7 +265,8 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt)
 int64_t sqzread(sqzFile file, void *buff, uint64_t len)
 {
     if (!file | !buff) return -1;
-    if ( !(file->fmt & 4) ) return sqz_gzread(file->gzfp, buff, (uint32_t)len);
+    if ( !(file->fmt & 4) )
+        return sqz_gzread(file->gzfp, buff, (uint32_t)len);
     sqzfastx_t *sqz  = file->sqz;
     sqzblock_t *blk  = file->blk;
     uint8_t     fmt  = file->fmt & 3;

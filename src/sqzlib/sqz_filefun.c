@@ -6,7 +6,9 @@
 #include "sqz_data.h"
 
 char zbytes[4] = {0, 0, 0, 0};
-char magic[4] = {5, 8, 5, 9};
+uint8_t magic1[4] = {5, 8, 5, 9};
+uint8_t magic2[4] = {9,5,8,5};
+
 unsigned char cmpflag = 1;
 
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
@@ -131,7 +133,7 @@ void sqzrewind(sqzFile sqzfp)
 char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp)
 {
     char wbytes = 0;
-    if ( 4 != (wbytes += fwrite(magic, 1, 4, ofp)) ) return 0;
+    if ( 4 != (wbytes += fwrite(magic1, 1, 4, ofp)) ) return 0;
     if ( 5 != (wbytes += fwrite(&fmt,  1, 1, ofp)) ) return 0;
     //Compression library
     if ( 6 != (wbytes += fwrite(&libfmt, 1, 1, ofp)) ) return 0;
@@ -145,10 +147,10 @@ char sqz_filetail(uint64_t numseqs, FILE *ofp)
     if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
         return 0;
     }
-    if ( 1 != fwrite(&numseqs, sizeof(numseqs), 1, ofp) ) {
+    if ( 1 != fwrite(&numseqs, B64, 1, ofp) ) {
         return 0;
     }
-    if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
+    if ( 4 != fwrite(magic2, 1, 4, ofp) ) {
         return 0;
     }
     return 1;
@@ -157,7 +159,6 @@ char sqz_filetail(uint64_t numseqs, FILE *ofp)
 
 char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
 {
-    fprintf(stderr, "DUMP\n");
     size_t wbytes = 0;
     //Write uncompressed number of bytes in block
     wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
@@ -232,7 +233,6 @@ void sqzclose(sqzFile file)
 
 char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt)
 {
-    fprintf(stderr, "LOAD\n");
     char ret = 0;
     uint64_t cmpsize;
     uint64_t dcpsize;

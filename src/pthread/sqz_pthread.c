@@ -173,7 +173,6 @@ static void *sqz_readerthread(void *thread_data)
     sqzthread->threadid++;
     int nthread = sqzthread->nthread;
     uint8_t fqflag = sqzthread->fqflag;
-    fprintf(stderr, "FQFLAG: %u\n", fqflag);
     //Initialize kseq object
     sqzFile fp = sqzopen(sqzthread->filename, "r");
     if (!fp) return NULL;
@@ -269,11 +268,14 @@ static sqzthread_t *sqz_threadinit(FILE *ofp,
 }
 
 
-static void sqz_threadkill(sqzthread_t *sqzthread)
+static uint64_t sqz_threadkill(sqzthread_t *sqzthread)
 {
+    uint64_t n = 0;
     if (sqzthread) {
-        for (int i = 0; i < sqzthread->nthread; i++)
+        for (int i = 0; i < sqzthread->nthread; i++) {
+            n += sqzthread->sqzqueue[i]->n;
             sqz_fastxkill(sqzthread->sqzqueue[i]);
+        }
         free(sqzthread->sqzqueue);
         pthread_attr_destroy(&(sqzthread->thatt));
         pthread_mutex_destroy(&(sqzthread->mtx));
@@ -282,6 +284,7 @@ static void sqz_threadkill(sqzthread_t *sqzthread)
         pthread_cond_destroy(&(sqzthread->intraconscond));
         free(sqzthread);
     }
+    return n;
 }
 
 
@@ -290,9 +293,9 @@ uint8_t sqz_threadlauncher(FILE *ofp,
                            uint8_t fqflag,
                            int nthread,
                            uint8_t libfmt,
-                           uint8_t fmt)
+                           uint8_t fmt,
+                           uint64_t *n)
 {
-    fprintf(stderr, "INIT: %u\n", fqflag);
     uint8_t ret = 1;
     //Start thread object
     sqzthread_t *sqzthread = sqz_threadinit(ofp,
@@ -318,6 +321,6 @@ uint8_t sqz_threadlauncher(FILE *ofp,
     ret = 0;
     exit:
         //Clean up
-        sqz_threadkill(sqzthread);
+        *n = sqz_threadkill(sqzthread);
         return ret;
 }

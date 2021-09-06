@@ -17,6 +17,9 @@
 #define NL        '\n'
 
 
+//struct kseq_t kseq_t;
+
+
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -30,25 +33,24 @@ typedef struct {
     char       cmpflag;
     //data members
     uint64_t   offset;
-    uint8_t    *seqbuffer;
-    uint8_t    *qualbuffer;
+    uint8_t    *seq;
+    uint8_t    *qlt;
     uint8_t    *namebuffer;
     uint8_t    *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
-    //Partially loaded sequence and qualities
-    char       *pseq; //previous seq
-    char       *pqlt; //previous quality
-    uint64_t    plen;
     //return members
     uint64_t    n;
     uint64_t    bases;
+    //Partially loaded sequence
+    void        *pseq;
     //Partially decoded sequences
     uint64_t    seqread; //Amount of sequence read.
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    toread;  //Size of sequence still needed to be read
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
+
 
 
 typedef struct {

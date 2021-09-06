@@ -15,7 +15,8 @@ char sqz_threadlauncher(FILE *ofp,
                         char fqflag,
                         int nthread,
                         uint8_t libfmt,
-                        unsigned char fmt);
+                        unsigned char fmt,
+                        uint64_t *n);
 
 char sqz_deflatefastX(const char *ifile,
                       const char *ofile,
@@ -24,8 +25,8 @@ char sqz_deflatefastX(const char *ifile,
                       uint8_t libfmt,
                       int nthread)
 {
-    fprintf(stderr, "DEFLATE: %u\n", fqflag);
     char ret = 0;
+    uint64_t n = 0;
     FILE *ofp = fopen(ofile, "wb");
     if ( !(ofp) ) return ret;
 
@@ -37,9 +38,11 @@ char sqz_deflatefastX(const char *ifile,
                        fqflag,
                        nthread,
                        libfmt,
-                       fmt);
+                       fmt,
+                       &n);
     //TODO Replace the 0 (# sequences) sequence writting
-    if ( !sqz_filetail(0, ofp) )
+    fprintf(stderr, "%lu\n", n);
+    if ( !sqz_filetail(n, ofp) )
         goto exit;
 
     ret = 1;
@@ -52,9 +55,7 @@ char sqz_deflatefastX(const char *ifile,
 char sqz_compress(sqzopts_t opts)
 {
     char ret = 0;
-    fprintf(stderr, "GETTING FMT\n");
     uint8_t fmt = sqz_getformat(opts.ifile);
-    fprintf(stderr, "CMP: %u\n", fmt);
     switch (fmt & 7) {
         case 1:
             if (!sqz_deflatefastX(opts.ifile,

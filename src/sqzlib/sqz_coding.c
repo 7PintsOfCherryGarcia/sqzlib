@@ -235,8 +235,8 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = blk->blkpos;
-    uint8_t  *seqbuffer  = sqz->seqbuffer;
-    uint8_t  *qltbuffer  = sqz->qualbuffer;
+    uint8_t  *seqb  = sqz->seq;
+    uint8_t  *qltb  = sqz->qlt;
     uint64_t  sqzsize    = sqz->offset;
     uint8_t  *seq     = NULL;
     uint8_t  *qlt     = NULL;
@@ -244,12 +244,12 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint64_t  seqread = 0;
     uint64_t  k       = 0;
     while ( k < sqzsize ) {
-        seqlen = *(uint64_t *)( seqbuffer + k );
+        seqlen = *(uint64_t *)( seqb + k );
         k += B64;
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
-        seq  = seqbuffer + k;
-        qlt  = qltbuffer + k;
+        seq  = seqb + k;
+        qlt  = qltb + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
         blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos,
@@ -277,8 +277,8 @@ static uint8_t sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;
-    uint8_t *seqbuff = sqz->seqbuffer;
-    uint8_t *qltbuff = sqz->qualbuffer;
+    uint8_t *seqb = sqz->seq;
+    uint8_t *qltb = sqz->qlt;
     uint8_t *blkbuff = blk->blkbuff;
     uint64_t blksize = blk->blksize;
     uint64_t blkpos  = blk->blkpos;
@@ -291,8 +291,8 @@ static uint8_t sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpsize *= 2;
         blk->cmpbuff  = realloc(blk->cmpbuff, blk->cmpsize);
     }
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff + blkpos, 0);
-    blkpos += sqz_qualencode(qltbuff, blkbuff + blkpos, seqleft);
+    blkpos += sqz_seqencode(seqb, seqleft, blkbuff + blkpos, 0);
+    blkpos += sqz_qualencode(qltb, blkbuff + blkpos, seqleft);
     if (sqz->endflag) {
         blk->newblk = 0;
         goto exit;
@@ -318,21 +318,20 @@ static uint8_t sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 
 static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
-    fprintf(stderr, "FASTAHEAD\n");
     uint8_t *blkbuff   = blk->blkbuff;
     uint64_t blkpos    = blk->blkpos;
-    uint8_t *seqbuffer = sqz->seqbuffer;
+    uint8_t *seqb = sqz->seq;
     uint64_t sqzsize   = sqz->offset;
     uint8_t *seq = NULL;
     uint64_t seqlen = 0;
     uint64_t seqread = 0;
     uint64_t k = 0;
     while ( k < sqzsize ) {
-        seqlen = *(uint64_t *)( seqbuffer + k );
+        seqlen = *(uint64_t *)( seqb + k );
         k += B64;
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
-        seq = seqbuffer + k;
+        seq = seqb + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
         blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, 0);
@@ -358,7 +357,7 @@ static uint8_t sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint64_t seqlen  = sqz->prevlen;
     uint64_t seqleft = seqlen - sqz->seqread;
-    uint8_t *seqbuff = sqz->seqbuffer;
+    uint8_t *seqb = sqz->seq;
     uint8_t *blkbuff = blk->blkbuff;
     uint64_t blksize = blk->blksize;
     uint64_t blkpos  = blk->blkpos;
@@ -373,7 +372,7 @@ static uint8_t sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
     }
     //encode sequence
-    blkpos += sqz_seqencode(seqbuff, seqleft, blkbuff + blkpos, 0);
+    blkpos += sqz_seqencode(seqb, seqleft, blkbuff + blkpos, 0);
     //Indicate if there is more sequence to read
     if (sqz->endflag) {
         blk->newblk = 0;

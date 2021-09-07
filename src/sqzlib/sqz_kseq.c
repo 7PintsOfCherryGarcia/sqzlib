@@ -11,7 +11,7 @@ uint8_t sqz_checksqz(const char *filename);
 KSEQ_INIT(sqzFile, sqzread)
 
 
-uint8_t  sqz_getformat(const char *filename)
+uint8_t sqz_getformat(const char *filename)
 {
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(filename)) ) return ret;

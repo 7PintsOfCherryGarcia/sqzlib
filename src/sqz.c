@@ -1,159 +1,42 @@
-#include "sqzlib.h"
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <getopt.h>
+#include <unistd.h>
 
 typedef struct  {
     char ifile[256];
     char ofile[256];
     int  nthread;
-    char  libfmt;
-    char fqflag;
+    char libfmt;
 } sqzopts_t;
 
 
-char sqz_threadlauncher(FILE *ofp,
-                        const char *filename,
-                        char fqflag,
-                        int nthread,
+char sqz_threadcompress(const char *ifile,
+                        const char *ofile,
                         uint8_t libfmt,
-                        unsigned char fmt,
-                        uint64_t *n);
+                        uint8_t nthread);
 
-char sqz_deflatefastX(const char *ifile,
-                      const char *ofile,
-                      char fqflag,
-                      uint8_t fmt,
-                      uint8_t libfmt,
-                      int nthread)
-{
-    char ret = 0;
-    uint64_t n = 0;
-    FILE *ofp = fopen(ofile, "wb");
-    if ( !(ofp) ) return ret;
-
-    if ( !sqz_filehead(fmt, libfmt, ofp) )
-        goto exit;
-    fflush(ofp);
-    sqz_threadlauncher(ofp,
-                       ifile,
-                       fqflag,
-                       nthread,
-                       libfmt,
-                       fmt,
-                       &n);
-    //TODO Replace the 0 (# sequences) sequence writting
-    fprintf(stderr, "%lu\n", n);
-    if ( !sqz_filetail(n, ofp) )
-        goto exit;
-
-    ret = 1;
-    exit:
-        fclose(ofp);
-        return ret;
-}
+char sqz_threaddecompress(const char *ifile,
+                          const char *ofile,
+                          uint8_t nthread);
 
 
 char sqz_compress(sqzopts_t opts)
 {
-    char ret = 0;
-    uint8_t fmt = sqz_getformat(opts.ifile);
-    switch (fmt & 7) {
-        case 1:
-            if (!sqz_deflatefastX(opts.ifile,
-                                  opts.ofile,
-                                  0,
-                                  fmt,
-                                  opts.libfmt,
-                                  opts.nthread)) goto exit;
-            break;
-        case 2:
-            if (!sqz_deflatefastX(opts.ifile,
-                                  opts.ofile,
-                                  1,
-                                  fmt,
-                                  opts.libfmt,
-                                  opts.nthread)) goto exit;
-            break;
-        case 5:
-            fprintf(stderr, "File %s alredy sqz encoded.\n", opts.ifile);
-            goto exit;
-        case 6:
-            fprintf(stderr, "File %s alredy sqz encoded.\n", opts.ifile);
-            goto exit;
-    }
-    ret = 1;
-    exit:
-        return ret;
-}
-
-
-uint8_t sqz_inflatefastX(FILE *ifp, FILE *ofp, char fqflag, uint8_t libfmt)
-{
-    uint8_t ret      = 0;
-    uint8_t *outbuff = NULL;
-    uint64_t dsize   = 0;
-    int64_t size    = 0;
-    sqzblock_t *blk  = sqz_sqzblkinit(LOAD_SIZE);
-    if (!blk) goto exit;
-    size = sqz_filesize(ifp);
-    outbuff = malloc(LOAD_SIZE);
-    if (!outbuff) goto exit;
-    fseek(ifp, HEADLEN, SEEK_SET);
-    while ( ftell(ifp) < size )
-        {
-            if (!sqz_readblksize(blk, ifp, libfmt)) goto exit;
-            do {
-                dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
-                fwrite(outbuff, 1, dsize, ofp);
-                fflush(ofp);
-            } while (blk->newblk);
-        }
-    ret = 1;
-    exit:
-        sqz_blkkill(blk);
-        free(outbuff);
-        return ret;
+    return sqz_threadcompress(opts.ifile,
+                              opts.ofile,
+                              opts.libfmt,
+                              opts.nthread);
 }
 
 
 char sqz_decompress(sqzopts_t opts)
 {
-    char ret = 0;
-    FILE *ifp = NULL;
-    FILE *ofp = NULL;
-    ofp = fopen(opts.ofile, "wb");
-    if (!ofp)
-        goto exit;
-    ifp = fopen(opts.ifile, "rb");
-    if (!ifp)
-        goto exit;
-    uint8_t fmt = sqz_getformat(opts.ifile);
-    uint8_t libfmt = fmt >> 3;
-    //Check for format
-    switch (fmt & 7) {
-        case 1:
-            fprintf(stderr, "File %s already decoded.\n", opts.ifile);
-            goto exit;
-        case 2:
-            fprintf(stderr, "File %s already decoded.\n", opts.ifile);
-            goto exit;
-        case 5:
-            if (!sqz_inflatefastX(ifp, ofp, 0, libfmt)) {
-                fprintf(stderr, "[sqz ERROR]: Failed to decode data.\n");
-                goto exit;
-            }
-            break;
-        case 6:
-            if (!sqz_inflatefastX(ifp, ofp, 1, libfmt)) {
-                fprintf(stderr, "[sqz ERROR]: Failed to decode data.\n");
-                goto exit;
-            }
-            break;
-        }
-    ret = 1;
-    exit:
-        if(ifp) fclose(ifp);
-        if(ofp) fclose(ofp);
-        return ret;
+    return sqz_threaddecompress(opts.ifile,
+                                opts.ofile,
+                                opts.nthread);
 }
 
 
@@ -231,7 +114,7 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
         goto exit;
     }
     if ( access(argv[argc - 1], F_OK) ) {
-        fprintf(stderr, "[sqz]: %s, no such file.\n\n", argv[argc - 1]);
+        fprintf(stderr, "[sqz]: %s, file not found.\n\n", argv[argc - 1]);
         sqz_usage();
         ret = 0;
         goto exit;

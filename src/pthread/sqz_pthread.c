@@ -22,6 +22,9 @@ int64_t sqzcompress(sqzblock_t *blk, int level, uint8_t libfmt);
 void sqzclose(sqzFile file);
 sqzFile sqzopen(const char *filename, const char *mode);
 uint8_t sqz_getformat(const char *filename);
+char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp);
+char sqz_filetail(uint64_t numseqs, FILE *ofp);
+
 
 typedef struct {
     pthread_mutex_t mtx;
@@ -171,18 +174,24 @@ static void *sqz_readerthread(void *thread_data)
 {
     //TODO indicate errors
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
-    sqzfastx_t **sqzqueue   = sqzthread->sqzqueue;
     sqzthread->threadid++;
+    sqzfastx_t **sqzqueue  = sqzthread->sqzqueue;
     uint8_t nthread = sqzthread->nthread;
-
-
-    uint8_t fqflag = 0;
+    uint8_t fqflag  = sqzthread->fqflag;
 
     //Initialize kseq object
     sqzFile fp = sqzopen(sqzthread->ifile, "r");
     if (!fp) return NULL;
     kseq_t *seq = kseq_init(fp);
     if (!seq) return NULL;
+    //Open output file and write sqz header
+    sqzthread->ofp = fopen(sqzthread->ofile, "wb");
+    if (!sqzthread->ofp) return NULL;
+    if ( !sqz_filehead(sqzthread->fqflag, sqzthread->libfmt, sqzthread->ofp) ) {
+        fclose(sqzthread->ofp);
+        return NULL;
+    }
+    fflush(sqzthread->ofp);
 
     //Start consumer pool
     pthread_t *consumer_pool = malloc(nthread * sizeof(pthread_t));
@@ -221,9 +230,13 @@ static void *sqz_readerthread(void *thread_data)
     sqzthread->wakethreadn = 0;
     pthread_cond_broadcast(&(sqzthread->conscond));
     //Wait until done
-    for (int i = 0; i < nthread; i++)
+    uint64_t n = 0;
+    for (int i = 0; i < nthread; i++) {
         if (pthread_join(consumer_pool[i], NULL))
             fprintf(stderr, "[sqz]: Thread error join\n");
+        n += sqzqueue[i]->n;
+    }
+    sqz_filetail(n, sqzthread->ofp);
     exit:
         free(consumer_pool);
         kseq_destroy(seq);
@@ -293,11 +306,6 @@ uint8_t sqz_threadcompress(const char *ifile,
     uint8_t fmt = sqz_getformat(ifile);
     //Print error
     if (!fmt) return ret;
-    /*
-      if ( !sqz_filehead(fmt, libfmt, ofp) )
-      goto exit;
-      fflush(ofp);
-    */
     //Start thread object
     sqzthread_t *sqzthread = sqz_threadinit(ifile,
                                             ofile,
@@ -323,10 +331,6 @@ uint8_t sqz_threadcompress(const char *ifile,
     exit:
         //Clean up
         sqz_threadkill(sqzthread);
-        /*
-        if ( !sqz_filetail(n, ofp) )
-        goto exit;
-        */
         return ret;
 }
 

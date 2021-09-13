@@ -52,14 +52,16 @@ typedef struct {
     //return members
     uint64_t    n;
     uint64_t    bases;
+    uint64_t    blks;
     //Partially loaded sequence
-    void *pseq;
+    void        *pseq;
     //Partially decoded sequences
     uint64_t    seqread; //Amount of sequence read.
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    toread;  //Size of sequence still needed to be read
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
+
 
 
 

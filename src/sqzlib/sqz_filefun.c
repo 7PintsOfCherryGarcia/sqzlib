@@ -142,12 +142,21 @@ char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp)
 }
 
 
-char sqz_filetail(uint64_t numseqs, FILE *ofp)
+char sqz_filetail(uint64_t numseqs, uint64_t nblocks, FILE *ofp)
 {
     if ( 4 != fwrite(zbytes, 1, 4, ofp) ) {
         return 0;
     }
     if ( 1 != fwrite(&numseqs, B64, 1, ofp) ) {
+        return 0;
+    }
+    if ( 2 != fwrite(zbytes, 1, 2, ofp) ) {
+        return 0;
+    }
+    if ( 1 != fwrite(&nblocks, B64, 1, ofp) ) {
+        return 0;
+    }
+    if ( 2 != fwrite(zbytes, 1, 2, ofp) ) {
         return 0;
     }
     if ( 4 != fwrite(magic2, 1, 4, ofp) ) {

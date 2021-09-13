@@ -42,8 +42,7 @@ unsigned char seq_dec_tableSQZ[128] = {
 unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
 
 
-//TODO Make inline
-static const uint8_t *sqz_findn(const uint8_t *seq)
+static inline const uint8_t *sqz_findn(const uint8_t *seq)
 {
     while (seq_nt4_tableSQZ[*seq] < 4)
         seq++;
@@ -116,15 +115,17 @@ static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t len)
 }
 
 
-static uint64_t
-sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
+static uint64_t sqz_seqencode(const uint8_t *seq,
+                              uint64_t seqlen,
+                              uint8_t *blkbuff,
+                              uint8_t p)
 {
-    uint64_t       blkpos = 0;             //position in blkbuff
-    const uint8_t *lstop  = seq;           //Track position in sequence
-    const uint8_t *nptr   = seq + seqlen;  //End of string
-	  const uint8_t *npos   = NULL;          //Track positions where N occurs
-    uint64_t nn     = 0;                   //Number of Ns
-	  uint64_t blen   = 0;                   //Length of segment before first N
+    uint64_t blkpos = 0;
+    const uint8_t *lstop  = seq;
+    const uint8_t *nptr   = seq + seqlen;
+	  const uint8_t *npos   = NULL;
+    uint64_t nn     = 0;
+	  uint64_t blen   = 0;
     do {
         //Get position of first non ACGTacgt base
 	      npos = sqz_findn(lstop);
@@ -142,6 +143,8 @@ sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
             blkpos += B64;
             //Encode sequence
             blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
+            //Trace next base after sequence of Ns
+            lstop = npos;
             //Indicate that a non-ACGT block follows
             //quality code will follow
             if ( !(nptr - npos) && p) memcpy(blkbuff + blkpos, &tnblk, 1);
@@ -150,8 +153,7 @@ sqz_seqencode(const uint8_t *seq, uint64_t seqlen, uint8_t *blkbuff, uint8_t p)
             blkpos++;
             //Encode non-ACGT block
             blkpos += sqz_nblkcode(blkbuff + blkpos, nn);
-            //Trace next base after sequence of Ns
-            lstop = npos;
+
         }
     } while (*npos);
     //Detect and encode trailing bases
@@ -225,7 +227,7 @@ static uint64_t sqz_qualencode(const uint8_t *qual,
 
 
 //TODO change to #define
-static uint64_t getblkbytesize(uint64_t blklen)
+static inline uint64_t getblkbytesize(uint64_t blklen)
 {
     return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
 }
@@ -234,7 +236,7 @@ static uint64_t getblkbytesize(uint64_t blklen)
 static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t  *blkbuff    = blk->blkbuff;
-    uint64_t  blkpos     = blk->blkpos;
+    uint64_t  blkpos     = 0;
     uint8_t  *seqb  = sqz->seq;
     uint8_t  *qltb  = sqz->qlt;
     uint64_t  sqzsize    = sqz->offset;
@@ -252,9 +254,13 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         qlt  = qltb + k;
         seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
         k += seqread + 1;
-        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos,
+        blkpos += sqz_seqencode(seq,
+                                seqread,
+                                blkbuff + blkpos,
                                 seqread < seqlen ? 1 : 0);
-        blkpos += sqz_qualencode(qlt, blkbuff + blkpos, seqread);
+        blkpos += sqz_qualencode(qlt,
+                                 blkbuff + blkpos,
+                                 seqread);
     }
     //More sequence to encode?
     if (sqz->endflag) {
@@ -969,6 +975,10 @@ static uint64_t sqz_qualdecode(const uint8_t *codebuff,
             qualstr[offset++] = qual_val_table[q];
         decoded += (count + 1); //Count[0-31], real length [1-32]
         byte++;
+        if (decoded > length) {
+            fprintf(stderr, "ERROR!!!\n");
+            sleep(100);
+        }
     }
     return byte;
 }

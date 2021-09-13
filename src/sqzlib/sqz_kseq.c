@@ -90,8 +90,7 @@ static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
     memcpy(sqz->seq, seq + sqz->seqread, seqleft);
     memcpy(sqz->qlt, qlt + sqz->seqread, seqleft);
     sqz->seq[seqleft] = 0;
-    sqz->qlt[seqleft] = 0;
-    seqleft++;
+    sqz->qlt[seqleft++] = 0;
     sqz->endflag = 0;
     sqz->offset = seqleft;
     sqz->bases += seqleft;
@@ -136,6 +135,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
         l = kseq->seq.l;
         n++;
         if (!sqz_loadname(sqz, kseq)) {
+            //TODO better errir
             offset = 0;
             goto exit;
         }

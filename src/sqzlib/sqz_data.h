@@ -17,9 +17,6 @@
 #define NL        '\n'
 
 
-//struct kseq_t kseq_t;
-
-
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -42,6 +39,7 @@ typedef struct {
     //return members
     uint64_t    n;
     uint64_t    bases;
+    uint64_t    blks;
     //Partially loaded sequence
     void        *pseq;
     //Partially decoded sequences

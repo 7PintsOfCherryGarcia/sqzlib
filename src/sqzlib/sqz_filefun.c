@@ -67,7 +67,6 @@ static void sqz_fastxreset(sqzfastx_t *sqz)
     sqz->n          = 0;
     sqz->bases      = 0;
     sqz->rem        = 0;
-    sqz->toread     = 0;
     sqz->prevlen    = 0;
 }
 
@@ -185,7 +184,7 @@ int64_t sqz_filesize(FILE *fp)
     fseek(fp, 0, SEEK_END);
     int64_t s = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    return s - 16;
+    return s - 28;
 }
 
 

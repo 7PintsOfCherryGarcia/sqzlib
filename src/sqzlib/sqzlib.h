@@ -36,17 +36,17 @@
   reading sequencing data into.
 */
 typedef struct {
-    uint8_t    nthread;
-    uint8_t    endthread;
+    uint8_t     nthread;
+    uint8_t     endthread;
     //flags
-    char       endflag; //Sequece has not completely been read into a buffer flag
-    char       cmpflag;
+    char        endflag; //Sequece has not completely been read into a buffer flag
+    char        cmpflag;
     //data members
-    uint64_t   offset;
-    uint8_t    *seq;
-    uint8_t    *qlt;
-    uint8_t    *namebuffer;
-    uint8_t    *readbuffer;
+    uint64_t    offset;
+    uint8_t     *seq;
+    uint8_t     *qlt;
+    uint8_t     *namebuffer;
+    uint8_t     *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
     //return members
@@ -54,13 +54,16 @@ typedef struct {
     uint64_t    bases;
     uint64_t    blks;
     //Partially loaded sequence
-    void        *pseq;
+    uint8_t     *pseq;
+    uint8_t     *pqlt;
+    uint64_t    psize;
     //Partially decoded sequences
     uint64_t    seqread; //Amount of sequence read.
     uint64_t    rem;     //Length of sequence remaining to be read
-    uint64_t    toread;  //Size of sequence still needed to be read
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
+
+
 
 
 

@@ -10,30 +10,33 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     uint8_t ret = 1;
     sqzfastx_t *sqz = calloc(1, sizeof(sqzfastx_t));
     if (!sqz) return NULL;
+
     sqz->namesize   = NAME_SIZE;
-    sqz->endthread = 128L;
+    sqz->endthread  = 128L;
+
+    sqz->seq = malloc(size + 1);
+    if (!sqz->seq)  goto exit;
+    sqz->seq[size] = '\0';
+
+    sqz->namebuffer = malloc(NAME_SIZE);
+    if (!sqz->namebuffer) goto exit;
+
+    sqz->pseq = malloc(16384);
+    if (!sqz->pseq) goto exit;
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
             goto exit;
         case 1:
-            //FASTA
-            sqz->seq = malloc(size + 1);
-            if (!sqz->seq)  goto exit;
-            sqz->seq[size] = '\0';
-            sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) goto exit;
+            //FASTA do nothing, everything allocated
             break;
         case 2:
             //FASTQ
             sqz->qlt = malloc(size + 1);
             if (!sqz->qlt) goto exit;
             sqz->qlt[size] = 0;
-            sqz->seq = malloc(size + 1);
-            if (!sqz->seq)  goto exit;
-            sqz->seq[size] = 0;
-            sqz->namebuffer = malloc(NAME_SIZE);
-            if (!sqz->namebuffer) goto exit;
+            sqz->pqlt = malloc(16384);
+            if (!sqz->pqlt) goto exit;
             break;
         case 5:
             sqz->readbuffer = malloc(size + 1);

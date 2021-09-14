@@ -40,6 +40,20 @@ uint8_t sqz_getformat(const char *filename)
 }
 
 
+static uint8_t sqz_remeber(sqzfastx_t *sqz, kseq_t *seq, uint8_t fqflag)
+{
+    if (sqz->psize < seq->seq.l) {
+        if (fqflag) sqz->pqlt = realloc(sqz->pqlt, seq->seq.l);
+        sqz->pseq = realloc(sqz->pseq, seq->seq.l);
+        if (!(sqz->pqlt) || !(sqz->pseq)) return 1;
+        sqz->psize = seq->seq.l;
+    }
+    memcpy(sqz->pseq, seq->seq.s, seq->seq.l + 1);
+    if (fqflag) memcpy(sqz->pqlt, seq->qual.s, seq->seq.l + 1);
+    return 0;
+}
+
+
 static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint8_t ret = 0;
@@ -70,40 +84,55 @@ static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 }
 
 
-static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
+static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
-    kseq_t *pseq = sqz->pseq;
-    uint64_t l = sqz->prevlen;
-    uint64_t seqleft = l - sqz->seqread;
-    char *seq = pseq->seq.s;
-    char *qlt = pseq->qual.s;
-    //buffer can be completely filled with current sequence
-    if (seqleft >= LOAD_SIZE) {
-        memcpy(sqz->seq, seq + sqz->seqread, LOAD_SIZE);
-        memcpy(sqz->qlt, qlt + sqz->seqread, LOAD_SIZE);
-        sqz->seqread += LOAD_SIZE;
-        sqz->offset   = LOAD_SIZE;
-        sqz->bases   += LOAD_SIZE;
-        return LOAD_SIZE;
+    uint64_t offset = 0;
+    uint64_t n      = 0;
+    uint64_t l;
+    uint64_t bases  = 0;
+    uint64_t maxlen = LOAD_SIZE - B64 - 1;
+    uint8_t *seq = sqz->seq;
+    while ( (kseq_read(kseq) >= 0) ) {
+        l = kseq->seq.l;
+        n++;
+        if (!sqz_loadname(sqz, kseq)) {
+            offset = 0;
+            goto exit;
+        }
+        if (l > maxlen) {
+            memcpy(seq + offset, &l, B64);
+            offset += B64;
+            memcpy(seq + offset, kseq->seq.s, maxlen);
+            offset += maxlen;
+            seq[offset++] = 0;
+            bases += maxlen;
+            sqz->endflag = 1;
+            sqz->seqread = maxlen;
+            sqz->prevlen = l;
+            sqz_remeber(sqz, kseq, 0);
+            goto exit;
+        }
+        bases += l;
+        memcpy(seq + offset, &l, B64);
+        offset += B64;
+        memcpy(seq + offset, kseq->seq.s, l + 1);
+        offset += l + 1;
+        if ( maxlen <= (l + 1 + B64) ) break;
+        maxlen -= (l + 1 + B64);
     }
-    //Rest of sequence can go into buffer
-    memcpy(sqz->seq, seq + sqz->seqread, seqleft);
-    memcpy(sqz->qlt, qlt + sqz->seqread, seqleft);
-    sqz->seq[seqleft] = 0;
-    sqz->qlt[seqleft++] = 0;
-    sqz->endflag = 0;
-    sqz->offset = seqleft;
-    sqz->bases += seqleft;
-    return seqleft;
+    exit:
+        sqz->n += n;
+        sqz->bases = bases;
+        sqz->offset = offset;
+        return offset;
 }
 
 
 static uint64_t sqz_fastaeblock(sqzfastx_t *sqz)
 {
-    kseq_t *pseq = sqz->pseq;
     uint64_t l = sqz->prevlen;
     uint64_t seqleft = l - sqz->seqread;
-    char *seq = pseq->seq.s;
+    uint8_t *seq = sqz->pseq;
     //buffer can be completely filled with current sequence
     if (seqleft > LOAD_SIZE) {
         memcpy(sqz->seq, seq + sqz->seqread, LOAD_SIZE);
@@ -152,7 +181,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
             sqz->endflag = 1;
             sqz->seqread = maxlen;
             sqz->prevlen = l;
-            sqz->pseq = kseq;
+            sqz_remeber(sqz, kseq, 1);
             goto exit;
         }
         bases += l;
@@ -172,47 +201,30 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
 }
 
 
-static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
+static uint64_t sqz_fastqeblock(sqzfastx_t *sqz)
 {
-    uint64_t offset = 0;
-    uint64_t n      = 0;
-    uint64_t l;
-    uint64_t bases  = 0;
-    uint64_t maxlen = LOAD_SIZE - B64 - 1;
-    uint8_t *seq = sqz->seq;
-    while ( (kseq_read(kseq) >= 0) ) {
-        l = kseq->seq.l;
-        n++;
-        if (!sqz_loadname(sqz, kseq)) {
-            offset = 0;
-            goto exit;
-        }
-        if (l > maxlen) {
-            memcpy(seq + offset, &l, B64);
-            offset += B64;
-            memcpy(seq + offset, kseq->seq.s, maxlen);
-            offset += maxlen;
-            seq[offset++] = 0;
-            bases += maxlen;
-            sqz->endflag = 1;
-            sqz->seqread = maxlen;
-            sqz->prevlen = l;
-            sqz->pseq = kseq;
-            goto exit;
-        }
-        bases += l;
-        memcpy(seq + offset, &l, B64);
-        offset += B64;
-        memcpy(seq + offset, kseq->seq.s, l + 1);
-        offset += l + 1;
-        if ( maxlen <= (l + 1 + B64) ) break;
-        maxlen -= (l + 1 + B64);
+    uint64_t l = sqz->prevlen;
+    uint64_t seqleft = l - sqz->seqread;
+    uint8_t *seq = sqz->pseq;
+    uint8_t *qlt = sqz->pqlt;
+    //buffer can be completely filled with current sequence
+    if (seqleft >= LOAD_SIZE) {
+        memcpy(sqz->seq, seq + sqz->seqread, LOAD_SIZE);
+        memcpy(sqz->qlt, qlt + sqz->seqread, LOAD_SIZE);
+        sqz->seqread += LOAD_SIZE;
+        sqz->offset   = LOAD_SIZE;
+        sqz->bases   += LOAD_SIZE;
+        return LOAD_SIZE;
     }
-    exit:
-        sqz->n += n;
-        sqz->bases = bases;
-        sqz->offset = offset;
-        return offset;
+    //Rest of sequence can go into buffer
+    memcpy(sqz->seq, seq + sqz->seqread, seqleft);
+    memcpy(sqz->qlt, qlt + sqz->seqread, seqleft);
+    sqz->seq[seqleft] = 0;
+    sqz->qlt[seqleft++] = 0;
+    sqz->endflag = 0;
+    sqz->offset = seqleft;
+    sqz->bases += seqleft;
+    return seqleft;
 }
 
 

@@ -977,7 +977,7 @@ static uint64_t sqz_qualdecode(const uint8_t *codebuff,
         byte++;
         if (decoded > length) {
             fprintf(stderr, "ERROR!!!\n");
-            sleep(100);
+            //sleep(100);
         }
     }
     return byte;

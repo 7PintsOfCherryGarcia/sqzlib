@@ -347,6 +347,35 @@ uint8_t sqz_threadcompress(const char *ifile,
 }
 
 
+uint8_t sqz_inflatefastX(FILE *ifp, FILE *ofp, char fqflag, uint8_t libfmt)
+{
+    uint8_t ret      = 1;
+    uint8_t *outbuff = NULL;
+    uint64_t dsize   = 0;
+    int64_t size    = 0;
+    sqzblock_t *blk  = sqz_sqzblkinit(LOAD_SIZE);
+    if (!blk) goto exit;
+    size = sqz_filesize(ifp);
+    outbuff = malloc(LOAD_SIZE);
+    if (!outbuff) goto exit;
+    fseek(ifp, HEADLEN, SEEK_SET);
+    while ( ftell(ifp) < size )
+        {
+            if (!sqz_readblksize(blk, ifp, libfmt)) goto exit;
+            do {
+                dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
+                fwrite(outbuff, 1, dsize, ofp);
+                fflush(ofp);
+            } while (blk->newblk);
+        }
+    ret = 0;
+    exit:
+        sqz_blkkill(blk);
+        free(outbuff);
+        return ret;
+}
+
+
 uint8_t sqz_threaddecompress(const char *ifile,
                              const char *ofile,
                              uint8_t nthread)
@@ -357,7 +386,11 @@ uint8_t sqz_threaddecompress(const char *ifile,
         //TODO Fall back to gzread
         fprintf(stderr, "[sqz ERROR]: Not an sqz file\n");
     }
-
+    FILE *ifp = fopen(ifile, "rb");
+    FILE *ofp = fopen(ofile, "wb");
+    if (sqz_inflatefastX(ifp, ofp, 1, 2)) fprintf(stderr, "^ERROR\n");
+    fclose(ifp);
+    fclose(ofp);
     return 0;
 }
 /*
@@ -435,31 +468,5 @@ return ret;
 
 
 /*
-uint8_t sqz_inflatefastX(FILE *ifp, FILE *ofp, char fqflag, uint8_t libfmt)
-{
-    uint8_t ret      = 0;
-    uint8_t *outbuff = NULL;
-    uint64_t dsize   = 0;
-    int64_t size    = 0;
-    sqzblock_t *blk  = sqz_sqzblkinit(LOAD_SIZE);
-    if (!blk) goto exit;
-    size = sqz_filesize(ifp);
-    outbuff = malloc(LOAD_SIZE);
-    if (!outbuff) goto exit;
-    fseek(ifp, HEADLEN, SEEK_SET);
-    while ( ftell(ifp) < size )
-        {
-            if (!sqz_readblksize(blk, ifp, libfmt)) goto exit;
-            do {
-                dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
-                fwrite(outbuff, 1, dsize, ofp);
-                fflush(ofp);
-            } while (blk->newblk);
-        }
-    ret = 1;
- exit:
-    sqz_blkkill(blk);
-    free(outbuff);
-    return ret;
-}
+
 */

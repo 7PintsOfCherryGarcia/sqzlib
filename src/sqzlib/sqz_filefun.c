@@ -7,10 +7,11 @@
 
 char zbytes[4] = {0, 0, 0, 0};
 uint8_t magic1[4] = {5, 8, 5, 9};
-uint8_t magic2[4] = {9,5,8,5};
+uint8_t magic2[4] = {9, 5, 8, 5};
 
 unsigned char cmpflag = 1;
 
+uint8_t sqz_getformat(sqzFile sqzfp);
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
 sqzblock_t *sqz_sqzblkinit(uint64_t size);
 void sqz_fastxkill(sqzfastx_t *sqz);
@@ -20,42 +21,12 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
                          uint8_t *buff,
                          uint64_t buffsize,
                          uint8_t fqflag);
-uint8_t sqz_getformat(const char *filename);
 FILE *fdopen(int fd, const char *mode);
 sqzFile sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode);
 int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len);
 size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
-
-
-uint8_t sqz_checksqz(const char *filename)
-{
-    uint64_t tmp   = 0;
-    uint32_t magic = 0;
-    uint8_t  fmt   = 0;
-    uint8_t  sqz   = 0;
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) return 0;
-    //Read magic
-    tmp += fread(&magic, 1, 4, fp);
-    if (MAGIC ^ magic) {
-        //Return 0 if not an sqz file
-        fclose(fp);
-        return 0;
-    }
-    //Set sqz flag (bit 6 of fmt)
-    fmt |= 4;
-    //Read format: 1 - fastA or 2 - fastQ (bits 7 and 8 of fmt)
-    tmp += fread(&sqz, 1, 1, fp);
-    fmt |= sqz;
-    //Read compression library: 1 - zlib (bits 1,2,3,4,5 of fmt)
-    tmp += fread(&sqz, 1, 1, fp);
-    //fprintf(stderr, "libfmt: %u\n", sqz);
-    fmt |= (sqz << 3);
-    fclose(fp);
-    return fmt;
-}
 
 
 static void sqz_fastxreset(sqzfastx_t *sqz)
@@ -96,7 +67,7 @@ static void sqz_decode(sqzfastx_t *sqz,
 }
 
 
-int64_t sqzcompress(sqzblock_t *blk, int level, uint8_t libfmt)
+int64_t sqz_blkcompress(sqzblock_t *blk, int level, uint8_t libfmt)
 {
     switch (libfmt) {
         case 1:
@@ -118,6 +89,7 @@ uint64_t sqzdecompress(sqzblock_t *blk, uint8_t libfmt)
     }
     return 0;
 }
+
 
 void sqzrewind(sqzFile sqzfp)
 {
@@ -165,57 +137,60 @@ char sqz_filetail(uint64_t numseqs, uint64_t nblocks, FILE *ofp)
 }
 
 
-char sqz_blkdump(sqzblock_t *blk, uint64_t size, FILE *ofp)
+char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp)
 {
     size_t wbytes = 0;
     //Write uncompressed number of bytes in block
-    wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
+    wbytes += fwrite(blksize, B64, 1, ofp);
     //Write compressed number of bytes in block
-    wbytes += fwrite(&(size), B64, 1, ofp);
+    wbytes += fwrite(&cmpsize, B64, 1, ofp);
     //Write block
-    wbytes += fwrite(blk->cmpbuff, 1, size, ofp);
-    if (wbytes != size+2) return 0;
+    wbytes += fwrite(cmpbuff, cmpsize, 1, ofp);
+    if (wbytes != 3) return 0;
     return 1;
 }
 
 
-int64_t sqz_filesize(FILE *fp)
+uint64_t sqz_filesize(sqzFile fp)
 {
-    fseek(fp, 0, SEEK_END);
-    int64_t s = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    return s - 28;
+    if (!fp) return 0;
+    long current =  ftell(fp->fp);
+    fseek(fp->fp, 0, SEEK_END);
+    long s = ftell(fp->fp);
+    fseek(fp->fp, current, SEEK_SET);
+    return (uint64_t)(s - 28);
 }
 
 
 sqzFile sqzopen(const char *filename, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
-    sqzfp->ff = 0;
-    sqzfp->fmt = sqz_checksqz(filename);
-    //Fall back to zlib if file not in sqz format
-    if ( !(sqzfp->fmt & 4) )
-        return sqz_gzopen(filename, sqzfp, mode);
-    //Check compression library
-    sqzfp->libfmt = sqzfp->fmt >> 3;
-    sqzfp->fp = fopen(filename, "rb");
+    if (!sqzfp) return NULL;
+    sqzfp->fp = fopen(filename, mode);
     if (!sqzfp->fp) {
         free(sqzfp);
         return NULL;
     }
-    sqzfp->size = sqz_filesize(sqzfp->fp);
+    sqzfp->fmt = sqz_getformat(sqzfp);
+    fprintf(stderr, "from open %u\n", sqzfp->fmt);
+    //Fall back to zlib if file not in sqz format
+    if ( !(sqzfp->fmt & 4) )
+        return sqz_gzopen(filename, sqzfp, mode);
+
+    sqzfp->libfmt = sqzfp->fmt >> 3;
+    sqzfp->ff = 0;
+    sqzfp->size = sqz_filesize(sqzfp);
     fseek(sqzfp->fp, HEADLEN, SEEK_SET);
     sqzfp->filepos = ftell(sqzfp->fp);
+
     sqzfp->blk = sqz_sqzblkinit(LOAD_SIZE);
     if (!sqzfp->blk) {
-        //TODO: Let killer function take care of this
         fclose(sqzfp->fp);
         free(sqzfp);
         return NULL;
     }
     sqzfp->sqz = sqz_fastxinit(sqzfp->fmt, LOAD_SIZE);
     if (!sqzfp->sqz) {
-        //TODO: Let killer function take care of this
         fclose(sqzfp->fp);
         free(sqzfp);
         return NULL;
@@ -404,4 +379,19 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
     }
     error:
         return -1;
+}
+
+
+uint8_t sqz_getblocks(sqzFile sqzfp, uint64_t *b)
+{
+    if (!sqzfp) return 1;
+    if (!(sqzfp->fmt & 4)) {
+        *b = 0;
+        return 0;
+    }
+    long current = ftell(sqzfp->fp);
+    if (fseek(sqzfp->fp, -14, SEEK_END)) return 1;
+    if (!fread(b, B64, 1, sqzfp->fp)) return 1;
+    if (fseek(sqzfp->fp, current, SEEK_SET)) return 1;
+    return 0;
 }

@@ -1086,10 +1086,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     uint64_t namelen    = strlen(namebuff + namepos);
     //New lines per sequence
     uint8_t E = fqflag ? 6 : 3;
-    /*
-      To fit current sequence, length of sequence bytes is needed (2x if fastq
-      for quality values). Plus 3 header/newline bytes (6 for fastq).
-    */
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded
     if (prevbytes) {
@@ -1103,7 +1099,9 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                              fqflag);
         prevbytes += outpos;
         //Check that no more sequence needs decoding. (Move to next sequence)
-        if (prevbytes < buffneed - 1) //account for last newline TODO What happens with fq?
+        //account for last newline
+        //TODO What happens with fq?
+        if (prevbytes < buffneed - 1)
             goto exit;
         outbuff[outpos++] = NL;
         outsize -= outpos;

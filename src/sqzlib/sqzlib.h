@@ -156,19 +156,24 @@ char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp);
 /*
   Write an sqz tail
 */
-char sqz_filetail(uint64_t numseqs, FILE *ofp);
+char sqz_filetail(uint64_t numseqs, uint64_t numblks, FILE *ofp);
 
 
 /*
   Get format of a fastX file
 */
-uint8_t  sqz_getformat(const char *filename);
+uint8_t  sqz_getformat(sqzFile sqzfp);
 
 
 /*
   Get size of an sqz file
 */
 uint64_t sqz_filesize(FILE *fp);
+
+/*
+  Get number of blocks in sqz file
+*/
+uint8_t sqz_getblocks(sqzFile fp, uint64_t *b);
 
 
 /*
@@ -215,14 +220,25 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt);
 /*
   Compress encoded data block
 */
-int64_t sqzcompress(sqzblock_t *blk, int level);
+int64_t sqz_blkcompress(sqzblock_t *blk, int level, uint8_t libfmt);
+
+
+/*
+  Encode data from sqz into blk
+*/
+char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
 
 
 /*
   Decode data in sqz block to memory
 */
-uint64_t
-sqz_fastXdecode(sqzblock_t *blk, uint8_t *buff, uint64_t size,char fqflag);
+uint64_t sqz_fastXdecode(sqzblock_t *blk,
+                         uint8_t *buff,
+                         uint64_t size,
+                         uint8_t fqflag);
 
 
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
+
+
+char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp);

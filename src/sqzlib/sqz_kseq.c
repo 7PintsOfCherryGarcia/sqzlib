@@ -5,27 +5,48 @@
 int64_t sqzread(sqzFile file, void *buff, uint64_t len);
 void sqzclose(sqzFile file);
 sqzFile sqzopen(const char *filename, const char *mode);
-uint8_t sqz_checksqz(const char *filename);
 
 #include "klib/kseq.h"
 KSEQ_INIT(sqzFile, sqzread)
 
 
-uint8_t sqz_getformat(const char *filename)
+static uint8_t sqz_checksqz(sqzFile sqzfp)
+{
+    uint64_t tmp   = 0;
+    uint32_t magic = 0;
+    uint8_t  fmt   = 0;
+    uint8_t  sqz   = 0;
+    //Read magic
+    tmp += fread(&magic, 1, 4, sqzfp->fp);
+    if (MAGIC ^ magic) return 0;
+    //Set sqz flag
+    fmt |= 4;
+    //Read sequence format
+    tmp += fread(&sqz, 1, 1, sqzfp->fp);
+    fmt |= sqz;
+    //Read compression library
+    tmp += fread(&sqz, 1, 1, sqzfp->fp);
+    fmt |= (sqz << 3);
+    return fmt;
+}
+
+
+uint8_t sqz_getformat(sqzFile sqzfp)
 {
     uint8_t ret = 0;
-    if ( (ret = sqz_checksqz(filename)) ) return ret;
-    sqzFile fp = sqzopen(filename, "r");
-    if (!fp) return ret;
-    kseq_t *seq = kseq_init(fp);
+    if ( (ret = sqz_checksqz(sqzfp)) ) return ret;
+
+    kseq_t *seq = kseq_init(sqzfp->fp);
     if (!seq) {
-        sqzclose(fp);
+        fprintf(stderr, "here 1\n");
         return ret;
     }
     int l = kseq_read(seq);
     //ERROR
-    if (l < 0)
+    if (l < 0) {
+        fprintf(stderr, "here 2\n");
         goto exit;
+    }
     //FASTQ
     if (seq->qual.l > 0) {
         ret = 2;
@@ -34,7 +55,6 @@ uint8_t sqz_getformat(const char *filename)
     //FASTA
     ret = 1;
     exit:
-        sqzclose(fp);
         kseq_destroy(seq);
         return ret;
 }

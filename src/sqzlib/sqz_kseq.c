@@ -18,7 +18,10 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     uint8_t  sqz   = 0;
     //Read magic
     tmp += fread(&magic, 1, 4, sqzfp->fp);
-    if (MAGIC ^ magic) return 0;
+    if (MAGIC ^ magic) {
+        rewind(sqzfp->fp);
+        return 0;
+    }
     //Set sqz flag
     fmt |= 4;
     //Read sequence format
@@ -27,6 +30,7 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     //Read compression library
     tmp += fread(&sqz, 1, 1, sqzfp->fp);
     fmt |= (sqz << 3);
+    rewind(sqzfp->fp);
     return fmt;
 }
 
@@ -36,17 +40,11 @@ uint8_t sqz_getformat(sqzFile sqzfp)
     uint8_t ret = 0;
     if ( (ret = sqz_checksqz(sqzfp)) ) return ret;
 
-    kseq_t *seq = kseq_init(sqzfp->fp);
-    if (!seq) {
-        fprintf(stderr, "here 1\n");
-        return ret;
-    }
+    kseq_t *seq = kseq_init(sqzfp);
+    if (!seq) return ret;
     int l = kseq_read(seq);
     //ERROR
-    if (l < 0) {
-        fprintf(stderr, "here 2\n");
-        goto exit;
-    }
+    if (l < 0) goto exit;
     //FASTQ
     if (seq->qual.l > 0) {
         ret = 2;
@@ -56,6 +54,7 @@ uint8_t sqz_getformat(sqzFile sqzfp)
     ret = 1;
     exit:
         kseq_destroy(seq);
+        if (ret) gzrewind(sqzfp->gzfp);
         return ret;
 }
 

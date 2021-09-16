@@ -166,16 +166,17 @@ sqzFile sqzopen(const char *filename, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
     if (!sqzfp) return NULL;
+
     sqzfp->fp = fopen(filename, mode);
-    if (!sqzfp->fp) {
+    sqz_gzopen(filename, sqzfp, mode);
+    if ( (!sqzfp->fp) || !sqzfp) {
         free(sqzfp);
         return NULL;
     }
     sqzfp->fmt = sqz_getformat(sqzfp);
-    fprintf(stderr, "from open %u\n", sqzfp->fmt);
-    //Fall back to zlib if file not in sqz format
-    if ( !(sqzfp->fmt & 4) )
-        return sqz_gzopen(filename, sqzfp, mode);
+
+    //If not sqz format, no need for the rest of members
+    if ( !(sqzfp->fmt & 4) ) return sqzfp;
 
     sqzfp->libfmt = sqzfp->fmt >> 3;
     sqzfp->ff = 0;
@@ -205,12 +206,13 @@ sqzFile sqzdopen(int fd, const char *mode)
 }
 
 
-void sqzclose(sqzFile file)
+void sqzclose(sqzFile sqzfp)
 {
-    sqz_fastxkill(file->sqz);
-    sqz_blkkill(file->blk);
-    (file->fmt & 4) ? fclose(file->fp) : gzclose(file->gzfp);
-    free(file);
+    fclose(sqzfp->fp);
+    gzclose(sqzfp->gzfp);
+    if (sqzfp->sqz) sqz_fastxkill(sqzfp->sqz);
+    if (sqzfp->blk) sqz_blkkill(sqzfp->blk);
+    free(sqzfp);
 }
 
 
@@ -247,7 +249,7 @@ char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt)
 
 int64_t sqzread(sqzFile file, void *buff, uint64_t len)
 {
-    if (!file | !buff) return -1;
+    if (!file || !buff) return -1;
     if ( !(file->fmt & 4) )
         return sqz_gzread(file->gzfp, buff, (uint32_t)len);
     sqzfastx_t *sqz  = file->sqz;

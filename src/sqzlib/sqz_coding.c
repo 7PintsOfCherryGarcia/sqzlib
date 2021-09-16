@@ -976,8 +976,9 @@ static uint64_t sqz_qualdecode(const uint8_t *codebuff,
         decoded += (count + 1); //Count[0-31], real length [1-32]
         byte++;
         if (decoded > length) {
+            //TODO this should never happen!!!
             fprintf(stderr, "ERROR!!!\n");
-            //sleep(100);
+            return 0;
         }
     }
     return byte;

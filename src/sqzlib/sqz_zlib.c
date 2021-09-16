@@ -4,8 +4,6 @@
 #include <zlib.h>
 
 #include "sqz_data.h"
-//#include "klib/kseq.h"
-//KSEQ_INIT(gzFile, gzread)
 
 
 int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len)

@@ -23,11 +23,9 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
-            fprintf(stderr, "0\n");
             goto exit;
         case 1:
             //FASTA do nothing, everything allocated
-            fprintf(stderr, "aqui? %u\n", fmt);
             break;
         case 2:
             //FASTQ
@@ -55,7 +53,6 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
             free(sqz->readbuffer);
             return NULL;
         }
-        fprintf(stderr, "normal init %d\n", sqz ? 1 : -1);
         return sqz;
 }
 

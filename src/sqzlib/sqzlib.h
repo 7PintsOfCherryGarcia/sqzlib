@@ -168,7 +168,7 @@ uint8_t  sqz_getformat(sqzFile sqzfp);
 /*
   Get size of an sqz file
 */
-uint64_t sqz_filesize(FILE *fp);
+uint64_t sqz_filesize(sqzFile sqzfp);
 
 /*
   Get number of blocks in sqz file

@@ -9,8 +9,9 @@
 #define TWO_BIT_MASK 3
 
 const uint8_t nblk  = 255U;
-const uint8_t qblk  =   0U;
+const uint8_t qblk  =  63U;
 const uint8_t tnblk =  15U;
+const uint8_t endb  =   0U;
 
 
 //Table to change "ACGT" to 0123 else to 4
@@ -147,9 +148,15 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
             lstop = npos;
             //Indicate that a non-ACGT block follows
             //quality code will follow
-            if ( !(nptr - npos) && p) memcpy(blkbuff + blkpos, &tnblk, 1);
+            if ( !(nptr - npos) && p) {
+                memcpy(blkbuff + blkpos, &tnblk, 1);
+                fprintf(stderr, "%u\n", tnblk);
+            }
             //more sequence code will follow
-            else memcpy(blkbuff + blkpos, &nblk, 1);
+            else {
+                memcpy(blkbuff + blkpos, &nblk, 1);
+                fprintf(stderr, "%u\n", nblk);
+            }
             blkpos++;
             //Encode non-ACGT block
             blkpos += sqz_nblkcode(blkbuff + blkpos, nn);
@@ -163,8 +170,10 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
         blkpos += B64;
         blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
         //quality block will follow
+        fprintf(stderr, "ERROR here: %u\n", qblk);
         memcpy(blkbuff + blkpos, &qblk, 1);
         blkpos++;
+        sleep(1);
     }
     return blkpos;
 }
@@ -978,6 +987,7 @@ static uint64_t sqz_qualdecode(const uint8_t *codebuff,
         if (decoded > length) {
             //TODO this should never happen!!!
             fprintf(stderr, "ERROR!!!\n");
+            sleep(2);
             return 0;
         }
     }
@@ -1006,6 +1016,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
+        fprintf(stderr, "\tblklen: %lu\n", blklen);
         qltnum += blklen;
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
@@ -1015,10 +1026,12 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
         length -= blklen;
         if (length) {
             nflag = *(codebuff + codepos); //Read N flag
+            fprintf(stderr, "nflag: %u %u\n", nflag, *(codebuff + codepos + 1));
             codepos++;
             switch (nflag) {
                 case NBLK:
                     nnum = countnblk(codebuff + codepos, &nbytes);
+                    fprintf(stderr, "nnum: %lu\n", nnum);
                     qltnum += nnum;
                     codepos += nbytes;
                     sqz_writens(nnum, outbuff + outpos);
@@ -1026,6 +1039,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     length -= nnum;
                     continue;
                 case QBLK:
+                    fprintf(stderr, "Decoding qual\n");
                     codepos += sqz_qualdecode(codebuff + codepos,
                                               outbuff + seqlen + 3 + qltdecoded,
                                               qltnum);
@@ -1146,6 +1160,8 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
+        fprintf(stderr, "%s\n", namebuff + namepos);
+        fprintf(stderr, "\t%lu\n", seqlen);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,

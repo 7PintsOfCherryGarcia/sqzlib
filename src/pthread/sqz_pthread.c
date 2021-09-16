@@ -189,6 +189,7 @@ static void *sqz_readerthread(void *thread_data)
 
     sqzthread->sqzqueue = sqzqueue;
     uint8_t fqflag  = (sqzfp->fmt == 2) ? 1 : 0;;
+    fprintf(stderr, "fqflag: %u\n", fqflag);
     sqzthread->fqflag = fqflag;
     //Initialize kseq object
     seq = kseq_init(sqzfp);
@@ -391,7 +392,7 @@ uint8_t sqz_threaddecompress(const char *ifile,
     uint64_t nblk;
     if (sqz_getblocks(sqzfp, &nblk)) return ret;
     FILE *ofp = fopen(ofile, "wb");
-    if (sqz_inflatefastX(sqzfp, ofp, 1, 1)) fprintf(stderr, "^ERROR\n");
+    if (sqz_inflatefastX(sqzfp, ofp, 0, 1)) fprintf(stderr, "^ERROR\n");
     sqzclose(sqzfp);
     fclose(ofp);
     ret = 0;

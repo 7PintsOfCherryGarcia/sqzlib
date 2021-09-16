@@ -8,8 +8,9 @@
 #define MAGIC     151324677
 
 #define NBLK      255U
-#define QBLK        0U
+#define QBLK       63U
 #define TNBLK      15U
+#define ENDB        0U
 
 #define FQH       '@'
 #define FAH       '>'

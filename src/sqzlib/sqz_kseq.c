@@ -54,7 +54,7 @@ uint8_t sqz_getformat(sqzFile sqzfp)
     ret = 1;
     exit:
         kseq_destroy(seq);
-        if (ret) gzrewind(sqzfp->gzfp);
+        gzrewind(sqzfp->gzfp);
         return ret;
 }
 

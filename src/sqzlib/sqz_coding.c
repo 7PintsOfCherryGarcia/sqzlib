@@ -150,11 +150,14 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
             lstop = npos;
             //Indicate that a non-ACGT block follows
             //quality code will follow
-            if ( !(nptr - npos) && pflag && fqflag) {
+            if ( !(*npos) && fqflag) {
+            //if ( !(nptr - npos) && pflag && fqflag) {
+                //fprintf(stderr, "Here?\n");
                 memcpy(blkbuff + blkpos, &tnblk, 1);
             }
             //more sequence code will follow
             else {
+                //fprintf(stderr, "or Here?\n");
                 memcpy(blkbuff + blkpos, &nblk, 1);
             }
             blkpos++;
@@ -528,8 +531,12 @@ static uint64_t sqz_gotoqblk(uint8_t *blkbuff,
                 bases = 0;
                 continue;
             case TNBLK:
-                fprintf(stderr, "gotoqblk TNBLK\n");
-                sleep(100);
+                bases += countnblk(blkbuff + blkpos, &pos);
+                blkpos += pos;
+                if (bases + dbases >= qoffset) goto exit;
+                blkpos += countqbytes(blkbuff + blkpos, bases);
+                dbases += bases;
+                bases = 0;
                 continue;
             case ENDB:
                 fprintf(stderr, "gotoqblk ENDB\n");
@@ -912,9 +919,11 @@ static uint64_t sqz_codeblksize(uint8_t *codebuff)
     uint64_t blklen   = 0;
     uint8_t  nflag    = 0;
     uint64_t seqlen = *(uint64_t *)codebuff;
+    //fprintf(stderr, ">>>SEQLEN: %lu\n", seqlen);
     codepos += B64;
     while (bases != seqlen) {
         blklen = *(uint64_t *)(codebuff + codepos);
+        //fprintf(stderr, "\tblklen: %lu\n", blklen);
         codepos += B64;
         if (blklen) {
             bases += blklen;
@@ -926,18 +935,22 @@ static uint64_t sqz_codeblksize(uint8_t *codebuff)
         //Check and account for Ns
         switch (nflag) {
             case NBLK:
+                //fprintf(stderr, "\t1\n");
                 bases += countnblk(codebuff + codepos, &blkpos2);
                 codepos += blkpos2;
                 continue;
             case QBLK:
+                //fprintf(stderr, "\t2\n");
                 codepos += countqbytes(codebuff + codepos, bases);
                 continue;
             case TNBLK:
+                //fprintf(stderr, "\t3\n");
                 bases += countnblk(codebuff + codepos, &blkpos2);
                 codepos += blkpos2;
                 codepos += countqbytes(codebuff + codepos, bases);
                 continue;
             case ENDB:
+                //fprintf(stderr, "\t4\n");
                 continue;
         }
     }

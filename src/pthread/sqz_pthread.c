@@ -218,7 +218,9 @@ static void *sqz_dcpthread(void *thread_data)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
     uint8_t nthread = sqzthread->nthread;
+
     uint8_t *outbuff = NULL;
+    uint8_t *filebuff = NULL;
     uint64_t dsize = 0;
 
     pthread_mutex_lock(&(sqzthread->mtx));
@@ -227,33 +229,51 @@ static void *sqz_dcpthread(void *thread_data)
 
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
+    uint8_t fqflag = (sqzfp->fmt & 3) == 2 ? 1 : 0;
+    uint8_t libfmt = sqzfp->fmt >> 3;
     sqzblock_t *blk =  sqzfp->blk;
 
     outbuff = malloc(LOAD_SIZE);
     if (!outbuff) goto exit;
 
+    filebuff = malloc(LOAD_SIZE);
+    uint64_t fbsize = LOAD_SIZE;
+    uint64_t fbpos = 0;
+
     uint64_t nblk;
     if (sqz_getblocks(sqzfp, &nblk)) goto exit;;
 
     uint64_t currentblk = (uint64_t)id;
+    //currentblk = 395;
     while (currentblk < nblk) {
+        //fprintf(stderr, "currentblk: %lu\n", currentblk);
         if (sqz_go2blockn(sqzfp, currentblk)) {
             fprintf(stderr, "ERROR\n");
             sleep(100);
         }
-        if (!sqz_readblksize(blk, sqzfp->fp, 1)) goto exit;
+        if (!sqz_readblksize(blk, sqzfp->fp, libfmt))
+            goto exit;
         do {
-            dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, 1);
-            pthread_mutex_lock(&(sqzthread->mtx));
-            fwrite(outbuff, 1, dsize, sqzthread->ofp);
-            fflush(sqzthread->ofp);
-            pthread_mutex_unlock(&(sqzthread->mtx));
+            dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
+            if ( (fbpos + dsize) >= fbsize) {
+                fbsize *= 2;
+                filebuff = realloc(filebuff, fbsize);
+                if (!filebuff) goto exit;
+            }
+            memcpy(filebuff + fbpos, outbuff, dsize);
+            fbpos += dsize;
         } while (blk->newblk);
+        pthread_mutex_lock(&(sqzthread->mtx));
+        fwrite(filebuff, fbpos, 1, sqzthread->ofp);
+        fflush(sqzthread->ofp);
+        pthread_mutex_unlock(&(sqzthread->mtx));
+        fbpos = 0;
         currentblk += nthread;
     }
     exit:
         if(sqzfp) sqzclose(sqzfp);
         if(outbuff) free(outbuff);
+        if (filebuff) free(filebuff);
         pthread_exit(NULL);
 }
 
@@ -265,7 +285,6 @@ static void *sqz_decompressor(void *thread_data)
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
 
-    fprintf(stderr, "fmt: %u\n", sqzfp->fmt);
     uint8_t fmt = sqzfp->fmt;
     if ( !(fmt & 4) ) {
         fprintf(stderr, "[sqz WARNING]: Not an sqz file\n");
@@ -274,7 +293,6 @@ static void *sqz_decompressor(void *thread_data)
     }
     else {
         sqzclose(sqzfp);
-        fprintf(stderr, "multithreaded decompression\n");
         sqzthread->ofp = fopen(sqzthread->ofile, "wb");
         if (!sqzthread->ofp) goto exit;
 
@@ -304,7 +322,7 @@ static void *sqz_compressor(void *thread_data)
 
     sqzfastx_t **sqzqueue = NULL;
     kseq_t *seq = NULL;
-    pthread_t *consumer_pool;
+    pthread_t *consumer_pool = NULL;
 
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "r");
     if (!sqzfp) goto exit;

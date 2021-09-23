@@ -333,7 +333,6 @@ static void *sqz_compressor(void *thread_data)
     sqzthread->sqzqueue = sqzqueue;
 
     uint8_t fqflag  = (sqzfp->fmt == 2) ? 1 : 0;;
-    fprintf(stderr, "fqflag: %u\n", fqflag);
     sqzthread->fqflag = fqflag;
     //Initialize kseq object
     seq = kseq_init(sqzfp);

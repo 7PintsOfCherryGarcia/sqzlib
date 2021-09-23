@@ -205,8 +205,11 @@ static uint64_t sqz_qualencode(const uint8_t *qual,
     uint8_t c       = 0;
     uint8_t code    = 0;
     while(len) {
+        //If next qual val is the same
         if ( sqz_8binqual(*(qual + 1)) == q) {
+            //Increase counter
             c++;
+            //If counter reached
             if (c == 31) {
                 //Encode
                 qual++;
@@ -1082,6 +1085,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
                     sqz_writens(nnum, outbuff + outpos);
                     outpos += nnum;
                     length -= nnum;
+                    //TODO too hacky
                     codepos += sqz_qualdecode(codebuff + codepos,
                                               outbuff + seqlen + 3 + qltdecoded,
                                               qltnum);
@@ -1130,7 +1134,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     uint64_t seqlen     = *(uint64_t *)( codebuff + codepos );;
     //Length of name of first sequence
     uint64_t namelen    = strlen(namebuff + namepos);
-    //New lines per sequence
+    //Extra bytes per seq
     uint8_t E = fqflag ? 6 : 3;
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded

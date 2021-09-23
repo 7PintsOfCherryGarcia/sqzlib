@@ -13,14 +13,14 @@ typedef struct  {
 } sqzopts_t;
 
 
-char sqz_threadcompress(const char *ifile,
-                        const char *ofile,
-                        uint8_t libfmt,
-                        uint8_t nthread);
+uint8_t sqz_threadcompress(const char *ifile,
+                           const char *ofile,
+                           uint8_t libfmt,
+                           uint8_t nthread);
 
-char sqz_threaddecompress(const char *ifile,
-                          const char *ofile,
-                          uint8_t nthread);
+uint8_t sqz_threaddecompress(const char *ifile,
+                             const char *ofile,
+                             uint8_t nthread);
 
 
 char sqz_compress(sqzopts_t opts)
@@ -161,10 +161,10 @@ int main(int argc, char *argv[])
         case 0:
             goto exit;
         case 1:
-            if ( !sqz_compress(opts) ) goto exit;
+            if ( sqz_compress(opts) ) goto exit;
             break;
         case 2:
-            if ( !sqz_decompress(opts)) goto exit;
+            if ( sqz_decompress(opts)) goto exit;
             break;
     }
     ret = 0;

@@ -64,10 +64,6 @@ typedef struct {
 } sqzfastx_t;
 
 
-
-
-
-
 /*
  Docstring
 */
@@ -102,6 +98,7 @@ typedef struct sqzFile_s {
     uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;
+
 
 /*
   ##############################################################################

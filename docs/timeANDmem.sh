@@ -134,7 +134,7 @@ runpigz() {
 
 runcmp() {
     diff <(seqstats dcpsqz) <(seqstats gz.1)
-    cat $1.d.gzip.time $1.9.gzip.time $1.1.gzip.time $1.d.pigz.time $1.d.2.pigz.time $1.d.4.pigz.time $1.d.8.pigz.time $1.d.16.pigz.time $1.9.pigz.time $1.9.2.pigz.time $1.9.4.pigz.time $1.9.8.pigz.time $1.9.16.pigz.time $1.1.pigz.time $1.1.2.pigz.time $1.1.4.pigz.time $1.1.8.pigz.time $1.1.16.pigz.time $1.sqz.time $1.2.sqz.time $1.4.sqz.time $1.16.sqz.time $1.16.sqz.time > cmptimes
+    cat $1.d.gzip.time $1.9.gzip.time $1.1.gzip.time $1.d.pigz.time $1.d.2.pigz.time $1.d.4.pigz.time $1.d.8.pigz.time $1.d.16.pigz.time $1.9.pigz.time $1.9.2.pigz.time $1.9.4.pigz.time $1.9.8.pigz.time $1.9.16.pigz.time $1.1.pigz.time $1.1.2.pigz.time $1.1.4.pigz.time $1.1.8.pigz.time $1.1.16.pigz.time $1.sqz.time $1.2.sqz.time $1.4.sqz.time $1.8.sqz.time $1.16.sqz.time > cmptimes
     paste <(printf "gzip\ngzip.9\ngzip.1\npigz\npigz.2\npigz.4\npigz.8\npigz.16\npigz.9\npigz.9.2\npigz.9.4\npigz.9.8\npigz.9.16\npigz.1\npigz.1.2\npigz.1.4\npigz.1.8\npigz.1.16\nsqz\nsqz.2\nsqz.4\nsqz.8\nsqz.16\n") cmptimes > tmp; mv tmp cmptimes
     cat $1.d.gzip.dtime $1.9.gzip.dtime $1.1.gzip.dtime $1.d.pigz.dtime $1.9.pigz.dtime $1.1.pigz.dtime $1.sqz.dtime $1.2.sqz.dtime $1.4.sqz.dtime $1.8.sqz.dtime $1.16.sqz.dtime > dcptimes
     paste <(printf "gzip\ngzip.9\ngzip.1\npigz\npigz.9\npigz.1\nsqz\nsqz.2\nsqz.4\nsqz.8\nsqz.16\n") dcptimes > tmp; mv tmp dcptimes
@@ -142,12 +142,9 @@ runcmp() {
     paste <(printf "gzip\ngzip.9\ngzip.1\npigz\npigz.9\npigz.1\nsqz\n") cmpsizes > tmp; mv tmp cmpsizes
     ogsize=$(ls -l $1 | cut -f5 -d ' ')
     cat <(printf "#$ogsize\n") cmpsizes > tmp; mv tmp cmpsizes
-    #cat <(printf "#FMT\tcmp.time\tmax.mem\tdcp.time\t$ogsize\n") benchmark > tmp
-    #mv tmp benchmark
     rm *time *.size
     rm gz.1
     rm dcpsqz
-    #rm cmptimes dcptimes cmpsizes
 }
 
 if [ -f $1 ]

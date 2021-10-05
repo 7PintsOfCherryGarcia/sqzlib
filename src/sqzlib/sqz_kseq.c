@@ -61,11 +61,12 @@ uint8_t sqz_getformat(sqzFile sqzfp)
 
 static uint8_t sqz_remeber(sqzfastx_t *sqz, kseq_t *seq, uint8_t fqflag)
 {
+    //TODO Double buffer instead of setting it to new sequence length
     if (sqz->psize < seq->seq.l) {
-        if (fqflag) sqz->pqlt = realloc(sqz->pqlt, seq->seq.l);
-        sqz->pseq = realloc(sqz->pseq, seq->seq.l);
+        if (fqflag) sqz->pqlt = realloc(sqz->pqlt, seq->seq.l + 1);
+        sqz->pseq = realloc(sqz->pseq, seq->seq.l + 1);
         if (!(sqz->pqlt) || !(sqz->pseq)) return 1;
-        sqz->psize = seq->seq.l;
+        sqz->psize = seq->seq.l + 1;
     }
     memcpy(sqz->pseq, seq->seq.s, seq->seq.l + 1);
     if (fqflag) memcpy(sqz->pqlt, seq->qual.s, seq->seq.l + 1);

@@ -20,6 +20,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     if (!sqz->namebuffer) goto exit;
     sqz->pseq = malloc(16384);
     if (!sqz->pseq) goto exit;
+    sqz->psize = 16384;
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:

@@ -131,7 +131,7 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
 	  uint64_t blen   = 0;
     do {
         //Get position of first non ACGTacgt base
-	      npos = sqz_findn(lstop);
+        npos = sqz_findn(lstop);
         if (*npos) {
             //Determine block length up to first non ACGT base
             blen = npos - lstop;
@@ -383,7 +383,6 @@ static uint8_t sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     uint8_t *blkbuff = blk->blkbuff;
     uint64_t blksize = blk->blksize;
     uint64_t blkpos  = blk->blkpos;
-
     if (sqz->endflag) seqleft = LOAD_SIZE;
     if ( (blkpos + getblkbytesize(seqleft)) > blksize ) {
         blksize *= 2;

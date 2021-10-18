@@ -494,27 +494,6 @@ uint8_t sqz_threaddecompress(const char *ifile,
     exit:
         sqz_threadkill(sqzthread);
         return ret;
-
-    /*
-    sqzFile sqzfp = sqzopen(ifile, "rb");
-    fprintf(stderr, "fmt: %u\n", sqzfp->fmt);
-    uint8_t fmt = sqzfp->fmt;
-    if ( !(sqzfp->fmt & 4) ) {
-        fprintf(stderr, "[sqz WARNING]: Not an sqz file\n");
-        return sqz_gzread(ifile, ofile);
-    }
-    
-    FILE *ofp = fopen(ofile, "wb");
-    uint8_t libfmt = fmt >> 3;
-    uint8_t fqflag = (fmt & 3) == 2 ? 1 : 0;
-    fprintf(stderr, "libfmt: %u fqflag: %u\n", libfmt, fqflag);
-    if (sqz_inflatefastX(sqzfp, ofp, fqflag, libfmt))
-        fprintf(stderr, "^ERROR\n");
-    sqzclose(sqzfp);
-    fclose(ofp);
-    ret = 0;
-    return ret;
-    */
 }
 
 

@@ -189,10 +189,9 @@ static void sqz_gzread(sqzFile sqzfp, const char *ofile)
 }
 
 
-uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
+static uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
 {
     //TODO Error out on request of block number greater than blocks available
-    //fprintf(stderr, "\tRequested blk: %lu\n", n);
     uint64_t blkn = 0;
     uint64_t blks = 0;
     uint64_t blkr = 0;
@@ -201,7 +200,6 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
         if (fseek(sqzfp->fp, 8, SEEK_CUR)) return 1;
         blkr = fread(&blks, B64, 1, sqzfp->fp);
         if (blkr) {
-            //fprintf(stderr, "\t\tblk: %lu blksize: %lu\n",blkn ,blks);
             if(fseek(sqzfp->fp, blks, SEEK_CUR)) return 1;
             sqzfp->filepos = ftell(sqzfp->fp);
             blkn++;
@@ -244,9 +242,7 @@ static void *sqz_dcpthread(void *thread_data)
     if (sqz_getblocks(sqzfp, &nblk)) goto exit;;
 
     uint64_t currentblk = (uint64_t)id;
-    //currentblk = 395;
     while (currentblk < nblk) {
-        //fprintf(stderr, "currentblk: %lu\n", currentblk);
         if (sqz_go2blockn(sqzfp, currentblk)) {
             fprintf(stderr, "ERROR\n");
             sleep(100);
@@ -437,6 +433,7 @@ static void sqz_threadkill(sqzthread_t *sqzthread)
         free(sqzthread);
     }
 }
+
 
 
 static uint8_t sqz_inflatefastX(sqzFile sqzfp, FILE *ofp, char fqflag, uint8_t libfmt)

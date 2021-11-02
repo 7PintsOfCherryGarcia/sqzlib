@@ -18,6 +18,3 @@ seqstats patch:
     make
     ./seqstats <sqzfile>
     
-# Compatibility with gzip files
-
-sqzlib will fall back to zlib routines if provided by a file not in the sqz format.

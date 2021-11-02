@@ -127,11 +127,6 @@ static void *sqz_consumerthread(void *thread_data)
     while (sqz->endthread & 128) { //bit 7 is on if there is still data
         //Encode data
         sqz_fastXencode(sqz, blk, fqflag);
-        //Check if there is leftover sequence that needs loading
-        while (sqz->endflag) {
-            sqz_loadfastX(sqz, fqflag, NULL);
-            sqz_fastXencode(sqz, blk, fqflag);
-        }
         //Compress block
         cbytes = sqz_blkcompress(blk, 9, libfmt);
         //TODO Deal with error
@@ -140,7 +135,6 @@ static void *sqz_consumerthread(void *thread_data)
         sqz_blkdump(blk->cmpbuff, &(blk->blkpos), cbytes, sqzthread->ofp);
         fflush(sqzthread->ofp);
         blk->blkpos  = 0;
-        blk->newblk  = 1;
         sqz->namepos = 0;
         sqz->endflag = 0;
         sqz->blks++;
@@ -356,7 +350,6 @@ static void *sqz_compressor(void *thread_data)
                            (void *)thread_data))
             goto exit;
     int thcounter = 0;
-    //TODO: Error checking on fastX parsing
     while (sqz_loadfastX(sqzqueue[thcounter], fqflag, seq)) {
         thcounter++;
         if (nthread == thcounter) {
@@ -522,5 +515,3 @@ uint8_t sqz_threadcompress(const char *ifile,
         sqz_threadkill(sqzthread);
         return ret;
 }
-
-

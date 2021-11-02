@@ -241,7 +241,6 @@ static uint64_t sqz_qualencode(const uint8_t *qual,
 }
 
 
-//TODO change to #define
 static inline uint64_t getblkbytesize(uint64_t blklen)
 {
     return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
@@ -252,155 +251,33 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = 0;
-    uint8_t  *seqb  = sqz->seq;
-    uint8_t  *qltb  = sqz->qlt;
-    uint64_t  sqzpos    = sqz->offset;
+    uint8_t  *seqb       = sqz->seq;
+    uint8_t  *qltb       = sqz->qlt;
+    uint64_t  sqzsize    = sqz->offset;
     uint8_t  *seq     = NULL;
     uint8_t  *qlt     = NULL;
     uint64_t  seqlen  = 0;
-    uint64_t  seqread = 0;
     uint64_t  k       = 0;
-    while ( k < sqzpos ) {
+    while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqb + k );
         k += B64;
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
         seq  = seqb + k;
         qlt  = qltb + k;
-        seqread = seqlen < (sqzpos - k) ? seqlen : sqzpos - k - 1;
-        k += seqread + 1;
-        blkpos += sqz_seqencode(seq,
-                                seqread,
-                                blkbuff + blkpos,
-                                seqread < seqlen ? 1 : 0,
-                                1);
-        blkpos += sqz_qualencode(qlt,
-                                 blkbuff + blkpos,
-                                 seqread);
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0, 1);
+        blkpos += sqz_qualencode(qlt, blkbuff + blkpos, seqlen);
+        k += seqlen + 1;
     }
-    //More sequence to encode?
+    //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
-        //Unset new block flag.
-        blk->newblk = 0;
-        goto exit;
-    }
-    memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
-    blkpos += sqz->namepos;
-    memcpy(blkbuff + blkpos, &(sqz->namepos), B64);
-    blkpos += B64;
-    sqz->cmpflag = 1;
-    exit:
-        blk->blkpos = blkpos;
-        return 1;
-}
-
-
-static uint8_t sqz_fastqtailblk(sqzfastx_t *sqz, sqzblock_t *blk)
-{
-    uint64_t seqlen  = sqz->prevlen;
-    uint64_t seqleft = seqlen - sqz->seqread;
-    uint8_t *seqb = sqz->seq;
-    uint8_t *qltb = sqz->qlt;
-    uint8_t *blkbuff = blk->blkbuff;
-    uint64_t blksize = blk->blksize;
-    uint64_t blkpos  = blk->blkpos;
-    if (sqz->endflag) seqleft = LOAD_SIZE;
-    if ( (blkpos + getblkbytesize(seqleft)) > blksize ) {
-        blksize *= 2;
-        blkbuff  = realloc(blk->blkbuff, blksize);
-        blk->blkbuff  = blkbuff;
-        blk->blksize  = blksize;
-        blk->cmpsize *= 2;
-        blk->cmpbuff  = realloc(blk->cmpbuff, blk->cmpsize);
-    }
-    blkpos += sqz_seqencode(seqb, seqleft, blkbuff + blkpos, 0, 1);
-    blkpos += sqz_qualencode(qltb, blkbuff + blkpos, seqleft);
-    if (sqz->endflag) {
-        blk->newblk = 0;
-        goto exit;
-    }
-    blk->newblk = 1;
-    //Copy name data making sure it fits
-    if ( (blkpos + sqz->namepos) >= blksize ) {
-        blksize += sqz->namepos + B64;
-        blkbuff = realloc(blk->blkbuff, blksize);
-        blk->blkbuff = blkbuff;
-        blk->blksize = blksize;
-    }
-    memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
-    blkpos += sqz->namepos;
-    memcpy(blkbuff + blkpos, &(sqz->namepos), B64);
-    blkpos += B64;
-    sqz->cmpflag = 1;
-    exit:
-        blk->blkpos = blkpos;
-        return 1;
-}
-
-
-static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
-{
-    uint8_t *blkbuff   = blk->blkbuff;
-    uint64_t blkpos    = blk->blkpos;
-    uint8_t *seqb = sqz->seq;
-    uint64_t sqzsize   = sqz->offset;
-    uint8_t *seq = NULL;
-    uint64_t seqlen = 0;
-    uint64_t seqread = 0;
-    uint64_t k = 0;
-    while ( k < sqzsize ) {
-        seqlen = *(uint64_t *)( seqb + k );
-        k += B64;
-        memcpy(blkbuff + blkpos, &seqlen, B64);
+        memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
-        seq = seqb + k;
-        seqread = seqlen < (sqzsize - k) ? seqlen : sqzsize - k - 1;
-        k += seqread + 1;
-        blkpos += sqz_seqencode(seq, seqread, blkbuff + blkpos, 0, 0);
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0, 0);
+        blkpos += sqz_qualencode(sqz->pqlt, blkbuff + blkpos, sqz->prevlen);
     }
-    //Indicate if there is more sequence to read
-    if (sqz->endflag) {
-        //Unset new block flag.
-        blk->newblk = 0;
-        goto exit;
-    }
-    memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
-    blkpos += sqz->namepos;
-    memcpy(blkbuff + blkpos, &(sqz->namepos), B64);
-    blkpos += B64;
-    sqz->cmpflag = 1;
-    exit:
-        blk->blkpos = blkpos;
-        return 1;
-}
-
-
-static uint8_t sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
-{
-    uint64_t seqlen  = sqz->prevlen;
-    uint64_t seqleft = seqlen - sqz->seqread;
-    uint8_t *seqb = sqz->seq;
-    uint8_t *blkbuff = blk->blkbuff;
-    uint64_t blksize = blk->blksize;
-    uint64_t blkpos  = blk->blkpos;
-    if (sqz->endflag) seqleft = LOAD_SIZE;
-    if ( (blkpos + getblkbytesize(seqleft)) > blksize ) {
-        blksize *= 2;
-        blkbuff = realloc(blk->blkbuff, blksize);
-        blk->blkbuff = blkbuff;
-        blk->blksize = blksize;
-        blk->cmpsize *= 2;
-        blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
-    }
-    //encode sequence
-    blkpos += sqz_seqencode(seqb, seqleft, blkbuff + blkpos, 0, 0);
-    //Indicate if there is more sequence to read
-    if (sqz->endflag) {
-        blk->newblk = 0;
-        goto exit;
-    }
-    blk->newblk = 1;
     //Copy name data making sure it fits
+    uint64_t blksize = blk->blksize;
     if ( (blkpos + sqz->namepos) >= blksize ) {
         blksize += sqz->namepos + B64;
         blkbuff = realloc(blk->blkbuff, blksize);
@@ -414,20 +291,59 @@ static uint8_t sqz_fastatailblk(sqzfastx_t *sqz, sqzblock_t *blk)
     memcpy(blkbuff + blkpos, &(sqz->namepos), B64);
     blkpos += B64;
     sqz->cmpflag = 1;
-    exit:
-        blk->blkpos = blkpos;
-        return 1;
+    blk->blkpos = blkpos;
+    return 1;
+}
+
+
+static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
+{
+    uint8_t *blkbuff   = blk->blkbuff;
+    uint64_t blkpos    = blk->blkpos;
+    uint8_t *seqb      = sqz->seq;
+    uint64_t sqzsize   = sqz->offset;
+    uint8_t *seq = NULL;
+    uint64_t seqlen = 0;
+    uint64_t k = 0;
+    while ( k < sqzsize ) {
+        seqlen = *(uint64_t *)( seqb + k );
+        k += B64;
+        memcpy(blkbuff + blkpos, &seqlen, B64);
+        blkpos += B64;
+        seq = seqb + k;
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0, 0);
+        k += seqlen + 1;
+    }
+    //Last sequence, loaded into kseq, but not copied into buffer
+    if (sqz->endflag) {
+        memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
+        blkpos += B64;
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0, 0);
+    }
+    //Copy name data making sure it fits
+    uint64_t blksize = blk->blksize;
+    if ( (blkpos + sqz->namepos) >= blksize ) {
+        blksize += sqz->namepos + B64;
+        blkbuff = realloc(blk->blkbuff, blksize);
+        blk->blkbuff = blkbuff;
+        blk->blksize = blksize;
+        blk->cmpsize = blksize;
+        blk->cmpbuff = realloc(blk->cmpbuff, blk->cmpsize);
+    }
+    memcpy(blkbuff + blkpos, sqz->namebuffer, sqz->namepos);
+    blkpos += sqz->namepos;
+    memcpy(blkbuff + blkpos, &(sqz->namepos), B64);
+    blkpos += B64;
+    sqz->cmpflag = 1;
+    blk->blkpos = blkpos;
+    return 1;
 }
 
 
 char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
 {
-    if (blk->newblk) {
-        if (fqflag) return sqz_fastqheadblk(sqz, blk);
-        return sqz_fastaheadblk(sqz, blk);
-    }
-    if (fqflag) return sqz_fastqtailblk(sqz, blk);
-    return sqz_fastatailblk(sqz, blk);
+    if (fqflag) return sqz_fastqheadblk(sqz, blk);
+    return sqz_fastaheadblk(sqz, blk);
 }
 
 
@@ -1051,6 +967,7 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
     uint64_t nbytes;
     while (length > 0) {
         blklen = *(uint64_t *)(codebuff + codepos);
+        //fprintf(stderr, "blklen: %lu\n", blklen);
         qltnum += blklen;
         codepos += B64;
         codepos += sqz_blkdecode(codebuff + codepos,
@@ -1193,6 +1110,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
+        //fprintf(stderr, "%s\nlen: %lu\n", namebuff + namepos, seqlen);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,

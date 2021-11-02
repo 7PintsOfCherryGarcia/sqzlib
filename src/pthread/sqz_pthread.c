@@ -429,7 +429,10 @@ static void sqz_threadkill(sqzthread_t *sqzthread)
 
 
 
-static uint8_t sqz_inflatefastX(sqzFile sqzfp, FILE *ofp, char fqflag, uint8_t libfmt)
+static uint8_t sqz_inflatefastX(sqzFile sqzfp,
+                                FILE *ofp,
+                                char fqflag,
+                                uint8_t libfmt)
 {
     uint8_t ret      = 1;
     uint8_t *outbuff = NULL;

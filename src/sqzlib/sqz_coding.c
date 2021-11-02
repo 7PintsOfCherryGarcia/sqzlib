@@ -120,7 +120,6 @@ static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t len)
 static uint64_t sqz_seqencode(const uint8_t *seq,
                               uint64_t seqlen,
                               uint8_t *blkbuff,
-                              uint8_t pflag,
                               uint8_t fqflag)
 {
     uint64_t blkpos = 0;
@@ -265,7 +264,7 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blkpos += B64;
         seq  = seqb + k;
         qlt  = qltb + k;
-        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0, 1);
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 1);
         blkpos += sqz_qualencode(qlt, blkbuff + blkpos, seqlen);
         k += seqlen + 1;
     }
@@ -273,7 +272,7 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     if (sqz->endflag) {
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
-        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0, 0);
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0);
         blkpos += sqz_qualencode(sqz->pqlt, blkbuff + blkpos, sqz->prevlen);
     }
     //Copy name data making sure it fits
@@ -311,14 +310,14 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
         seq = seqb + k;
-        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0, 0);
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0);
         k += seqlen + 1;
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
-        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0, 0);
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0);
     }
     //Copy name data making sure it fits
     uint64_t blksize = blk->blksize;

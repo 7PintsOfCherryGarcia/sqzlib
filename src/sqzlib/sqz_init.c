@@ -12,7 +12,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     if (!sqz) return NULL;
     sqz->namesize   = NAME_SIZE;
     sqz->endthread  = 128U;
-
+    sqz->size       = size;
     sqz->seq = malloc(size + 1);
     if (!sqz->seq)  goto exit;
     sqz->seq[size] = '\0';

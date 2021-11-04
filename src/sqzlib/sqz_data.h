@@ -30,6 +30,7 @@ typedef struct {
     char        endflag; //Sequece has not completely been read into a buffer flag
     char        cmpflag;
     //data members
+    uint64_t    size; //Amount of sequence read.
     uint64_t    offset;
     uint8_t     *seq;
     uint8_t     *qlt;
@@ -46,7 +47,6 @@ typedef struct {
     uint8_t     *pqlt;
     uint64_t    psize;
     //Partially decoded sequences
-    uint64_t    seqread; //Amount of sequence read.
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;

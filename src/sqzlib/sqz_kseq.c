@@ -110,7 +110,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
-    uint64_t maxlen = LOAD_SIZE - B64 - 1;
+    uint64_t maxlen = sqz->size - B64 - 1;
     uint8_t *seq = sqz->seq;
     while ( (kseq_read(kseq) >= 0) ) {
         l = kseq->seq.l;
@@ -147,7 +147,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
     uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
-    uint64_t maxlen = LOAD_SIZE - B64 - 1;
+    uint64_t maxlen = sqz->size - B64 - 1;
     uint8_t  *seq = sqz->seq;
     uint8_t  *qlt = sqz->qlt;
     while ( kseq_read(kseq) >= 0 ) {

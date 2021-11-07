@@ -19,9 +19,9 @@
 
 #define LOAD_SIZE 4L*1024L*1024L   //Sequence buffer size
 #define NAME_SIZE 1L*1024L*1024L   //Sequence name buffer size
-#define B64       8                //64bits - 8 bytes
-#define HEADLEN   8
-#define NEND      128
+#define B64       8UL                //64bits - 8 bytes
+#define HEADLEN   8UL
+#define NEND      128UL
 #define MAGIC     151324677        //4 bytes: 5 8 5 9
 
 #define FQH       '@'
@@ -30,6 +30,7 @@
 #define NL        '\n'
 
 
+//TODO These structs will become opaque
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -238,4 +239,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
 
 
+/*
+  Write compressed block to file
+*/
 char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp);

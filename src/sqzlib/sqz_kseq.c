@@ -3,8 +3,6 @@
 
 #include "sqz_data.h"
 int64_t sqzread(sqzFile file, void *buff, uint64_t len);
-void sqzclose(sqzFile file);
-sqzFile sqzopen(const char *filename, const char *mode);
 
 #include "klib/kseq.h"
 KSEQ_INIT(sqzFile, sqzread)
@@ -32,30 +30,6 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     fmt |= (sqz << 3);
     rewind(sqzfp->fp);
     return fmt;
-}
-
-
-uint8_t sqz_getformat(sqzFile sqzfp)
-{
-    uint8_t ret = 0;
-    if ( (ret = sqz_checksqz(sqzfp)) ) return ret;
-
-    kseq_t *seq = kseq_init(sqzfp);
-    if (!seq) return ret;
-    int l = kseq_read(seq);
-    //ERROR
-    if (l < 0) goto exit;
-    //FASTQ
-    if (seq->qual.l > 0) {
-        ret = 2;
-        goto exit;
-    }
-    //FASTA
-    ret = 1;
-    exit:
-        kseq_destroy(seq);
-        gzrewind(sqzfp->gzfp);
-        return ret;
 }
 
 
@@ -121,6 +95,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
             goto exit;
         }
         if (l > maxlen) {
+            fprintf(stderr, "Done l: %lu maxlen: %lu n: %lu\n", l, maxlen, n);
             sqz->endflag = 1;
             sqz->prevlen = l;
             sqz_remeber(sqz, kseq, 0);
@@ -137,7 +112,8 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->n += n;
         sqz->bases = bases;
         sqz->offset = offset;
-        return offset;
+        fprintf(stderr, "RET: %lu %lu\n", n, offset);
+        return n;
 }
 
 
@@ -177,6 +153,29 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->bases = bases;
         sqz->offset = offset;
         return offset;
+}
+
+
+uint8_t sqz_getformat(sqzFile sqzfp)
+{
+    uint8_t ret = 0;
+    if ( (ret = sqz_checksqz(sqzfp)) ) return ret;
+    kseq_t *seq = kseq_init(sqzfp);
+    if (!seq) return ret;
+    int l = kseq_read(seq);
+    //ERROR
+    if (l < 0) goto exit;
+    //FASTQ
+    if (seq->qual.l > 0) {
+        ret = 2;
+        goto exit;
+    }
+    //FASTA
+    ret = 1;
+    exit:
+        kseq_destroy(seq);
+        gzrewind(sqzfp->gzfp);
+        return ret;
 }
 
 

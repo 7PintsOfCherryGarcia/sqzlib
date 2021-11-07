@@ -77,13 +77,13 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     sqzblock_t *blk = malloc(sizeof(sqzblock_t));
     if (!blk) return NULL;
     //Encoding buffer
-    blk->blkbuff = malloc(2*size);
+    blk->blkbuff = malloc(3*size);
     if (!blk->blkbuff) {
         free(blk);
         return NULL;
     }
-    blk->blksize = 2*size;
-    blk->mblksize = 2*size;
+    blk->blksize = 3*size;
+    blk->mblksize = 3*size;
     blk->blkpos  = 0;
 
     blk->namepos = 0;
@@ -91,14 +91,14 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     blk->newblk  = 1;
 
     //Compression buffer
-    blk->cmpbuff = malloc(2*size);
+    blk->cmpbuff = malloc(3*size);
     if (!blk->cmpbuff) {
         free(blk->blkbuff);
         free(blk);
         return NULL;
     }
-    blk->cmpsize = 2*size;
-    blk->mcmpsize = 2*size;
+    blk->cmpsize = 3*size;
+    blk->mcmpsize = 3*size;
     blk->cmppos  = 0;
     return blk;
 }

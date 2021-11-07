@@ -129,7 +129,6 @@ static void *sqz_consumerthread(void *thread_data)
         sqz_fastXencode(sqz, blk, fqflag);
         //Compress block
         cbytes = sqz_blkcompress(blk, 9, libfmt);
-        //TODO Deal with error
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
         sqz_blkdump(blk->cmpbuff, &(blk->blkpos), cbytes, sqzthread->ofp);

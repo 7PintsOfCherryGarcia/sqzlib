@@ -95,7 +95,6 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
             goto exit;
         }
         if (l > maxlen) {
-            fprintf(stderr, "Done l: %lu maxlen: %lu n: %lu\n", l, maxlen, n);
             sqz->endflag = 1;
             sqz->prevlen = l;
             sqz_remeber(sqz, kseq, 0);
@@ -112,7 +111,6 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->n += n;
         sqz->bases = bases;
         sqz->offset = offset;
-        fprintf(stderr, "RET: %lu %lu\n", n, offset);
         return n;
 }
 

@@ -117,7 +117,7 @@ static void *sqz_consumerthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
     uint64_t cbytes = 0;
-    sqzblock_t *blk = sqz_sqzblkinit(LOAD_SIZE);
+    sqzblock_t *blk = sqz_sqzblkinit(100UL*1024UL*1024UL);
     if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
     sqzfastx_t *sqz = sqzthread->sqzqueue[id - 1];

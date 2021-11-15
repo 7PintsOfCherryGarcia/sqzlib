@@ -60,24 +60,6 @@ static uint64_t sqz_bit2encode(const uint8_t *seq, uint8_t seqlen)
 }
 
 
-static uint8_t sqz_bit2decode(const uint64_t *mer,
-                              uint8_t *decoded,
-                              unsigned char len)
-{
-    unsigned char byte;
-    unsigned char nbase = 0;
-    uint64_t code = *mer;
-    --len;
-    do {
-        byte = code & TWO_BIT_MASK;
-        decoded[len] = seq_dec_tableSQZ[byte];
-        nbase++;
-        code >>= 2;
-    } while (len-- != 0);
-    return nbase;
-}
-
-
 static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len)
 {
     if (!len) return 0;
@@ -117,14 +99,68 @@ static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t len)
 }
 
 
-static uint64_t sqz_seqencode(const uint8_t *seq,
-                              uint64_t seqlen,
-                              uint8_t *blkbuff,
-                              uint8_t fqflag)
+static uint8_t sqz_8binqual(uint8_t q)
+{
+    if (q >= 73) return 7<<5;
+    if ( (q < 73) && (q >= 68) ) return 6<<5;
+    if ( (q < 68) && (q >= 63) ) return 5<<5;
+    if ( (q < 63) && (q >= 58) ) return 4<<5;
+    if ( (q < 58) && (q >= 53) ) return 3<<5;
+    if ( (q < 53) && (q >= 43) ) return 2<<5;
+    if ( (q < 43) && (q >= 35) ) return 1<<5;
+    if ( (q < 35) && (q > 0)   ) return 1;
+    return 0;
+}
+
+
+static uint64_t sqz_qualencode(const uint8_t *qlt, uint64_t l, uint8_t *blkbuff)
+{
+    uint64_t blkpos = 0;
+    uint8_t q       = sqz_8binqual(*qlt);
+    uint8_t c       = 0;
+    uint8_t code    = 0;
+    while(l) {
+        //If next qual val is the same
+        if ( sqz_8binqual(*(qlt + 1)) == q) {
+            //Increase counter
+            c++;
+            //If counter reached
+            if (c == 31) {
+                //Encode
+                qlt++;
+                l--;
+                code = code | (q & 224);
+                code = code | c;
+                memcpy(blkbuff + blkpos, &code, 1);
+                blkpos++;
+                c = 0;
+                code = 0;
+                q = sqz_8binqual(*(qlt + 1));
+            }
+            qlt++;
+            l--;
+            continue;
+        }
+        //Encode
+        code = code | (q & 224);
+        code = code | c;
+        memcpy(blkbuff + blkpos, &code, 1);
+        blkpos++;
+        qlt++;
+        l--;
+        q = sqz_8binqual(*qlt);
+        c = 0;
+        code = 0;
+    }
+    return blkpos;
+}
+
+
+static uint64_t sqz_seqencode(const uint8_t *seq, uint64_t l, uint8_t *blkbuff)
 {
     uint64_t blkpos = 0;
     const uint8_t *lstop  = seq;
-    const uint8_t *nptr   = seq + seqlen;
+    const uint8_t *nptr   = seq + l;
 	  const uint8_t *npos   = NULL;
     uint64_t nn     = 0;
 	  uint64_t blen   = 0;
@@ -148,17 +184,7 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
             //Trace next base after sequence of Ns
             lstop = npos;
             //Indicate that a non-ACGT block follows
-            //quality code will follow
-            if ( !(*npos) && fqflag) {
-            //if ( !(nptr - npos) && pflag && fqflag) {
-                //fprintf(stderr, "Here?\n");
-                memcpy(blkbuff + blkpos, &tnblk, 1);
-            }
-            //more sequence code will follow
-            else {
-                //fprintf(stderr, "or Here?\n");
-                memcpy(blkbuff + blkpos, &nblk, 1);
-            }
+            memcpy(blkbuff + blkpos, &nblk, 1);
             blkpos++;
             //Encode non-ACGT block
             blkpos += sqz_nblkcode(blkbuff + blkpos, nn);
@@ -171,78 +197,8 @@ static uint64_t sqz_seqencode(const uint8_t *seq,
         memcpy(blkbuff + blkpos, &blen, B64);
         blkpos += B64;
         blkpos += sqz_blkcode((uint64_t *)(blkbuff + blkpos), lstop, blen);
-        if (fqflag) //quality block will follow
-            memcpy(blkbuff + blkpos, &qblk, 1);
-        else
-            memcpy(blkbuff + blkpos, &endb, 1);
-        blkpos++;
     }
     return blkpos;
-}
-
-
-static uint8_t sqz_8binqual(uint8_t q)
-{
-    if (q >= 73) return 7<<5;
-    if ( (q < 73) && (q >= 68) ) return 6<<5;
-    if ( (q < 68) && (q >= 63) ) return 5<<5;
-    if ( (q < 63) && (q >= 58) ) return 4<<5;
-    if ( (q < 58) && (q >= 53) ) return 3<<5;
-    if ( (q < 53) && (q >= 43) ) return 2<<5;
-    if ( (q < 43) && (q >= 35) ) return 1<<5;
-    if ( (q < 35) && (q > 0)   ) return 1;
-    return 0;
-}
-
-
-static uint64_t sqz_qualencode(const uint8_t *qual,
-                               uint8_t *blkbuff,
-                               uint64_t len)
-{
-    uint64_t blkpos = 0;
-    uint8_t q       = sqz_8binqual(*qual);
-    uint8_t c       = 0;
-    uint8_t code    = 0;
-    while(len) {
-        //If next qual val is the same
-        if ( sqz_8binqual(*(qual + 1)) == q) {
-            //Increase counter
-            c++;
-            //If counter reached
-            if (c == 31) {
-                //Encode
-                qual++;
-                len--;
-                code = code | (q & 224);
-                code = code | c;
-                memcpy(blkbuff + blkpos, &code, 1);
-                blkpos += 1;
-                c = 0;
-                code = 0;
-                q = sqz_8binqual(*(qual + 1));
-            }
-            qual++;
-            len--;
-            continue;
-        }
-        //Encode
-        code = code | (q & 224);
-        code = code | c;
-        memcpy(blkbuff + blkpos, &code, 1);
-        blkpos += 1;
-        qual++;
-        len--;
-        q = sqz_8binqual(*qual);
-        c = 0;
-        code = 0;
-    }
-    return blkpos;
-}
-
-
-static inline uint64_t getblkbytesize(uint64_t blklen)
-{
-    return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
 }
 
 
@@ -264,16 +220,20 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         blkpos += B64;
         seq  = seqb + k;
         qlt  = qltb + k;
-        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 1);
-        blkpos += sqz_qualencode(qlt, blkbuff + blkpos, seqlen);
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos);
+        memcpy(blkbuff + blkpos, &qblk, 1);
+        blkpos++;
+        blkpos += sqz_qualencode(qlt, seqlen, blkbuff + blkpos);
         k += seqlen + 1;
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
-        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0);
-        blkpos += sqz_qualencode(sqz->pqlt, blkbuff + blkpos, sqz->prevlen);
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos);
+        memcpy(blkbuff + blkpos, &qblk, 1);
+        blkpos++;
+        blkpos += sqz_qualencode(sqz->pqlt, sqz->prevlen, blkbuff + blkpos);
     }
     //Copy name data making sure it fits
     uint64_t blksize = blk->blksize;
@@ -310,14 +270,14 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
         seq = seqb + k;
-        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos, 0);
+        blkpos += sqz_seqencode(seq, seqlen, blkbuff + blkpos);
         k += seqlen + 1;
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
-        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos, 0);
+        blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos);
     }
     //Copy name data making sure it fits
     uint64_t blksize = blk->blksize;
@@ -351,6 +311,32 @@ char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
   Decoding functions
 ################################################################################
 */
+
+
+static uint8_t sqz_bit2decode(const uint64_t *mer,
+                              uint8_t *decoded,
+                              unsigned char len)
+{
+    unsigned char byte;
+    unsigned char nbase = 0;
+    uint64_t code = *mer;
+    --len;
+    do {
+        byte = code & TWO_BIT_MASK;
+        decoded[len] = seq_dec_tableSQZ[byte];
+        nbase++;
+        code >>= 2;
+    } while (len-- != 0);
+    return nbase;
+}
+
+
+static inline uint64_t getblkbytesize(uint64_t blklen)
+{
+    return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
+}
+
+
 static void sqz_qdecode(uint8_t  *blkbuff,
                         uint8_t  *buff,
                         uint64_t rquals,
@@ -1083,6 +1069,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     while ( codepos < datasize ) {
         //Test if there is enough space for current sequence
         if ( outsize < buffneed ) {
+            fprintf(stderr, "NOT ENOUGH\n");
             //Test if at least: ">"|"@" + name length + '\n' + 1 base fits
             if (outsize < namelen + 3) {
                 //Can't decode this sequence, just return buffer
@@ -1109,7 +1096,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
-        //fprintf(stderr, "%s\nlen: %lu\n", namebuff + namepos, seqlen);
+        fprintf(stderr, "%s\nlen: %lu\n", namebuff + namepos, seqlen);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,

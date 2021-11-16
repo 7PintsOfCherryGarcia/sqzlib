@@ -10,8 +10,6 @@
 
 const uint8_t nblk  = 255U;
 const uint8_t qblk  =  63U;
-const uint8_t tnblk =  15U;
-const uint8_t endb  =   0U;
 
 
 //Table to change "ACGT" to 0123 else to 4
@@ -1069,7 +1067,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     while ( codepos < datasize ) {
         //Test if there is enough space for current sequence
         if ( outsize < buffneed ) {
-            fprintf(stderr, "NOT ENOUGH\n");
             //Test if at least: ">"|"@" + name length + '\n' + 1 base fits
             if (outsize < namelen + 3) {
                 //Can't decode this sequence, just return buffer
@@ -1096,7 +1093,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         outpos += namelen;
         outbuff[outpos++] = NL;
         codepos += B64;
-        fprintf(stderr, "%s\nlen: %lu\n", namebuff + namepos, seqlen);
+        //fprintf(stderr, "%s\nlen: %lu\n", namebuff + namepos, seqlen);
         codepos += sqz_seqdecode(codebuff + codepos,
                                  outbuff + outpos,
                                  seqlen,

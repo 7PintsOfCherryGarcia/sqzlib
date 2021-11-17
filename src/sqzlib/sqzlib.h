@@ -24,10 +24,6 @@
 #define NEND      128UL
 #define MAGIC     151324677        //4 bytes: 5 8 5 9
 
-#define FQH       '@'
-#define FAH       '>'
-#define FQS       '+'
-#define NL        '\n'
 
 
 //TODO These structs will become opaque

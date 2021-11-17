@@ -237,11 +237,14 @@ static void *sqz_dcpthread(void *thread_data)
     uint64_t currentblk = (uint64_t)id;
     while (currentblk < nblk) {
         if (sqz_go2blockn(sqzfp, currentblk)) {
-            fprintf(stderr, "ERROR\n");
-            sleep(100);
-        }
-        if (!sqz_readblksize(blk, sqzfp->fp, libfmt))
+            fprintf(stderr, "[sqz ERROR]: Failed to read number of blocks.\n");
             goto exit;
+        }
+        if (!sqz_readblksize(blk, sqzfp->fp, libfmt)) {
+            fprintf(stderr, "[sqz ERROR]: Failed to read block %lu.\n",
+                            currentblk);
+            goto exit;
+        }
         do {
             dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
             if ( (fbpos + dsize) >= fbsize) {
@@ -270,10 +273,8 @@ static void *sqz_dcpthread(void *thread_data)
 static void *sqz_decompressor(void *thread_data)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
-
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
-
     uint8_t fmt = sqzfp->fmt;
     if ( !(fmt & 4) ) {
         fprintf(stderr, "[sqz WARNING]: Not an sqz file\n");
@@ -284,7 +285,6 @@ static void *sqz_decompressor(void *thread_data)
         sqzclose(sqzfp);
         sqzthread->ofp = fopen(sqzthread->ofile, "wb");
         if (!sqzthread->ofp) goto exit;
-
         pthread_t *consumer_pool = malloc(sqzthread->nthread * sizeof(pthread_t));
         for (int i = 0; i < sqzthread->nthread; i++)
             if (pthread_create(consumer_pool + i,

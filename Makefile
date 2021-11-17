@@ -78,7 +78,7 @@ sqzB:sqzflag pthrB
 build:wipe libsqzB sqzB
 
 clean:
-	rm -rf $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o
+	rm -rf sqz libsqz.a sqzlib.h $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o
 
 wipe:
 	rm -rf sqz libsqz.so libsqz.a sqzlib.h sqz_data.h $(SRCDIR)/sqzlib/*.o $(SRCDIR)/pthread/*.o

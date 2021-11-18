@@ -1,5 +1,5 @@
 # sqzlib 
-# fastA/Q sequence encoding with zlib compression
+# fastA/Q sequence encoding and compression
 
 
 ## What is it?
@@ -8,7 +8,7 @@ At its core sqzlib is small and flexible fastA/Q DNA sequence encoding library t
 
 ## What is contained here?
 
-This repo contains the library developed in C and targeting any GNU/Linux OS, as well as a CLI tool for encoding and decoding fasta and fastq DNA sequence files.
+This repo contains the library developed in C and targeting x86 GNU/Linux (no other platform has been tested), as well as a CLI tool for encoding and decoding fasta and fastq DNA sequence files.
 
 If you want to know how well sqzlib compares to gzip or pigz please head to [benchmarks]()
 

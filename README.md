@@ -84,7 +84,7 @@ This will print the decoded/decompressed data to standard output
 
 ### Using kseq.h with libsqz
 
-libsqz tries to emulate zlibs gz API. For example:
+libsqz provides a very similar interface to zlibs gz API. For example:
 
     //Open a gzip formatted file with zlib
     gzFile fp = gzopen("filename", "rb");

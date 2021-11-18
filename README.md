@@ -107,13 +107,13 @@ This means that in order parse fastA/Q data stored in sqz format, these function
         sqzFile fp = sqzopen(argv[1], "r");
         kseq_t *seq = kseq_init(seq);
         //Reading with kseq_read()
-         int l;
+	int l;
 	size_t n = 0;
 	while ( (l = kseq_read(seq)) >= 0 )
 		n++;
 	kseq_destroy(kseq);
-        //Close file
+	//Close file
 	sqzclose(fp);
-    }
+	}
     
 For a complete example, you can look at a [patch](https://github.com/7PintsOfCherryGarcia/sqzlib/tree/master/patches/seqstats) for the [seqstats](https://github.com/clwgg/seqstats) fasta summary statistics program.

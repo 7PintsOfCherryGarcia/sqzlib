@@ -89,7 +89,7 @@ libsqz provides a very similar interface to zlibs gz API. For example:
     //Open a gzip formatted file with zlib
     gzFile fp = gzopen("filename", "rb");
     
-    //Open a sqz formatted file
+    //Open a sqz formatted file with sqzlib
     sqzFile fp = sqzopen("filename", "rb");
     
 This means that in order parse fastA/Q data stored in sqz format, these emulated functions must be passed to the preprocessor macors.

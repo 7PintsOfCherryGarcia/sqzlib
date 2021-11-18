@@ -106,9 +106,8 @@ This means that in order parse fastA/Q data stored in sqz format, these function
         if (argc < 2) return -1;
         sqzFile fp = sqzopen(argv[1], "r");
         kseq_t *seq = kseq_init(seq);
-    
         //Reading with kseq_read()
-        int l;
+         int l;
 	size_t n = 0;
 	while ( (l = kseq_read(seq)) >= 0 )
 		n++;

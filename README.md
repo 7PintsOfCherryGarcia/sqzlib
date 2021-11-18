@@ -92,21 +92,29 @@ libsqz provides a very similar interface to zlibs gz API. For example:
     //Open a sqz formatted file with sqzlib
     sqzFile fp = sqzopen("filename", "rb");
     
-This means that in order parse fastA/Q data stored in sqz format, these emulated functions must be passed to the preprocessor macors.
+This means that in order parse fastA/Q data stored in sqz format, these functions must be passed to the preprocessor macros. Below is a simple C program that loops over a fastX file and outputs the number of sequences.
     
-    //includes
-    
+    //countseqsqz.c
+    //Compile with
+    // gcc -o countseqsqz countseqsqz.c libsqz.a -lz -lzstd
+    #include <stdio.h>
+    #include "sqzlib.h"
+    #include "kseq.h"
     KSEQ_INIT(sqzFile, sqzread)
     
-    int main(...) {
-        ...
-        sqzFile fp = sqzopen("file", "mode");
+    int main(int argc, char *argv[]) {
+        if (argc < 2) return -1;
+        sqzFile fp = sqzopen(argv[1], "r");
         kseq_t *seq = kseq_init(seq);
     
         //Reading with kseq_read()
-        ...
+        int l;
+	size_t n = 0;
+	while ( (l = kseq_read(seq)) >= 0 )
+		n++;
+	kseq_destroy(kseq);
         //Close file
-        sqzclose(fp);
+	sqzclose(fp);
     }
     
 For a complete example, you can look at a [patch](https://github.com/7PintsOfCherryGarcia/sqzlib/tree/master/patches/seqstats) for the [seqstats](https://github.com/clwgg/seqstats) fasta summary statistics program.

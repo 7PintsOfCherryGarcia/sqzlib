@@ -1,0 +1,232 @@
+diff --git a/.gitmodules b/.gitmodules
+index a80f848..526974b 100644
+--- a/.gitmodules
++++ b/.gitmodules
+@@ -1,3 +1,6 @@
+ [submodule "lib/simde"]
+ 	path = lib/simde
+ 	url = https://github.com/nemequ/simde.git
++[submodule "sqzlib"]
++	path = sqzlib
++	url = https://github.com/7PintsOfCherryGarcia/sqzlib
+diff --git a/Makefile b/Makefile
+index 4118616..b6e8149 100644
+--- a/Makefile
++++ b/Makefile
+@@ -4,9 +4,9 @@ INCLUDES=
+ OBJS=		kthread.o kalloc.o misc.o bseq.o sketch.o sdust.o options.o index.o \
+ 			lchain.o align.o hit.o seed.o map.o format.o pe.o esterr.o splitidx.o \
+ 			ksw2_ll_sse.o
+-PROG=		minimap2
++PROG= minimap2
+ PROG_EXTRA=	sdust minimap2-lite
+-LIBS=		-lm -lz -lpthread
++LIBS=		-lm -lz -lzstd -lpthread
+ 
+ ifeq ($(arm_neon),) # if arm_neon is not defined
+ ifeq ($(sse2only),) # if sse2only is not defined
+@@ -34,7 +34,7 @@ ifneq ($(tsan),)
+ 	LIBS+=-fsanitize=thread
+ endif
+ 
+-.PHONY:all extra clean depend
++.PHONY:all extra clean depend sqzlib
+ .SUFFIXES:.c .o
+ 
+ .c.o:
+@@ -44,17 +44,20 @@ all:$(PROG)
+ 
+ extra:all $(PROG_EXTRA)
+ 
+-minimap2:main.o libminimap2.a
+-		$(CC) $(CFLAGS) main.o -o $@ -L. -lminimap2 $(LIBS)
++sqzlib:
++		make -C sqzlib
++
++minimap2:sqzlib main.o libminimap2.a
++		$(CC) $(CFLAGS) main.o -o $@ -L. -lminimap2 sqzlib/libsqz.a $(LIBS)
+ 
+ minimap2-lite:example.o libminimap2.a
+-		$(CC) $(CFLAGS) $< -o $@ -L. -lminimap2 $(LIBS)
++		$(CC) $(CFLAGS) $< -o $@ -L. -lminimap2 sqzlib/libsqz.a $(LIBS)
+ 
+ libminimap2.a:$(OBJS)
+ 		$(AR) -csru $@ $(OBJS)
+ 
+ sdust:sdust.c kalloc.o kalloc.h kdq.h kvec.h kseq.h ketopt.h sdust.h
+-		$(CC) -D_SDUST_MAIN $(CFLAGS) $< kalloc.o -o $@ -lz
++		$(CC) -D_SDUST_MAIN $(CFLAGS) $< kalloc.o -o $@ sqzlib/libsqz.a -lz -lzstd
+ 
+ # SSE-specific targets on x86/x86_64
+ 
+@@ -98,6 +101,7 @@ ksw2_exts2_neon.o:ksw2_exts2_sse.c ksw2.h kalloc.h
+ # other non-file targets
+ 
+ clean:
++		make -C sqzlib clean
+ 		rm -fr gmon.out *.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM build dist mappy*.so mappy.c python/mappy.c mappy.egg*
+ 
+ depend:
+diff --git a/README.md b/README.md
+index 6c8a232..5d868c2 100644
+--- a/README.md
++++ b/README.md
+@@ -2,6 +2,10 @@
+ [![BioConda Install](https://img.shields.io/conda/dn/bioconda/minimap2.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/minimap2)
+ [![PyPI](https://img.shields.io/pypi/v/mappy.svg?style=flat)](https://pypi.python.org/pypi/mappy)
+ [![Build Status](https://github.com/lh3/minimap2/actions/workflows/ci.yaml/badge.svg)](https://github.com/lh3/minimap2/actions)
++
++# minimap2 - sqzlib patched
++See [sqzlib](https://github.com/7PintsOfCherryGarcia/sqzlib) for details
++
+ ## <a name="started"></a>Getting Started
+ ```sh
+ git clone https://github.com/lh3/minimap2
+diff --git a/bseq.c b/bseq.c
+index 075a17d..36dc799 100644
+--- a/bseq.c
++++ b/bseq.c
+@@ -1,4 +1,3 @@
+-#include <zlib.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <assert.h>
+@@ -6,7 +5,8 @@
+ #include "bseq.h"
+ #include "kvec.h"
+ #include "kseq.h"
+-KSEQ_INIT2(, gzFile, gzread)
++#include "sqzlib/sqzlib.h"
++KSEQ_INIT2(, sqzFile, sqzread)
+ 
+ unsigned char seq_comp_table[256] = {
+ 	  0,   1,	2,	 3,	  4,   5,	6,	 7,	  8,   9,  10,	11,	 12,  13,  14,	15,
+@@ -30,7 +30,7 @@ unsigned char seq_comp_table[256] = {
+ #define CHECK_PAIR_THRES 1000000
+ 
+ struct mm_bseq_file_s {
+-	gzFile fp;
++	sqzFile fp;
+ 	kseq_t *ks;
+ 	mm_bseq1_t s;
+ };
+@@ -38,8 +38,8 @@ struct mm_bseq_file_s {
+ mm_bseq_file_t *mm_bseq_open(const char *fn)
+ {
+ 	mm_bseq_file_t *fp;
+-	gzFile f;
+-	f = fn && strcmp(fn, "-")? gzopen(fn, "r") : gzdopen(0, "r");
++	sqzFile f;
++	f = fn && strcmp(fn, "-")? sqzopen(fn, "r") : sqzdopen(0, "r");
+ 	if (f == 0) return 0;
+ 	fp = (mm_bseq_file_t*)calloc(1, sizeof(mm_bseq_file_t));
+ 	fp->fp = f;
+@@ -50,7 +50,7 @@ mm_bseq_file_t *mm_bseq_open(const char *fn)
+ void mm_bseq_close(mm_bseq_file_t *fp)
+ {
+ 	kseq_destroy(fp->ks);
+-	gzclose(fp->fp);
++	sqzclose(fp->fp);
+ 	free(fp);
+ }
+ 
+diff --git a/example.c b/example.c
+index b495051..9674fc7 100644
+--- a/example.c
++++ b/example.c
+@@ -4,10 +4,10 @@
+ #include <stdlib.h>
+ #include <assert.h>
+ #include <stdio.h>
+-#include <zlib.h>
+ #include "minimap.h"
+ #include "kseq.h"
+-KSEQ_INIT(gzFile, gzread)
++#include "sqzlib/sqzlib.h"
++KSEQ_INIT(sqzFile, sqzread)
+ 
+ int main(int argc, char *argv[])
+ {
+@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
+ 	}
+ 
+ 	// open query file for reading; you may use your favorite FASTA/Q parser
+-	gzFile f = gzopen(argv[2], "r");
++	sqzFile f = sqzopen(argv[2], "r");
+ 	assert(f);
+ 	kseq_t *ks = kseq_init(f);
+ 
+@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
+ 	while ((mi = mm_idx_reader_read(r, n_threads)) != 0) { // traverse each part of the index
+ 		mm_mapopt_update(&mopt, mi); // this sets the maximum minimizer occurrence; TODO: set a better default in mm_mapopt_init()!
+ 		mm_tbuf_t *tbuf = mm_tbuf_init(); // thread buffer; for multi-threading, allocate one tbuf for each thread
+-		gzrewind(f);
++		sqzrewind(f);
+ 		kseq_rewind(ks);
+ 		while (kseq_read(ks) >= 0) { // each kseq_read() call reads one query sequence
+ 			mm_reg1_t *reg;
+@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
+ 			for (j = 0; j < n_reg; ++j) { // traverse hits and print them out
+ 				mm_reg1_t *r = &reg[j];
+ 				assert(r->p); // with MM_F_CIGAR, this should not be NULL
+-				printf("%s\t%d\t%d\t%d\t%c\t", ks->name.s, ks->seq.l, r->qs, r->qe, "+-"[r->rev]);
++				printf("%s\t%lu\t%d\t%d\t%c\t", ks->name.s, ks->seq.l, r->qs, r->qe, "+-"[r->rev]);
+ 				printf("%s\t%d\t%d\t%d\t%d\t%d\t%d\tcg:Z:", mi->seq[r->rid].name, mi->seq[r->rid].len, r->rs, r->re, r->mlen, r->blen, r->mapq);
+ 				for (i = 0; i < r->p->n_cigar; ++i) // IMPORTANT: this gives the CIGAR in the aligned regions. NO soft/hard clippings!
+ 					printf("%d%c", r->p->cigar[i]>>4, MM_CIGAR_STR[r->p->cigar[i]&0xf]);
+@@ -58,6 +58,6 @@ int main(int argc, char *argv[])
+ 	}
+ 	mm_idx_reader_close(r); // close the index reader
+ 	kseq_destroy(ks); // close the query file
+-	gzclose(f);
++	sqzclose(f);
+ 	return 0;
+ }
+diff --git a/sdust.c b/sdust.c
+index 176dcb0..5579057 100644
+--- a/sdust.c
++++ b/sdust.c
+@@ -175,15 +175,15 @@ uint64_t *sdust(void *km, const uint8_t *seq, int l_seq, int T, int W, int *n)
+ }
+ 
+ #ifdef _SDUST_MAIN
+-#include <zlib.h>
+ #include <stdio.h>
+ #include "ketopt.h"
+ #include "kseq.h"
+-KSEQ_INIT(gzFile, gzread)
++#include "sqzlib/sqzlib.h"
++KSEQ_INIT(sqzFile, sqzread)
+ 
+ int main(int argc, char *argv[])
+ {
+-	gzFile fp;
++	sqzFile fp;
+ 	kseq_t *ks;
+ 	int W = 64, T = 20, c;
+ 	ketopt_t o = KETOPT_INIT;
+@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
+ 		fprintf(stderr, "Usage: sdust [-w %d] [-t %d] <in.fa>\n", W, T);
+ 		return 1;
+ 	}
+-	fp = strcmp(argv[o.ind], "-")? gzopen(argv[o.ind], "r") : gzdopen(fileno(stdin), "r");
++	fp = strcmp(argv[o.ind], "-")? sqzopen(argv[o.ind], "r") : sqzdopen(fileno(stdin), "r");
+ 	ks = kseq_init(fp);
+ 	while (kseq_read(ks) >= 0) {
+ 		uint64_t *r;
+@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
+ 		free(r);
+ 	}
+ 	kseq_destroy(ks);
+-	gzclose(fp);
++	sqzclose(fp);
+ 	return 0;
+ }
+ #endif
+diff --git a/sqzlib b/sqzlib
+new file mode 160000
+index 0000000..14d4d1d
+--- /dev/null
++++ b/sqzlib
+@@ -0,0 +1 @@
++Subproject commit 14d4d1d3235eb8a7e0ca38fbd768e4a6e50445e4

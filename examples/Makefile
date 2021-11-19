@@ -2,8 +2,7 @@ CC=gcc
 CFLAGS= -Wall -std=c11 -pedantic -O3
 
 INC= -I../libs -I..
-LIB= -L..
-LIBS= -lsqz -lz
+LIBS= -lz -lzstd
 
 
 .PHONY:all clean
@@ -17,7 +16,7 @@ countseqsflag:
 
 countseqs:countseqsflag
 	$(info countseqs)
-	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ countseqs.c $(LIBS)
+	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ countseqs.c ../libsqz.a $(LIBS)
 
 
 

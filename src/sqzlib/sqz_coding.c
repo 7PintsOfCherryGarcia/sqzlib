@@ -829,7 +829,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         //Update code buffer position to next sequence
         codepos += sqz_codeblksize(codebuff + codepos);
         //Get new sequence info
-        //TODO: Overflow read when end of block has been reached
         namepos += namelen + 1;
         namelen  = strlen(namebuff + namepos);
         seqlen   = *(uint64_t *)( codebuff + codepos );

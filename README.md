@@ -11,7 +11,7 @@ Most importantly, sqzlib is designed to be compatible with [Heng Li's kseq.h](ht
 
 This repo contains the library developed in C and targeting x86 GNU/Linux (no other platform has been tested), as well as a CLI tool for encoding and decoding fasta and fastq DNA sequence files.
 
-If you want to know how well sqzlib compares to gzip or pigz please head to [benchmarks]()
+If you want to know how well sqzlib compares to gzip or pigz please head to [benchmarks](https://github.com/7PintsOfCherryGarcia/sqzlib/blob/master/benchmarks)
 
 
 ## A super quick getting started

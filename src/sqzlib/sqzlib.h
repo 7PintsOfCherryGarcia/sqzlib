@@ -9,6 +9,9 @@
     TODO: Incorporate reading modes to sqzFile
     TODO: Set sqzrewind to only work in reading mode
 */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -239,3 +242,8 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
   Write compressed block to file
 */
 char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp);
+
+
+#ifdef __cplusplus
+}
+#endif

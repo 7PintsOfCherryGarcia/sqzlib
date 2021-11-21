@@ -1,0 +1,296 @@
+diff --git a/Makefile b/Makefile
+index 359585f..3f3b57f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -42,13 +42,14 @@ endif
+ ARCH_FLAGS=	-msse -msse2 -msse3 -mssse3 -msse4.1
+ MEM_FLAGS=	-DSAIS=1
+ CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
+-INCLUDES=   -Isrc -Iext/safestringlib/include
+-LIBS=		-lpthread -lm -lz -L. -lbwa -Lext/safestringlib -lsafestring $(STATIC_GCC)
++INCLUDES=   -Isrc -Iext/safestringlib/include -I.
++LIBS=		-lpthread -lm -lz -lzstd -L. -lbwa -Lext/safestringlib -lsafestring $(STATIC_GCC)
+ OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.o \
+ 			src/kstring.o src/ksw.o src/bntseq.o src/bwamem.o src/profiling.o src/bandedSWA.o \
+ 			src/FMI_search.o src/read_index_ele.o src/bwamem_pair.o src/kswv.o src/bwa.o \
+ 			src/bwamem_extra.o src/kopen.o
+ BWA_LIB=    libbwa.a
++SQZ_LIB=		sqzlib/libsqz.a
+ SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
+ 
+ ifeq ($(arch),sse41)
+@@ -92,7 +93,7 @@ endif
+ 
+ CXXFLAGS+=	-g -O3 -fpermissive $(ARCH_FLAGS) #-Wall ##-xSSE2
+ 
+-.PHONY:all clean depend multi
++.PHONY:all clean depend multi sqzlib
+ .SUFFIXES:.cpp .o
+ 
+ .cpp.o:
+@@ -114,8 +115,11 @@ multi:
+ 	$(CXX) -Wall -O3 src/runsimd.cpp -Iext/safestringlib/include -Lext/safestringlib/ -lsafestring $(STATIC_GCC) -o bwa-mem2
+ 
+ 
+-$(EXE):$(BWA_LIB) $(SAFE_STR_LIB) src/main.o
+-	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/main.o $(BWA_LIB) $(LIBS) -o $@
++$(EXE):$(SQZ_LIB) $(BWA_LIB) $(SAFE_STR_LIB) src/main.o
++	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/main.o $(BWA_LIB) $(SQZ_LIB) $(LIBS) -o $@
++
++$(SQZ_LIB):
++	make -C sqzlib
+ 
+ $(BWA_LIB):$(OBJS)
+ 	ar rcs $(BWA_LIB) $(OBJS)
+@@ -124,6 +128,7 @@ $(SAFE_STR_LIB):
+ 	cd ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a
+ 
+ clean:
++	make -C sqzlib clean
+ 	rm -fr src/*.o $(BWA_LIB) $(EXE) bwa-mem2.sse41 bwa-mem2.sse42 bwa-mem2.avx bwa-mem2.avx2 bwa-mem2.avx512bw
+ 	cd ext/safestringlib/ && $(MAKE) clean
+ 
+diff --git a/src/bntseq.cpp b/src/bntseq.cpp
+index 13aceb4..2b35143 100644
+--- a/src/bntseq.cpp
++++ b/src/bntseq.cpp
+@@ -40,7 +40,7 @@
+ #include "macro.h"
+ 
+ #include "kseq.h"
+-KSEQ_DECLARE(gzFile)
++KSEQ_DECLARE(sqzFile)
+ 
+ #include "khash.h"
+ KHASH_MAP_INIT_STR(str, int)
+@@ -295,7 +295,7 @@ static uint8_t *add1(const kseq_t *seq, bntseq_t *bns, uint8_t *pac, int64_t *m_
+ 	return pac;
+ }
+ 
+-int64_t bns_fasta2bntseq(gzFile fp_fa, const char *prefix, int for_only)
++int64_t bns_fasta2bntseq(sqzFile fp_fa, const char *prefix, int for_only)
+ {
+ 	extern void seq_reverse(int len, ubyte_t *seq, int is_comp); // in bwaseqio.c
+ 	kseq_t *seq;
+@@ -359,7 +359,7 @@ int64_t bns_fasta2bntseq(gzFile fp_fa, const char *prefix, int for_only)
+ int bwa_fa2pac(int argc, char *argv[])
+ {
+ 	int c, for_only = 0;
+-	gzFile fp;
++	sqzFile fp;
+ 	while ((c = getopt(argc, argv, "f")) >= 0) {
+ 		switch (c) {
+ 			case 'f': for_only = 1; break;
+@@ -369,9 +369,9 @@ int bwa_fa2pac(int argc, char *argv[])
+ 		fprintf(stderr, "Usage: bwa fa2pac [-f] <in.fasta> [<out.prefix>]\n");
+ 		return 1;
+ 	}
+-	fp = xzopen(argv[optind], "r");
++	fp = sqzopen(argv[optind], "r");
+ 	bns_fasta2bntseq(fp, (optind+1 < argc)? argv[optind+1] : argv[optind], for_only);
+-	err_gzclose(fp);
++	sqzclose(fp);
+ 	return 0;
+ }
+ 
+diff --git a/src/bntseq.h b/src/bntseq.h
+index b241a3a..e6fe988 100644
+--- a/src/bntseq.h
++++ b/src/bntseq.h
+@@ -32,7 +32,7 @@
+ #include <stdint.h>
+ #include <stdio.h>
+ #include <zlib.h>
+-
++#include "sqzlib/sqzlib.h"
+ #ifndef BWA_UBYTE
+ #define BWA_UBYTE
+ typedef uint8_t ubyte_t;
+@@ -73,7 +73,7 @@ extern "C" {
+ 	bntseq_t *bns_restore(const char *prefix);
+ 	bntseq_t *bns_restore_core(const char *ann_filename, const char* amb_filename, const char* pac_filename);
+ 	void bns_destroy(bntseq_t *bns);
+-	int64_t bns_fasta2bntseq(gzFile fp_fa, const char *prefix, int for_only);
++	int64_t bns_fasta2bntseq(sqzFile fp_fa, const char *prefix, int for_only);
+ 	int bns_pos2rid(const bntseq_t *bns, int64_t pos_f);
+ 	int bns_cnt_ambi(const bntseq_t *bns, int64_t pos_f, int len, int *ref_id);
+ 	uint8_t *bns_get_seq(int64_t l_pac, const uint8_t *pac, int64_t beg, int64_t end, int64_t *len);
+diff --git a/src/bwa.cpp b/src/bwa.cpp
+index 3d25d81..da6f875 100644
+--- a/src/bwa.cpp
++++ b/src/bwa.cpp
+@@ -57,7 +57,7 @@ char *bwa_pg;
+  ************************/
+ 
+ #include "kseq.h"
+-KSEQ_DECLARE(gzFile)
++KSEQ_DECLARE(sqzFile)
+ 
+ static inline void trim_readno(kstring_t *s)
+ {
+@@ -215,7 +215,7 @@ bseq1_t *bseq_read_orig(int64_t chunk_size, int *n_, void *ks1_, void *ks2_, int
+     return seqs;
+ }
+ 
+-bseq1_t *bseq_read_one_fasta_file(int64_t chunk_size, int *n_, gzFile fp, int64_t *s)
++bseq1_t *bseq_read_one_fasta_file(int64_t chunk_size, int *n_, sqzFile fp, int64_t *s)
+ {
+     kseq_t *ks = kseq_init(fp);
+     bseq1_t *seq = bseq_read_orig(chunk_size, n_, ks, NULL, s);
+diff --git a/src/bwtindex.cpp b/src/bwtindex.cpp
+index 4a48b20..048e28c 100644
+--- a/src/bwtindex.cpp
++++ b/src/bwtindex.cpp
+@@ -66,12 +66,12 @@ int bwa_idx_build(const char *fa, const char *prefix)
+ 	int64_t l_pac;
+ 
+ 	{ // nucleotide indexing
+-		gzFile fp = xzopen(fa, "r");
++		sqzFile fp = sqzopen(fa, "r");
+ 		t = clock();
+ 		fprintf(stderr, "[bwa_index] Pack FASTA... ");
+ 		l_pac = bns_fasta2bntseq(fp, prefix, 1);
+ 		fprintf(stderr, "%.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
+-		err_gzclose(fp);
++		sqzclose(fp);
+         FMI_search *fmi = new FMI_search(prefix);
+         fmi->build_index();
+         delete fmi;
+diff --git a/src/fastmap.cpp b/src/fastmap.cpp
+index bc245b9..429bca7 100644
+--- a/src/fastmap.cpp
++++ b/src/fastmap.cpp
+@@ -362,7 +362,7 @@ static void *ktp_worker(void *data)
+     pthread_exit(0);
+ }
+ 
+-static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
++static int process(void *shared, sqzFile gfp, sqzFile gfp2, int pipe_threads)
+ {
+     ktp_aux_t   *aux = (ktp_aux_t*) shared;
+     worker_t     w;
+@@ -537,7 +537,6 @@ static int process(void *shared, gzFile gfp, gzFile gfp2, int pipe_threads)
+         free(w.mmc.rid[l]);
+         _mm_free(w.mmc.lim[l]);
+     }
+-
+     return 0;
+ }
+ 
+@@ -618,7 +617,7 @@ int main_mem(int argc, char *argv[])
+     const char  *mode                      = 0;
+     
+     mem_opt_t    *opt, opt0;
+-    gzFile        fp, fp2 = 0;
++    sqzFile        fp, fp2 = 0;
+     void         *ko = 0, *ko2 = 0;
+     int           fd, fd2;
+     mem_pestat_t  pes[4];
+@@ -889,8 +888,8 @@ int main_mem(int argc, char *argv[])
+             aux.fmi->idx->bns->anns[i].is_alt = 0;
+ 
+     /* READS file operations */
+-    ko = kopen(argv[optind + 1], &fd);
+-	if (ko == 0) {
++    fp = sqzopen(argv[optind + 1], "r");
++	if (!fp) {
+ 		fprintf(stderr, "[E::%s] fail to open file `%s'.\n", __func__, argv[optind + 1]);
+         free(opt);
+         if (is_o) 
+@@ -900,7 +899,7 @@ int main_mem(int argc, char *argv[])
+         return 1;
+     }
+     // fp = gzopen(argv[optind + 1], "r");
+-    fp = gzdopen(fd, "r");
++    //fp = gzdopen(fd, "r");
+     aux.ks = kseq_init(fp);
+     
+     // PAIRED_END
+@@ -913,12 +912,13 @@ int main_mem(int argc, char *argv[])
+         }
+         else
+         {
+-            ko2 = kopen(argv[optind + 2], &fd2);
+-            if (ko2 == 0) {
++            //ko2 = kopen(argv[optind + 2], &fd2);
++            fp2 = sqzopen(argv[optind + 2], "r");
++            if (!fp2) {
+                 fprintf(stderr, "[E::%s] failed to open file `%s'.\n", __func__, argv[optind + 2]);
+                 free(opt);
+                 free(ko);
+-                err_gzclose(fp);
++                sqzclose(fp);
+                 kseq_destroy(aux.ks);
+                 if (is_o) 
+                     fclose(aux.fp);             
+@@ -928,7 +928,7 @@ int main_mem(int argc, char *argv[])
+                 return 1;
+             }            
+             // fp2 = gzopen(argv[optind + 2], "r");
+-            fp2 = gzdopen(fd2, "r");
++            //fp2 = gzdopen(fd2, "r");
+             aux.ks2 = kseq_init(fp2);
+             opt->flag |= MEM_F_PE;
+             assert(aux.ks2 != 0);
+@@ -951,19 +951,18 @@ int main_mem(int argc, char *argv[])
+     process(&aux, fp, fp2, no_mt_io? 1:2);
+     
+     tprof[PROCESS][0] += __rdtsc() - tim;
+-
+     // free memory
+     int32_t nt = aux.opt->n_threads;
+     _mm_free(ref_string);
+     free(hdr_line);
+     free(opt);
+     kseq_destroy(aux.ks);   
+-    err_gzclose(fp); kclose(ko);
++    sqzclose(fp);
+ 
+     // PAIRED_END
+     if (aux.ks2) {
+         kseq_destroy(aux.ks2);
+-        err_gzclose(fp2); kclose(ko2);
++        sqzclose(fp2); kclose(ko2);
+     }
+     
+     if (is_o) {
+diff --git a/src/fastmap.h b/src/fastmap.h
+index e94022f..9d0d580 100644
+--- a/src/fastmap.h
++++ b/src/fastmap.h
+@@ -50,7 +50,7 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
+ #include "kseq.h"
+ #include "profiling.h"
+ 
+-KSEQ_DECLARE(gzFile)
++KSEQ_DECLARE(sqzFile)
+ 
+ typedef struct {
+ 	kseq_t *ks, *ks2;
+diff --git a/src/ksw.cpp b/src/ksw.cpp
+index ad9bc50..30dd964 100644
+--- a/src/ksw.cpp
++++ b/src/ksw.cpp
+@@ -682,7 +682,7 @@ int ksw_global(int qlen, const uint8_t *query, int tlen, const uint8_t *target,
+ #include <stdio.h>
+ #include <zlib.h>
+ #include "kseq.h"
+-KSEQ_INIT(gzFile, err_gzread)
++KSEQ_INIT(sqzFile, sqzread)
+ 
+ unsigned char seq_nt4_table[256] = {
+ 	4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
+diff --git a/src/utils.cpp b/src/utils.cpp
+index d90d4f7..1804d6a 100644
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@ -47,7 +47,8 @@ KSORT_INIT(128, pair64_t, pair64_lt)
+ KSORT_INIT(64,  uint64_t, ks_lt_generic)
+ 
+ #include "kseq.h"
+-KSEQ_INIT2(, gzFile, err_gzread)
++#include "sqzlib/sqzlib.h"
++KSEQ_INIT2(, sqzFile, sqzread)
+ 
+ /********************
+  * System utilities *

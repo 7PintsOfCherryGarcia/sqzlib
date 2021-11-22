@@ -164,37 +164,20 @@ static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 }
 
 
-static void sqz_gzread(sqzFile sqzfp, const char *ofile)
-{
-    uint8_t *buff = NULL;
-    FILE *ofp = NULL;
-    ofp = fopen(ofile, "w");
-    if (!ofp) goto exit;
-    buff = malloc(LOAD_SIZE);
-    if (!buff) goto exit;
-    uint32_t read;
-    while ( (read = gzread(sqzfp->gzfp, buff, LOAD_SIZE)) ) {
-        fwrite(buff, read, 1, ofp);
-    }
-    exit:
-        if (ofp) fclose(ofp);
-        if (buff) free(buff);
-}
-
-
 static uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
 {
     //TODO Error out on request of block number greater than blocks available
     uint64_t blkn = 0;
     uint64_t blks = 0;
     uint64_t blkr = 0;
-    if (fseek(sqzfp->fp, HEADLEN, SEEK_SET)) return 1;
+    if (sqz_fseek(sqzfp, HEADLEN, SEEK_SET)) return 1;
     while (blkn < n) {
-        if (fseek(sqzfp->fp, 8, SEEK_CUR)) return 1;
-        blkr = fread(&blks, B64, 1, sqzfp->fp);
+        if (sqz_fseek(sqzfp, 8, SEEK_CUR)) return 1;
+        blkr = sqz_fread(&blks, B64, 1, sqzfp);
         if (blkr) {
-            if(fseek(sqzfp->fp, blks, SEEK_CUR)) return 1;
-            sqzfp->filepos = ftell(sqzfp->fp);
+            if(sqz_fseek(sqzfp, blks, SEEK_CUR)) return 1;
+            sqz_getfilepos(sqzfp);
+            //sqzfp->filepos = ftell(sqzfp->fp);
             blkn++;
         }
         else {
@@ -220,9 +203,9 @@ static void *sqz_dcpthread(void *thread_data)
 
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
-    uint8_t fqflag = (sqzfp->fmt & 3) == 2 ? 1 : 0;
-    uint8_t libfmt = sqzfp->fmt >> 3;
-    sqzblock_t *blk =  sqzfp->blk;
+    uint8_t fqflag = sqz_sqzisfq(sqzfp);
+    uint8_t libfmt = sqz_sqzgetcmplib(sqzfp);
+    sqzblock_t *blk =  sqz_sqzgetblk(sqzfp);
 
     outbuff = malloc(LOAD_SIZE);
     if (!outbuff) goto exit;
@@ -240,7 +223,7 @@ static void *sqz_dcpthread(void *thread_data)
             fprintf(stderr, "[sqz ERROR]: Failed to read number of blocks.\n");
             goto exit;
         }
-        if (!sqz_readblksize(blk, sqzfp->fp, libfmt)) {
+        if (!sqz_readblksize(blk, sqzfp, libfmt)) {
             fprintf(stderr, "[sqz ERROR]: Failed to read block %lu.\n",
                             currentblk);
             goto exit;
@@ -275,10 +258,10 @@ static void *sqz_decompressor(void *thread_data)
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
-    uint8_t fmt = sqzfp->fmt;
+    uint8_t fmt = sqz_format(sqzfp);
     if ( !(fmt & 4) ) {
         fprintf(stderr, "[sqz WARNING]: Not an sqz file\n");
-        sqz_gzread(sqzfp, sqzthread->ofile);
+        sqz_gzdump(sqzfp, sqzthread->ofile);
         sqzclose(sqzfp);
     }
     else {
@@ -315,13 +298,13 @@ static void *sqz_compressor(void *thread_data)
 
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "r");
     if (!sqzfp) goto exit;
-
+    uint8_t fmt = sqz_format(sqzfp);
     uint8_t nthread = sqzthread->nthread;
-    sqzqueue = sqz_sqzqueueinit(nthread, sqzfp->fmt & 3);
+    sqzqueue = sqz_sqzqueueinit(nthread, fmt & 3);
     if (!sqzqueue) goto exit;
     sqzthread->sqzqueue = sqzqueue;
 
-    uint8_t fqflag  = (sqzfp->fmt == 2) ? 1 : 0;;
+    uint8_t fqflag  = sqz_sqzisfq(sqzfp);
     sqzthread->fqflag = fqflag;
     //Initialize kseq object
     seq = kseq_init(sqzfp);
@@ -436,16 +419,16 @@ static uint8_t sqz_inflatefastX(sqzFile sqzfp,
     uint8_t ret      = 1;
     uint8_t *outbuff = NULL;
     uint64_t dsize   = 0;
-    int64_t size    = 0;
+    uint64_t size    = 0;
     sqzblock_t *blk  = sqz_sqzblkinit(LOAD_SIZE);
     if (!blk) goto exit;
     size = sqz_filesize(sqzfp);
     outbuff = malloc(LOAD_SIZE);
     if (!outbuff) goto exit;
-    fseek(sqzfp->fp, HEADLEN, SEEK_SET);
-    while ( ftell(sqzfp->fp) < size )
+    sqz_fseek(sqzfp, HEADLEN, SEEK_SET);
+    while ( sqz_getfilepos(sqzfp) < size )
         {
-            if (!sqz_readblksize(blk, sqzfp->fp, libfmt)) goto exit;
+            if (!sqz_readblksize(blk, sqzfp, libfmt)) goto exit;
             do {
                 dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
                 fwrite(outbuff, 1, dsize, ofp);
@@ -500,15 +483,15 @@ uint8_t sqz_threadcompress(const char *ifile,
                                             libfmt,
                                             nthread);
     if (!sqzthread) goto exit;
-    pthread_t rthread;
-    if (pthread_create(&rthread,
+    pthread_t r;
+    if (pthread_create(&r,
                        &(sqzthread->thatt),
                        sqz_compressor,
                        (void *)sqzthread)) {
         fprintf(stderr, "[sqz ERROR]: thread launch error.\n");
         goto exit;
     }
-    if (pthread_join(rthread, NULL)) {
+    if (pthread_join(r, NULL)) {
         fprintf(stderr, "\t[sqz ERROR]: thread join failed.\n");
         goto exit;
     }

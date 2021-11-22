@@ -6,9 +6,27 @@
 #include "sqz_data.h"
 
 
-int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len)
+int64_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len)
 {
-    return (int64_t)gzread(fp, buff, len);
+    return (int64_t)gzread(sqzfp->gzfp, buff, len);
+}
+
+
+void sqz_gzdump(sqzFile sqzfp, const char *ofile)
+{
+    uint8_t *buff = NULL;
+    FILE *ofp = NULL;
+    ofp = fopen(ofile, "w");
+    if (!ofp) goto exit;
+    buff = malloc(LOAD_SIZE);
+    if (!buff) goto exit;
+    uint32_t read;
+    while ( (read = gzread(sqzfp->gzfp, buff, LOAD_SIZE)) ) {
+        fwrite(buff, read, 1, ofp);
+    }
+    exit:
+        if (ofp) fclose(ofp);
+        if (buff) free(buff);
 }
 
 

@@ -80,3 +80,5 @@ typedef struct sqzFile_s {
     uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;
+
+int64_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len);

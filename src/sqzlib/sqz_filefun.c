@@ -23,7 +23,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
                          uint8_t fqflag);
 FILE *fdopen(int fd, const char *mode);
 sqzFile sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode);
-int64_t sqz_gzread(gzFile fp, void *buff, uint32_t len);
 size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
@@ -162,6 +161,48 @@ uint64_t sqz_filesize(sqzFile fp)
 }
 
 
+int sqz_fseek(sqzFile sqzfp, long offset, int whence)
+{
+    return fseek(sqzfp->fp, offset, whence);
+}
+
+
+uint64_t sqz_fread(void *ptr, uint64_t size, uint64_t nmemb, sqzFile sqzfp)
+{
+    return fread(ptr, size, nmemb, sqzfp->fp);
+}
+
+
+uint64_t sqz_getfilepos(sqzFile sqzfp)
+{
+    return ( sqzfp->filepos = ftell(sqzfp->fp) );
+}
+
+
+uint8_t sqz_sqzisfq(sqzFile sqzfp)
+{
+    return (sqzfp->fmt & 3) == 2 ? 1 : 0;
+}
+
+
+uint8_t sqz_sqzgetcmplib(sqzFile sqzfp)
+{
+    return sqzfp->fmt >> 3;
+}
+
+
+sqzblock_t *sqz_sqzgetblk(sqzFile sqzfp)
+{
+    return sqzfp->blk;
+}
+
+
+uint8_t sqz_format(sqzFile sqzfp)
+{
+    return sqzfp->fmt;
+}
+
+
 sqzFile sqzopen(const char *filename, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
@@ -176,7 +217,8 @@ sqzFile sqzopen(const char *filename, const char *mode)
     sqzfp->fmt = sqz_getformat(sqzfp);
 
     //If not sqz format, no need for the rest of members
-    if ( !(sqzfp->fmt & 4) ) return sqzfp;
+    if ( !(sqzfp->fmt & 4) )
+        return sqzfp;
 
     sqzfp->libfmt = sqzfp->fmt >> 3;
     sqzfp->ff = 0;
@@ -216,9 +258,10 @@ void sqzclose(sqzFile sqzfp)
 }
 
 
-char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt)
+uint8_t sqz_readblksize(sqzblock_t *blk, sqzFile sqzfp, uint8_t libfmt)
 {
-    char ret = 0;
+    uint8_t  ret = 0;
+    FILE *fp = sqzfp->fp;
     uint64_t cmpsize;
     uint64_t dcpsize;
     uint64_t nelem;
@@ -251,7 +294,7 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
 {
     if (!file || !buff) return -1;
     if ( !(file->fmt & 4) )
-        return sqz_gzread(file->gzfp, buff, (uint32_t)len);
+        return sqz_gzread(file, buff, (uint32_t)len);
     sqzfastx_t *sqz  = file->sqz;
     sqzblock_t *blk  = file->blk;
     uint8_t     fmt  = file->fmt & 3;
@@ -260,7 +303,7 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
     switch (file->ff & 127) {
     case 0:
         {
-        if (!sqz_readblksize(file->blk, file->fp, file->libfmt)) goto error;
+        if (!sqz_readblksize(file->blk, file, file->libfmt)) goto error;
         if ( (uint64_t)ftell(file->fp) == file->size)
             file->ff |= 128U;
         sqz_decode(sqz, blk, fmt, LOAD_SIZE);
@@ -298,7 +341,7 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
                 return leftover;
             }
             else {
-                if (!sqz_readblksize(file->blk, file->fp, file->libfmt))
+                if (!sqz_readblksize(file->blk, file, file->libfmt))
                     goto error;
                 if (ftell(file->fp) == (long)file->size)
                     file->ff |= 128U;
@@ -316,7 +359,7 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
                 return outpos;
             }
             else {
-                if (!sqz_readblksize(file->blk, file->fp, file->libfmt))
+                if (!sqz_readblksize(file->blk, file, file->libfmt))
                     goto error;
                 if (ftell(file->fp) == (long)file->size)
                     file->ff |= 128U;

@@ -1,14 +1,27 @@
 /** \file sqzlib.h
-    TODO: Add low level API interface to initialize a input files
-    TODO: Do not write N block length when it's 127. 127 is implied
-          if not last N blck
-    TODO: Change member names of sqzblock_t to reflect what is coded data
-    TODO: Significant work is needed in the decoding low level API. Too much
-          code redundancy and therefore inefficiencies.
-    TODO: Change quality binning to mimic qualbin.c from htsbox
-    TODO: Incorporate reading modes to sqzFile
-    TODO: Set sqzrewind to only work in reading mode
-*/
+Julian Regalado Perez - julian.perez@sund.ku.dk
+MIT License
+
+Copyright (c) 2021 Julian Regalado Perez
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+ */
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,10 +35,8 @@ extern "C" {
 
 #define LOAD_SIZE 4L*1024L*1024L   //Sequence buffer size
 #define NAME_SIZE 1L*1024L*1024L   //Sequence name buffer size
-#define B64       8UL                //64bits - 8 bytes
 #define HEADLEN   8UL
-#define NEND      128UL
-#define MAGIC     151324677        //4 bytes: 5 8 5 9
+#define B64       8UL              //64bits - 8 bytes
 
 
 
@@ -87,18 +98,7 @@ typedef struct {
 /*
   Docstring
 */
-typedef struct sqzFile_s {
-    FILE       *fp;
-    gzFile      gzfp;
-    sqzfastx_t *sqz;
-    sqzblock_t *blk;
-    uint64_t    size;
-    uint8_t     ff;
-    uint8_t     fmt;
-    uint8_t     libfmt;
-    uint64_t    filepos;
-} *sqzFile;
-
+typedef struct sqzFile_S* sqzFile;
 
 /*
   ##############################################################################
@@ -174,6 +174,60 @@ uint8_t sqz_getblocks(sqzFile fp, uint64_t *b);
 
 
 /*
+  Write entire gz sqzFile to ofile
+*/
+void sqz_gzdump(sqzFile sqzfp, const char *ofile);
+
+
+/*
+  Read len uncompressed bytes from gzip sqzfile into buff
+*/
+int64_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len);
+
+
+/*
+  sqzlib interface to fseek
+*/
+int sqz_fseek(sqzFile sqzfp, long offset, int whence);
+
+
+/*
+  sqzlib interface to fread
+*/
+uint64_t sqz_fread(void *ptr, uint64_t size, uint64_t nmemb, sqzFile sqzfp);
+
+
+/*
+  sqzlib interface to ftell
+*/
+uint64_t sqz_getfilepos(sqzFile sqzfp);
+
+
+/*
+  Returns 1 if sqzfile is fastq format
+*/
+uint8_t sqz_sqzisfq(sqzFile sqzfp);
+
+
+/*
+  Get compression library
+*/
+uint8_t sqz_sqzgetcmplib(sqzFile sqzfp);
+
+
+/*
+  Get sqzblock structure from sqzfile
+*/
+sqzblock_t *sqz_sqzgetblk(sqzFile sqzfp);
+
+
+/*
+  Get format of sqz file
+*/
+uint8_t sqz_format(sqzFile sqzfp);
+
+
+/*
   ##############################################################################
   sqz structure routines
   ##############################################################################
@@ -211,7 +265,7 @@ void sqz_blkkill(sqzblock_t *blk);
 /*
   Read a data block into an sqz block structure
 */
-char sqz_readblksize(sqzblock_t *blk, FILE *fp, uint8_t libfmt);
+uint8_t sqz_readblksize(sqzblock_t *blk, sqzFile sqzfp, uint8_t libfmt);
 
 
 /*

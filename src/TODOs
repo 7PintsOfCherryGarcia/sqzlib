@@ -1,0 +1,9 @@
+Add low level API interface to initialize a input files
+Do not write N block length when it's 127. 127 is implied
+if not last N blck
+Change member names of sqzblock_t to reflect what is coded data
+Significant work is needed in the decoding low level API. Too much
+code redundancy and therefore inefficiencies.
+Change quality binning to mimic qualbin.c from htsbox
+Incorporate reading modes to sqzFile
+Set sqzrewind to only work in reading mode

@@ -170,7 +170,7 @@ uint64_t sqz_filesize(sqzFile sqzfp);
 /*
   Get number of blocks in sqz file
 */
-uint8_t sqz_getblocks(sqzFile fp, uint64_t *b);
+uint8_t sqz_getblocks(sqzFile sqzfp);
 
 
 /*
@@ -219,6 +219,11 @@ uint8_t sqz_sqzgetcmplib(sqzFile sqzfp);
   Get sqzblock structure from sqzfile
 */
 sqzblock_t *sqz_sqzgetblk(sqzFile sqzfp);
+
+/*
+  Got to block number in n in sqz file
+*/
+uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n);
 
 
 /*

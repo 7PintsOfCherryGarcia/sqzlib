@@ -164,30 +164,6 @@ static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 }
 
 
-static uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
-{
-    //TODO Error out on request of block number greater than blocks available
-    uint64_t blkn = 0;
-    uint64_t blks = 0;
-    uint64_t blkr = 0;
-    if (sqz_fseek(sqzfp, HEADLEN, SEEK_SET)) return 1;
-    while (blkn < n) {
-        if (sqz_fseek(sqzfp, 8, SEEK_CUR)) return 1;
-        blkr = sqz_fread(&blks, B64, 1, sqzfp);
-        if (blkr) {
-            if(sqz_fseek(sqzfp, blks, SEEK_CUR)) return 1;
-            sqz_getfilepos(sqzfp);
-            //sqzfp->filepos = ftell(sqzfp->fp);
-            blkn++;
-        }
-        else {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
 static void *sqz_dcpthread(void *thread_data)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
@@ -211,11 +187,12 @@ static void *sqz_dcpthread(void *thread_data)
     if (!outbuff) goto exit;
 
     filebuff = malloc(LOAD_SIZE);
+    if (!filebuff) goto exit;
     uint64_t fbsize = LOAD_SIZE;
     uint64_t fbpos = 0;
 
-    uint64_t nblk;
-    if (sqz_getblocks(sqzfp, &nblk)) goto exit;;
+    uint64_t nblk = sqz_getblocks(sqzfp);
+    if (!nblk) goto exit;
 
     uint64_t currentblk = (uint64_t)id;
     while (currentblk < nblk) {

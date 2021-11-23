@@ -209,6 +209,10 @@ sqzFile sqzopen(const char *filename, const char *mode)
     if (!sqzfp) return NULL;
 
     sqzfp->fp = fopen(filename, mode);
+    if ( !(sqzfp->fp) ) {
+        free(sqzfp);
+        return NULL;
+    }
     sqz_gzopen(filename, sqzfp, mode);
     if ( (!sqzfp->fp) || !sqzfp) {
         free(sqzfp);
@@ -385,16 +389,36 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
 }
 
 
-uint8_t sqz_getblocks(sqzFile sqzfp, uint64_t *b)
+uint64_t sqz_getblocks(sqzFile sqzfp)
 {
-    if (!sqzfp) return 1;
-    if (!(sqzfp->fmt & 4)) {
-        *b = 0;
+    uint64_t n;
+    if (!sqzfp) return 0;
+    if (!(sqzfp->fmt & 4))
         return 0;
-    }
     long current = ftell(sqzfp->fp);
-    if (fseek(sqzfp->fp, -14, SEEK_END)) return 1;
-    if (!fread(b, B64, 1, sqzfp->fp)) return 1;
-    if (fseek(sqzfp->fp, current, SEEK_SET)) return 1;
+    if (fseek(sqzfp->fp, -14, SEEK_END)) return 0;
+    if (!fread(&n, B64, 1, sqzfp->fp)) return 0;
+    if (fseek(sqzfp->fp, current, SEEK_SET)) return 0;
+    return n;
+}
+
+
+uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
+{
+    if ( (n > sqz_getblocks(sqzfp)) ) return 1;
+    uint64_t blkn = 0;
+    uint64_t blks = 0;
+    uint64_t blkr = 0;
+    if (fseek(sqzfp->fp, HEADLEN, SEEK_SET)) return 1;
+    while (blkn < n) {
+        if (fseek(sqzfp->fp, 8, SEEK_CUR)) return 1;
+        blkr = fread(&blks, B64, 1, sqzfp->fp);
+        if (blkr) {
+            if(fseek(sqzfp->fp, blks, SEEK_CUR)) return 1;
+            sqzfp->filepos = ftell(sqzfp->fp);
+            blkn++;
+        }
+        else return 1;
+    }
     return 0;
 }

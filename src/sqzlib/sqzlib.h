@@ -260,6 +260,10 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size);
 */
 void sqz_blkkill(sqzblock_t *blk);
 
+/*
+  Get number of sequences in block
+*/
+uint64_t sqz_seqsinblk(sqzblock_t *blk);
 
 /*
   ##############################################################################

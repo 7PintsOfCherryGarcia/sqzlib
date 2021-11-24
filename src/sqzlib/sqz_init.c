@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 
 #include "sqz_data.h"
@@ -111,4 +112,19 @@ void sqz_blkkill(sqzblock_t *blk)
         free(blk->cmpbuff);
         free(blk);
     }
+}
+
+
+uint64_t sqz_seqsinblk(sqzblock_t *blk)
+{
+    uint64_t s = *(uint64_t *)( blk->blkbuff + ( blk->blksize - B64 ) );
+    uint64_t d = blk->blksize - B64 - s;
+    char *names = (char *)(blk->blkbuff + d);
+    uint64_t p = 0;
+    uint64_t n = 0;
+    while (p != s) {
+        n++;
+        p += strlen(names + p) + 1;
+    }
+    return n;
 }

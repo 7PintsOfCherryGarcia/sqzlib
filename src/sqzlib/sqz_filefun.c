@@ -422,3 +422,20 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
     }
     return 0;
 }
+
+
+uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **buff, uint64_t s, uint8_t fqflag)
+{
+    uint64_t p = 0;
+    uint64_t d;
+    while (blk->newblk) {
+        d = sqz_fastXdecode(blk, *buff + p, s, fqflag);
+        if (d == s) {
+            s <<= 2;
+            *buff = realloc(*buff, s);
+            if (!buff) return 0;
+        }
+        p += d;
+    }
+    return p;
+}

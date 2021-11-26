@@ -490,10 +490,9 @@ static uint64_t sqz_ndecode(uint8_t *codebuff,
 
 static void sqz_merdecode(uint64_t mer,
                           uint8_t *outbuff,
-                          uint8_t  startpos,
+                          uint8_t  discard,
                           uint8_t  nbases)
 {
-    uint8_t discard = 32U - startpos - nbases;
     mer >>= (discard * 2);
     uint8_t byte;
     while(nbases--) {
@@ -503,12 +502,15 @@ static void sqz_merdecode(uint64_t mer,
     }
 }
 
-
 static void sqz_mblk(const uint64_t *codebuff,
                      uint8_t *outbuff,
                      uint64_t offset,
-                     uint64_t len)
+                     uint64_t len,
+                     uint64_t blklen)
 {
+    uint8_t lb;
+    if ( (len + offset) == blklen ) lb = blklen % 32;
+    else lb = 32;
     uint64_t codepos = 0;
     uint64_t outpos  = 0;
     uint64_t blknum  = 0;
@@ -524,7 +526,7 @@ static void sqz_mblk(const uint64_t *codebuff,
     const uint64_t *mer = codebuff + (offset / 32);
     uint64_t blkidx;
     for (blkidx = 0; blkidx < blknum; blkidx++) {
-        sqz_merdecode(*(mer + blkidx), outbuff + outpos, startpos, nbases);
+        sqz_merdecode(*(mer + blkidx), outbuff + outpos, 0, nbases);
         codepos += B64;
         outpos += nbases;
         startpos = 0;
@@ -532,7 +534,7 @@ static void sqz_mblk(const uint64_t *codebuff,
     }
     len -= outpos;
     //How large is this last mer?
-    sqz_merdecode(*(mer + blkidx), outbuff + outpos, startpos, len);
+    sqz_merdecode(*(mer + blkidx), outbuff + outpos, lb - len, len);
     codepos += B64;
     outpos += len;
 }
@@ -644,12 +646,12 @@ static void sqz_pblk(uint8_t *codebuff,
         }
         //How much of the block is available
         uint64_t blkavail = blklen - offset;
-        uint64_t bases;
-        bases =  blkavail < len - outpos ? blkavail : len - outpos;
+        uint64_t bases =  blkavail < len - outpos ? blkavail : len - outpos;
         sqz_mblk( (uint64_t*)(codebuff + codepos + B64),
-                 outbuff + outpos,
-                 offset,
-                 bases);
+                  outbuff + outpos,
+                  offset,
+                  bases,
+                  blklen);
         outpos += bases;
         offset += bases;
         availbases -= bases;
@@ -714,7 +716,7 @@ static uint64_t sqz_pdecode(uint8_t  *codebuff,
     uint64_t outpos = 0;
     //Determine number of bases that fit in buffer
     uint64_t todecode = (seqlen < outsize) ? seqlen : outsize;
-    sqz_pblk(codebuff, 0, todecode, outbuff + outpos);
+    sqz_pblk(codebuff, 0, todecode, outbuff);
     outpos += todecode;
     outsize -= todecode;
     //Decode quality if enough space

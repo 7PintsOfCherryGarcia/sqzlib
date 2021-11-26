@@ -8,6 +8,9 @@ tests
 *.so
 *.o
 sqzlib.h
+sqzlib-Linux_x86.tar.gz
+tmp
+tmp.c
 examples/seqstats
 examples/minimap2
 examples/bwa-mem2

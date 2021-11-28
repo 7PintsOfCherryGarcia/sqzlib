@@ -318,7 +318,6 @@ static void *sqz_compressor(void *thread_data)
             sqz_wakeconsumers(sqzthread);
         }
     }
-    fprintf(stderr, "%lu\tblocks\n", b);
     if (t % nthread) {
         //Set bit 1 of threads that got some data
         for (int i = 0; i < t; i++)

@@ -795,6 +795,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                          uint64_t outsize,  //Size of outbuff
                          char fqflag)       //0 - fasta, 1 - fastq
 {
+    fprintf(stderr, "C\n");
     uint8_t  *codebuff   = blk->blkbuff;
     uint64_t  codepos    = blk->blkpos;
     uint64_t  outpos     = 0;
@@ -814,6 +815,7 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
     uint64_t buffneed = ( seqlen * (1 + fqflag) )  + (E + namelen);
     //Check if there is sequence that was not completely decoded
     if (prevbytes) {
+        fprintf(stderr, "B\n");
         uint64_t decoded = prevbytes - namelen - 2;
         outpos = sqz_rdecode(codebuff + codepos + B64,
                              outbuff,
@@ -842,12 +844,15 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
         if ( outsize < buffneed ) {
             //Test if at least: ">"|"@" + name length + '\n' + 1 base fits
             if (outsize < namelen + 3) {
+                fprintf(stderr, "D outsize %lu, namelen + 3: %lu\n",
+                        outsize, namelen + 3);
                 //Can't decode this sequence, just return buffer
                 prevbytes    = 0;
                 blk->blkpos  = codepos;
                 blk->namepos = namepos;
                 goto exit;
             }
+            fprintf(stderr, "A\n");
             outbuff[outpos++] = fqflag ? FQH : FAH;
             memcpy(outbuff + outpos, namebuff + namepos, namelen);
             outpos += namelen;

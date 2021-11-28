@@ -310,7 +310,7 @@ char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp);
 /*
   Decoad and load sqz block into buff
 */
-uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **buff, uint64_t s, uint8_t fqflag);
+uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **b, uint64_t *s, uint8_t fqflag);
 
 #ifdef __cplusplus
 }

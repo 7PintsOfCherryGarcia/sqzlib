@@ -104,7 +104,7 @@ static sqzfastx_t **sqz_sqzqueueinit(uint8_t nthread, uint8_t fmt)
     sqzfastx_t **sqzqueue = calloc(nthread, sizeof(sqzfastx_t*));
     if (!sqzqueue) return NULL;
     for (int i = 0; i < nthread; i++)
-        if ( !(sqzqueue[i] = sqz_fastxinit(fmt, LOAD_SIZE)) ) {
+        if ( !(sqzqueue[i] = sqz_fastxinit(fmt, 64LU*1024LU*1024LU)) ) {
             for(int j = 0; j < i; j++)
                 sqz_fastxkill(sqzqueue[j]);
             return NULL;

@@ -218,8 +218,8 @@ sqzFile sqzopen(const char *filename, const char *mode)
         free(sqzfp);
         return NULL;
     }
-    sqzfp->fmt = sqz_getformat(sqzfp);
-
+    //sqzfp->fmt = sqz_getformat(sqzfp);
+    sqzfp->fmt = 1;
     //If not sqz format, no need for the rest of members
     if ( !(sqzfp->fmt & 4) )
         return sqzfp;

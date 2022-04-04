@@ -424,18 +424,22 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
 }
 
 
-uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **buff, uint64_t s, uint8_t fqflag)
+uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **b, uint64_t *s, uint8_t fq)
 {
     uint64_t p = 0;
-    uint64_t d;
+    uint64_t d = *s;
+    uint8_t *o = *b;
+    uint64_t w = 0;
     while (blk->newblk) {
-        d = sqz_fastXdecode(blk, *buff + p, s, fqflag);
-        if (d == s) {
-            s <<= 2;
-            *buff = realloc(*buff, s);
-            if (!buff) return 0;
+        p = sqz_fastXdecode(blk, o + w, d - w, fq);
+        if ( (p == d) || (0 == p) ) {
+            d <<= 2;
+            *b = realloc(*b, d);
+            o = *b;
+            if (!b) return 0;
         }
-        p += d;
+        w += p;
     }
-    return p;
+    *s = d;
+    return w;
 }

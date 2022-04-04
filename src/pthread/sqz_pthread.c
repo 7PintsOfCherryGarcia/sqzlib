@@ -104,7 +104,7 @@ static sqzfastx_t **sqz_sqzqueueinit(uint8_t nthread, uint8_t fmt)
     sqzfastx_t **sqzqueue = calloc(nthread, sizeof(sqzfastx_t*));
     if (!sqzqueue) return NULL;
     for (int i = 0; i < nthread; i++)
-        if ( !(sqzqueue[i] = sqz_fastxinit(fmt, LOAD_SIZE)) ) {
+        if ( !(sqzqueue[i] = sqz_fastxinit(fmt, 64LU*1024LU*1024LU)) ) {
             for(int j = 0; j < i; j++)
                 sqz_fastxkill(sqzqueue[j]);
             return NULL;
@@ -308,21 +308,23 @@ static void *sqz_compressor(void *thread_data)
                            sqz_consumerthread,
                            (void *)thread_data))
             goto exit;
-    int thcounter = 0;
-    while (sqz_loadfastX(sqzqueue[thcounter], fqflag, seq)) {
-        thcounter++;
-        if (nthread == thcounter) {
-            thcounter = 0;
+    uint8_t  t = 0; //Count number of threads
+    uint64_t b = 0; //Count number of blocks
+    while (sqz_loadfastX(sqzqueue[t], fqflag, seq)) {
+        b++;
+        t++;
+        if (nthread == t) {
+            t = 0;
             sqz_wakeconsumers(sqzthread);
         }
     }
-    if (thcounter % nthread) {
+    if (t % nthread) {
         //Set bit 1 of threads that got some data
-        for (int i = 0; i < thcounter; i++)
+        for (int i = 0; i < t; i++)
             sqzqueue[i]->endthread |= 1;
     }
     //Unset bit 7 from rest of threads
-    for (int i = thcounter; i < nthread; i++)
+    for (int i = t; i < nthread; i++)
         sqzqueue[i]->endthread &= 127;
     //Wake consumers one last time
     sqzthread->goread = 0;
@@ -335,11 +337,8 @@ static void *sqz_compressor(void *thread_data)
             fprintf(stderr, "[sqz ERROR]: Thread error join\n");
     //Log number of sequences and blocks
     uint64_t n = 0;
-    uint64_t b = 0;
-    for (int i = 0; i < nthread; i++) {
-        b += sqzqueue[i]->blks;
+    for (int i = 0; i < nthread; i++)
         n += sqzqueue[i]->n;
-    }
     sqz_filetail(n, b, sqzthread->ofp);
     exit:
         if (consumer_pool) free(consumer_pool);

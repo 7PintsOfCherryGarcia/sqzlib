@@ -30,14 +30,12 @@ void sqz_gzdump(sqzFile sqzfp, const char *ofile)
 }
 
 
-sqzFile sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
+uint8_t sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
 {
     sqzfp->gzfp = gzopen(filename, mode);
-    if (!sqzfp->gzfp) {
-        free(sqzfp);
-        return NULL;
-    }
-    return sqzfp;
+    if (!sqzfp->gzfp)
+        return 1;
+    return 0;
 }
 
 

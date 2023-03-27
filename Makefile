@@ -1,6 +1,5 @@
 CC=gcc
-CFLAGS=  -Wall -Wextra -std=c11 -pedantic -O3
-CFLAGSB= -Wall -Wextra -std=c11 -pedantic -g
+CFLAGS=  -Wall -Wextra -std=c11 -pedantic
 CSHFLAG= -shared
 
 SRCDIR= src
@@ -22,27 +21,27 @@ SOBJSB=$(SRC:%.c=$(SRCDIR)/%SB.o)
 .SUFFIXES:.c .o
 
 
-all:libsqz pthr sqz
+all:libsqz sqzthreads sqz
 
 
 %.o:%.c
-	$(CC) $(CFLAGS) $(INC) -c $< -o $@
+	$(CC) $(CFLAGS) $(INC) -O3 -c $< -o $@
 
 %S.o:%.c
 	$(CC) $(CFLAGS) $(INC) -c -fPIC $< -o $@
 
 %B.o:%.c
-	$(CC) $(CFLAGSB) $(INC) -c $< -o $@
+	$(CC) $(CFLAGSB) $(INC) -g -c $< -o $@
 
 %SB.o:%.c
 	$(CC) $(CFLAGSB) $(INC) -c -fPIC  $< -o $@
 
 
-pthr:
-	$(CC) $(CFLAGS) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthread.o src/pthread/sqz_pthread.c
+sqzthreads:
+	$(CC) $(CFLAGS) $(INC) -Wno-unused-function -O3 -c -o src/sqz_threads.o src/sqz_threads.c
 
-pthrB:
-	$(CC) $(CFLAGSB) $(INC) -Wno-unused-function -c -o src/pthread/sqz_pthreadB.o src/pthread/sqz_pthread.c
+sqzthreadsB:
+	$(CC) $(CFLAGSB) $(INC) -Wno-unused-function -g -c -o src/sqz_threadsB.o src/sqz_threads.c
 
 
 libsqzflag:
@@ -69,8 +68,8 @@ libsqz_sharedB:libsqzflag $(SOBJSB)
 	cp src/sqzlib/sqzlib.h .
 
 
-sqz:sqzflag pthr
-	$(CC) $(CFLAGS) $(INC) $(LIB) -Wno-unused-function -o $@ $(SRCDIR)/sqz.c src/pthread/sqz_pthread.o libsqz.a $(LIBS)
+sqz:sqzflag sqzthreads
+	$(CC) $(CFLAGS) $(INC) $(LIB) -Wno-unused-function -o $@ $(SRCDIR)/sqz.c src/sqz_threads.o libsqz.a $(LIBS)
 
 sqzB:sqzflag pthrB
 	$(CC) $(CFLAGSB) $(INC) $(LIB) -o sqz $(SRCDIR)/sqz.c src/pthread/sqz_pthreadB.o libsqz.a $(LIBS)

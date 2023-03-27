@@ -13,30 +13,20 @@ typedef struct  {
 } sqzopts_t;
 
 
-uint8_t sqz_threadcompress(const char *ifile,
-                           const char *ofile,
-                           uint8_t libfmt,
-                           uint8_t nthread);
+uint8_t sqz_compress(const char *i,const char *o, uint8_t lib, uint8_t nthread);
 
-uint8_t sqz_threaddecompress(const char *ifile,
-                             const char *ofile,
-                             uint8_t nthread);
+uint8_t sqz_decompress(const char *i, const char *o, uint8_t nthread);
 
 
-char sqz_compress(sqzopts_t opts)
+char sqz_cmpr(sqzopts_t opts)
 {
-    return sqz_threadcompress(opts.ifile,
-                              opts.ofile,
-                              opts.libfmt,
-                              opts.nthread);
+    return sqz_compress(opts.ifile, opts.ofile, opts.libfmt, opts.nthread);
 }
 
 
-char sqz_decompress(sqzopts_t opts)
+char sqz_dcmp(sqzopts_t opts)
 {
-    return sqz_threaddecompress(opts.ifile,
-                                opts.ofile,
-                                opts.nthread);
+    return sqz_decompress(opts.ifile, opts.ofile, opts.nthread);
 }
 
 
@@ -161,10 +151,10 @@ int main(int argc, char *argv[])
         case 0:
             goto exit;
         case 1:
-            if ( sqz_compress(opts) ) goto exit;
+            if ( sqz_cmpr(opts) ) goto exit;
             break;
         case 2:
-            if ( sqz_decompress(opts)) goto exit;
+            if ( sqz_dcmp(opts)) goto exit;
             break;
     }
     ret = 0;

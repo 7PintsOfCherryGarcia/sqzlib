@@ -50,8 +50,6 @@ typedef struct {
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
 
-
-
 typedef struct {
     //Code data buffer
     uint8_t   *blkbuff; //Buffer to hold encoded fastX data
@@ -68,9 +66,8 @@ typedef struct {
     uint64_t   cmppos;
 } sqzblock_t;
 
-
 typedef struct sqzFile_s {
-    FILE       *fp;
+    FILE        *fp;
     gzFile      gzfp;
     sqzfastx_t *sqz;
     sqzblock_t *blk;

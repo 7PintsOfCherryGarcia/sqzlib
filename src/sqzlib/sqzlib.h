@@ -38,41 +38,11 @@ extern "C" {
 #define HEADLEN   8UL
 #define B64       8UL              //64bits - 8 bytes
 
-
-
-//TODO These structs will become opaque
 /*
-  "sqzfastx_t"
-  libsqueezma main data loading structure. Defines the buffers and flags for
-  reading sequencing data into.
+  sqzlib file data structure.
+  See src/sqz_data.h for details
 */
-typedef struct {
-    uint8_t     nthread;
-    uint8_t     endthread;
-    //flags
-    char        endflag; //Sequece has not completely been read into a buffer flag
-    char        cmpflag;
-    //data members
-    uint64_t    size; //Amount of sequence read.
-    uint64_t    offset;
-    uint8_t     *seq;
-    uint8_t     *qlt;
-    uint8_t     *namebuffer;
-    uint8_t     *readbuffer;
-    uint64_t    namesize;
-    uint64_t    namepos;
-    //return members
-    uint64_t    n;
-    uint64_t    bases;
-    uint64_t    blks;
-    //Partially loaded sequence
-    uint8_t     *pseq;
-    uint8_t     *pqlt;
-    uint64_t    psize;
-    //Partially decoded sequences
-    uint64_t    rem;     //Length of sequence remaining to be read
-    uint64_t    prevlen; //Size of sequence currently being read
-} sqzfastx_t;
+typedef struct sqzfastx *sqzfastx_t;
 
 
 /*
@@ -315,3 +285,41 @@ uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **b, uint64_t *s, uint8_t fqflag);
 #ifdef __cplusplus
 }
 #endif
+
+/*
+ * sqzfastx_t data routines
+ *
+ */
+
+/*
+  Check if sqzfastx_t object has data loaded.
+  Returns:
+      1 if Ture
+      0 if False
+*/
+uint8_t sqz_hasdata(sqzfastx_t *sqz);
+
+/*
+  Increase block number and reset appropriate flags
+*/
+void sqz_newblk(sqzfastx_t *sqz);
+
+/*
+ Check if reader has ended
+*/
+uint8_t sqz_endread(sqzfastx_t *sqz);
+
+/*
+ Read one last time from sqzfastx_t object
+*/
+void sqz_setlastread(sqzfastx_t *sqz);
+
+/*
+  End sqzfastx_t object reading
+*/
+void sqz_endthread(sqzfastx_t *sqz);
+
+/*
+  Get number of sequences processed by sqzfastx_t object
+*/
+uint64_t sqz_getn(sqzfastx_t *sqz);

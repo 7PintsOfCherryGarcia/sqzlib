@@ -48,22 +48,7 @@ typedef struct sqzfastx *sqzfastx_t;
 /*
  Docstring
 */
-typedef struct {
-    //Code data buffer
-    uint8_t   *blkbuff; //Buffer to hold encoded fastX data
-    uint64_t   blksize; //Size of blkbuff
-    uint64_t   mblksize;//Max size of blkbuff
-    uint64_t   blkpos;  //Position within blkbuff
-    uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
-    uint64_t   prevlen; //How much of current sequence had been decoded
-    uint8_t    newblk;  //flag
-    //Compression members
-    uint8_t   *cmpbuff; //Buffer to hold compressed blk data
-    uint64_t   cmpsize;
-    uint64_t   mcmpsize;//Max size of cmpbuff
-    uint64_t   cmppos;
-} sqzblock_t;
-
+typedef struct sqzblock *sqzblock_t;
 
 /*
   Docstring
@@ -176,7 +161,7 @@ uint64_t sqz_getfilepos(sqzFile sqzfp);
 /*
   Returns 1 if sqzfile is fastq format
 */
-uint8_t sqz_sqzisfq(sqzFile sqzfp);
+uint8_t sqz_isfq(sqzFile sqzfp);
 
 
 /*
@@ -274,8 +259,17 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
 /*
   Write compressed block to file
 */
-char sqz_blkdump(void *cmpbuff, uint64_t *blksize, uint64_t cmpsize, FILE *ofp);
+uint8_t sqz_blkdump(sqzblock_t *blk, uint64_t cmpsize, FILE *ofp);
 
+/*
+  Set block size member to 0
+*/
+void sqz_resetblk(sqzblock_t *blk);
+
+/*
+  Returns newblk member
+*/
+uint8_t sqz_newblk(sqzblock_t *blk);
 
 /*
   Decoad and load sqz block into buff
@@ -302,12 +296,12 @@ uint8_t sqz_hasdata(sqzfastx_t *sqz);
 /*
   Increase block number and reset appropriate flags
 */
-void sqz_newblk(sqzfastx_t *sqz);
+void sqz_resetsqz(sqzfastx_t *sqz);
 
 /*
  Check if reader has ended
 */
-uint8_t sqz_endread(sqzfastx_t *sqz);
+uint8_t sqz_readend(sqzfastx_t *sqz);
 
 /*
  Read one last time from sqzfastx_t object
@@ -315,9 +309,9 @@ uint8_t sqz_endread(sqzfastx_t *sqz);
 void sqz_setlastread(sqzfastx_t *sqz);
 
 /*
-  End sqzfastx_t object reading
+  Set no data flag
 */
-void sqz_endthread(sqzfastx_t *sqz);
+void sqz_setnodata(sqzfastx_t *sqz);
 
 /*
   Get number of sequences processed by sqzfastx_t object

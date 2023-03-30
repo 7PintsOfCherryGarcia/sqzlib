@@ -1,11 +1,11 @@
-#include <zlib.h>
 
-#define LOAD_SIZE 4L*1024L*1024L
-#define NAME_SIZE 1L*1024L*1024L
-#define B64       sizeof(uint64_t)
-#define HEADLEN   8
-#define NEND      128
-#define MAGIC     151324677
+#define LOAD_SIZE 4UL*1024UL*1024UL
+#define NAME_SIZE 1UL*1024UL*1024UL
+#define B64       8U
+#define B32       4U
+#define HEADLEN   8U
+#define NEND      128U
+#define MAGIC     151324677U
 
 #define NBLK      255U
 #define QBLK       63U
@@ -16,7 +16,6 @@
 #define FQS       '+'
 #define NL        '\n'
 
-
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -24,8 +23,8 @@
 */
 typedef struct {
     uint8_t     nthread;
-    uint8_t     endthread;
     //flags
+    uint8_t     datflag;
     char        endflag; //Sequece has not completely been read into a buffer flag
     char        cmpflag;
     //data members
@@ -67,10 +66,10 @@ typedef struct {
 } sqzblock_t;
 
 typedef struct sqzFile_s {
-    FILE        *fp;
-    gzFile      gzfp;
-    sqzfastx_t *sqz;
-    sqzblock_t *blk;
+    const char  *namestr;
+    void        *gzfp;
+    sqzfastx_t  *sqz;
+    sqzblock_t  *blk;
     uint64_t    size;
     uint8_t     ff;
     uint8_t     fmt;
@@ -78,4 +77,26 @@ typedef struct sqzFile_s {
     uint64_t    filepos;
 } *sqzFile;
 
-int64_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len);
+
+uint8_t  sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode);
+void sqz_gzclose(sqzFile sqzfp);
+int32_t  sqz_gzread(sqzFile file, void *buff, uint32_t len);
+void     sqz_gzrewind(sqzFile sqzfp);
+uint64_t sqz_gztell(sqzFile sqzfp);
+void     sqz_gzseek(sqzFile sqzfp, uint64_t OFS, uint8_t WH);
+
+void sqz_getformat(sqzFile sqzfp);
+
+
+sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
+sqzblock_t *sqz_sqzblkinit(uint64_t size);
+void sqz_fastxkill(sqzfastx_t *sqz);
+void sqz_blkkill(sqzblock_t *blk);
+uint64_t sqz_inflate(sqzblock_t *blk);
+uint64_t sqz_fastXdecode(sqzblock_t *blk,
+                         uint8_t *buff,
+                         uint64_t buffsize,
+                         uint8_t fqflag);
+size_t sqz_deflate(sqzblock_t *blk, int level);
+int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
+uint64_t sqz_zstddecompress(sqzblock_t *blk);

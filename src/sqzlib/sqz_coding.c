@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
 #include <stdint.h>
 
 #include "sqz_data.h"
@@ -37,10 +36,8 @@ const unsigned char seq_dec_tableSQZ[128] = {
      4,   4,  4,   4,    4,  4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
 };
 
-
 //Table to change 0,1,2,3,4,5,6,7 to quality values
 const unsigned char qual_val_table[8] = {33,39,48,55,60,66,70,73};
-
 
 static inline const uint8_t *sqz_findn(const uint8_t *seq)
 {
@@ -49,7 +46,6 @@ static inline const uint8_t *sqz_findn(const uint8_t *seq)
     return seq;
 }
 
-
 static inline uint64_t sqz_bit2encode(const uint8_t *seq, uint8_t seqlen)
 {
     uint64_t result = 0;
@@ -57,7 +53,6 @@ static inline uint64_t sqz_bit2encode(const uint8_t *seq, uint8_t seqlen)
         result = (result << 2) | seq_nt4_tableSQZ[seq[i]];
     return result;
 }
-
 
 static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len)
 {
@@ -82,7 +77,6 @@ static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len)
     return nbytes;
 }
 
-
 static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t len)
 {
     if (!len) return 0;
@@ -97,7 +91,6 @@ static uint64_t sqz_nblkcode(uint8_t *buff, uint64_t len)
     return buffpos;
 }
 
-
 static uint8_t sqz_8binqual(uint8_t q)
 {
     if (q >= 73) return 7<<5;
@@ -110,7 +103,6 @@ static uint8_t sqz_8binqual(uint8_t q)
     if ( (q < 35) && (q > 0)   ) return 1;
     return 0;
 }
-
 
 static uint64_t sqz_qualencode(const uint8_t *qlt, uint64_t l, uint8_t *blkbuff)
 {
@@ -153,7 +145,6 @@ static uint64_t sqz_qualencode(const uint8_t *qlt, uint64_t l, uint8_t *blkbuff)
     }
     return blkpos;
 }
-
 
 static uint64_t sqz_seqencode(const uint8_t *seq, uint64_t l, uint8_t *blkbuff)
 {
@@ -199,7 +190,6 @@ static uint64_t sqz_seqencode(const uint8_t *seq, uint64_t l, uint8_t *blkbuff)
     }
     return blkpos;
 }
-
 
 static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
@@ -253,7 +243,6 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     return 1;
 }
 
-
 static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
 {
     uint8_t *blkbuff   = blk->blkbuff;
@@ -301,13 +290,11 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     return 1;
 }
 
-
 char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
 {
     if (fqflag) return sqz_fastqheadblk(sqz, blk);
     return sqz_fastaheadblk(sqz, blk);
 }
-
 
 /*
 ################################################################################
@@ -318,7 +305,6 @@ static inline uint64_t sqz_blksize(uint64_t blklen)
 {
     return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
 }
-
 
 static uint64_t sqz_qdecode(const uint8_t  *codebuff,
                             uint8_t  *outbuff,
@@ -355,7 +341,6 @@ static uint64_t sqz_qdecode(const uint8_t  *codebuff,
     return nbyte;
 }
 
-
 /*
   Counts number of Ns in an N block
   Returns number of Ns
@@ -373,7 +358,6 @@ static uint64_t sqz_countnblk(const uint8_t *buff, uint64_t *pos)
     return count;
 }
 
-
 static uint64_t sqz_qbytes(uint8_t *codebuff, uint64_t bases)
 {
     uint64_t rbases = 0;
@@ -384,7 +368,6 @@ static uint64_t sqz_qbytes(uint8_t *codebuff, uint64_t bases)
     }
     return nbytes;
 }
-
 
 static uint64_t sqz_gotoqblk(uint8_t *codebuff)
 {
@@ -415,7 +398,6 @@ static uint64_t sqz_gotoqblk(uint8_t *codebuff)
     exit:
         return codepos;
 }
-
 
 static uint64_t sqz_gotoblk(uint8_t  *codebuff,
                             uint64_t *retpos,
@@ -456,13 +438,11 @@ static uint64_t sqz_gotoblk(uint8_t  *codebuff,
     return rbases;
 }
 
-
 static void sqz_writens(uint64_t  numn, uint8_t *decoded)
 {
     while (numn-- > 0)
         decoded[numn] = 'N';
 }
-
 
 static uint64_t sqz_ndecode(uint8_t *codebuff,
                             uint8_t *outbuff,
@@ -486,7 +466,6 @@ static uint64_t sqz_ndecode(uint8_t *codebuff,
     }
     return nbases;
 }
-
 
 static void sqz_merdecode(uint64_t mer,
                           uint8_t *outbuff,
@@ -539,7 +518,6 @@ static void sqz_mblk(const uint64_t *codebuff,
     outpos += len;
 }
 
-
 /*
   Returns size of a sequence code block
 */
@@ -579,7 +557,6 @@ static uint64_t sqz_codeblksize(uint8_t *codebuff)
     return codepos;
 }
 
-
 /*
 Decodes blklen encoded bases
 Returns number of bytes decoded
@@ -610,7 +587,6 @@ static uint64_t sqz_blkdecode(const uint8_t *codebuff,
     *wbytes += outpos;
     return codepos;
 }
-
 
 static void sqz_pblk(uint8_t *codebuff,
                      uint64_t offset,
@@ -658,7 +634,6 @@ static void sqz_pblk(uint8_t *codebuff,
     }
 }
 
-
 /*
   Given a partially decoded sequence, continue decoding from where it was left
   Retrns number of decoded bytes
@@ -702,7 +677,6 @@ static uint64_t sqz_rdecode(uint8_t  *codebuff,
         return seq2decode + qlt2decode;
 }
 
-
 /*
   Decodes outsize bytes from blkbuff
   Returns number of bytes written
@@ -733,7 +707,6 @@ static uint64_t sqz_pdecode(uint8_t  *codebuff,
     }
     return outpos;
 }
-
 
 /*
 Loads length bases into decodebuffer
@@ -789,11 +762,10 @@ static uint64_t sqz_seqdecode(const uint8_t *codebuff,
     return codepos;
 }
 
-
 uint64_t sqz_fastXdecode(sqzblock_t *blk,   //Data block
                          uint8_t *outbuff,  //Array to place decoded data
                          uint64_t outsize,  //Size of outbuff
-                         char fqflag)       //0 - fasta, 1 - fastq
+                         uint8_t fqflag)       //0 - fasta, 1 - fastq
 {
     uint8_t  *codebuff   = blk->blkbuff;
     uint64_t  codepos    = blk->blkpos;

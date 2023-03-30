@@ -5,12 +5,38 @@
 
 #include "sqz_data.h"
 
-
-int64_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len)
+uint8_t sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
 {
-    return (int64_t)gzread(sqzfp->gzfp, buff, len);
+    sqzfp->gzfp = gzopen(filename, mode);
+    if (!sqzfp->gzfp)
+        return 1;
+    return 0;
 }
 
+void sqz_gzclose(sqzFile sqzfp)
+{
+    gzclose(sqzfp->gzfp);
+}
+
+int32_t sqz_gzread(sqzFile sqzfp, void *buff, uint32_t len)
+{
+    return (int32_t)gzread(sqzfp->gzfp, buff, len);
+}
+
+void sqz_gzrewind(sqzFile sqzfp)
+{
+    gzrewind(sqzfp->gzfp);
+}
+
+uint64_t sqz_gztell(sqzFile sqzfp)
+{
+    return (uint64_t)gztell(sqzfp->gzfp);
+}
+
+void sqz_gzseek(sqzFile sqzfp, uint64_t OFS, uint8_t WH)
+{
+    gzseek(sqzfp->gzfp, OFS, WH);
+}
 
 void sqz_gzdump(sqzFile sqzfp, const char *ofile)
 {
@@ -28,16 +54,6 @@ void sqz_gzdump(sqzFile sqzfp, const char *ofile)
         if (ofp) fclose(ofp);
         if (buff) free(buff);
 }
-
-
-uint8_t sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode)
-{
-    sqzfp->gzfp = gzopen(filename, mode);
-    if (!sqzfp->gzfp)
-        return 1;
-    return 0;
-}
-
 
 size_t sqz_deflate(sqzblock_t *blk, int level)
 {
@@ -79,7 +95,6 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
     deflateEnd(&strm);
     return wbytes;
 }
-
 
 uint64_t sqz_inflate(sqzblock_t *blk)
 {

@@ -2,36 +2,33 @@
 #include <stdint.h>
 
 #include "sqz_data.h"
-int64_t sqzread(sqzFile file, void *buff, uint64_t len);
-
 #include "klib/kseq.h"
-KSEQ_INIT(sqzFile, sqzread)
+KSEQ_INIT(sqzFile, sqz_gzread)
 
 
 static uint8_t sqz_checksqz(sqzFile sqzfp)
 {
-    uint64_t tmp   = 0;
-    uint32_t magic = 0;
-    uint8_t  fmt   = 0;
-    uint8_t  sqz   = 0;
+    int32_t magic = 0;
+    uint8_t fmt   = 0;
+    uint8_t sqz   = 0;
     //Read magic
-    tmp += fread(&magic, 1, 4, sqzfp->fp);
+    sqz_gzread(sqzfp, (void *)&magic, 4);
     if (MAGIC ^ magic) {
-        rewind(sqzfp->fp);
+        sqz_gzrewind(sqzfp);
         return 0;
     }
     //Set sqz flag
     fmt |= 4;
     //Read sequence format
-    tmp += fread(&sqz, 1, 1, sqzfp->fp);
+    sqz_gzread(sqzfp, &sqz, 1);
     fmt |= sqz;
     //Read compression library
-    tmp += fread(&sqz, 1, 1, sqzfp->fp);
+    sqz_gzread(sqzfp, &sqz, 1);
     fmt |= (sqz << 3);
-    rewind(sqzfp->fp);
-    return fmt;
+    sqz_gzrewind(sqzfp);
+    sqzfp->fmt = fmt;
+    return 1;
 }
-
 
 static uint8_t sqz_remeber(sqzfastx_t *sqz, kseq_t *seq, uint8_t fqflag)
 {
@@ -46,7 +43,6 @@ static uint8_t sqz_remeber(sqzfastx_t *sqz, kseq_t *seq, uint8_t fqflag)
     if (fqflag) memcpy(sqz->pqlt, seq->qual.s, seq->seq.l + 1);
     return 0;
 }
-
 
 static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 {
@@ -76,7 +72,6 @@ static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
         sqz->namepos = pos;
         return ret;
 }
-
 
 static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
@@ -113,7 +108,6 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->offset = offset;
         return n;
 }
-
 
 static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
@@ -153,29 +147,29 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
         return offset;
 }
 
-
-uint8_t sqz_getformat(sqzFile sqzfp)
+void sqz_getformat(sqzFile sqzfp)
 {
-    uint8_t ret = 0;
-    if ( (ret = sqz_checksqz(sqzfp)) ) return ret;
+    if ( (sqz_checksqz(sqzfp)) ) return;
+
     kseq_t *seq = kseq_init(sqzfp);
-    if (!seq) return ret;
+    if (!seq) goto exit;
+
     int l = kseq_read(seq);
     //ERROR
-    if (l < 0) goto exit;
+    if (l < 0)
+        goto exit;
     //FASTQ
     if (seq->qual.l > 0) {
-        ret = 2;
+        sqzfp->fmt = 2;
         goto exit;
     }
     //FASTA
-    ret = 1;
+    sqzfp->fmt = 1;
     exit:
         kseq_destroy(seq);
-        gzrewind(sqzfp->gzfp);
-        return ret;
+        sqz_gzrewind(sqzfp);
+        return;
 }
-
 
 uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {

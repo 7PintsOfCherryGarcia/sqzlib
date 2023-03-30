@@ -12,7 +12,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqzfastx_t *sqz = calloc(1, sizeof(sqzfastx_t));
     if (!sqz) return NULL;
     sqz->namesize   = NAME_SIZE;
-    sqz->endthread  = 128U;
+    sqz->datflag    = 128U;
     sqz->size       = size;
     sqz->seq = malloc(size + 1);
     if (!sqz->seq)  goto exit;
@@ -51,8 +51,11 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     ret = 0;
     exit:
         if (ret) {
-            free(sqz->seq),free(sqz->qlt),free(sqz->namebuffer);
+            free(sqz->seq);
+            free(sqz->qlt);
+            free(sqz->namebuffer);
             free(sqz->readbuffer);
+            free(sqz);
             return NULL;
         }
         return sqz;

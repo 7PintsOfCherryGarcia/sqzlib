@@ -16,6 +16,22 @@
 #define FQS       '+'
 #define NL        '\n'
 
+typedef struct {
+    //Code data buffer
+    uint8_t   *blkbuff; //Buffer to hold encoded fastX data
+    uint64_t   blksize; //Size of blkbuff
+    uint64_t   mblksize;//Max size of blkbuff
+    uint64_t   blkpos;  //Position within blkbuff
+    uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
+    uint64_t   prevlen; //How much of current sequence had been decoded
+    uint8_t    newblk;  //flag
+    //Compression members
+    uint8_t   *cmpbuff; //Buffer to hold compressed blk data
+    uint64_t   cmpsize;
+    uint64_t   mcmpsize;//Max size of cmpbuff
+    uint64_t   cmppos;
+} sqzblock_t;
+
 /*
   "sqzfastx_t"
   libsqueezma main data loading structure. Defines the buffers and flags for
@@ -36,6 +52,7 @@ typedef struct {
     uint8_t     *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
+    sqzblock_t  *blk;
     //return members
     uint64_t    n;
     uint64_t    bases;
@@ -48,22 +65,6 @@ typedef struct {
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
-
-typedef struct {
-    //Code data buffer
-    uint8_t   *blkbuff; //Buffer to hold encoded fastX data
-    uint64_t   blksize; //Size of blkbuff
-    uint64_t   mblksize;//Max size of blkbuff
-    uint64_t   blkpos;  //Position within blkbuff
-    uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
-    uint64_t   prevlen; //How much of current sequence had been decoded
-    uint8_t    newblk;  //flag
-    //Compression members
-    uint8_t   *cmpbuff; //Buffer to hold compressed blk data
-    uint64_t   cmpsize;
-    uint64_t   mcmpsize;//Max size of cmpbuff
-    uint64_t   cmppos;
-} sqzblock_t;
 
 typedef struct sqzFile_s {
     const char  *namestr;
@@ -100,3 +101,4 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
 size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
+uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize);

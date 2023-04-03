@@ -191,8 +191,9 @@ static uint64_t sqz_seqencode(const uint8_t *seq, uint64_t l, uint8_t *blkbuff)
     return blkpos;
 }
 
-static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
+static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
 {
+    sqzblock_t *blk = sqz->blk;
     uint8_t  *blkbuff    = blk->blkbuff;
     uint64_t  blkpos     = 0;
     uint8_t  *seqb       = sqz->seq;
@@ -243,8 +244,9 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     return 1;
 }
 
-static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
+static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz)
 {
+    sqzblock_t *blk = sqz->blk;
     uint8_t *blkbuff   = blk->blkbuff;
     uint64_t blkpos    = blk->blkpos;
     uint8_t *seqb      = sqz->seq;
@@ -265,6 +267,7 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
+        fprintf(stderr, "blkpos: %lu\nlen: %lu\n", blkpos, sqz->prevlen);
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
         blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos);
@@ -290,10 +293,10 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz, sqzblock_t *blk)
     return 1;
 }
 
-char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag)
+char sqz_fastXencode(sqzfastx_t *sqz, uint8_t fqflag)
 {
-    if (fqflag) return sqz_fastqheadblk(sqz, blk);
-    return sqz_fastaheadblk(sqz, blk);
+    if (fqflag) return sqz_fastqheadblk(sqz);
+    return sqz_fastaheadblk(sqz);
 }
 
 /*

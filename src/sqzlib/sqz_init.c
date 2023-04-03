@@ -22,6 +22,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqz->pseq = malloc(16384);
     if (!sqz->pseq) goto exit;
     sqz->psize = 16384;
+    if ( !(sqz->blk = sqz_sqzblkinit(size)) ) goto exit;
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
@@ -61,7 +62,6 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
         return sqz;
 }
 
-
 void sqz_fastxkill(sqzfastx_t *sqz)
 {
     if (sqz) {
@@ -74,7 +74,6 @@ void sqz_fastxkill(sqzfastx_t *sqz)
         free(sqz);
     }
 }
-
 
 sqzblock_t *sqz_sqzblkinit(uint64_t size)
 {
@@ -107,6 +106,13 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     return blk;
 }
 
+uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize)
+{
+    blk->blkbuff = realloc(blk->blkbuff, newsize);
+    if ( !(blk->blkbuff) ) return 1;
+    blk->mblksize = newsize;
+    return 0;
+}
 
 void sqz_blkkill(sqzblock_t *blk)
 {

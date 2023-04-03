@@ -47,13 +47,13 @@ static void sqz_decode(sqzfastx_t *sqz,
     }
 }
 
-int64_t sqz_blkcompress(sqzblock_t *blk, int level, uint8_t libfmt)
+int64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt)
 {
     switch (libfmt) {
         case 1:
-            return sqz_deflate(blk, level);
+            return sqz_deflate(sqz->blk, level);
         case 2:
-            return sqz_zstdcompress(blk, level);
+            return sqz_zstdcompress(sqz->blk, level);
     }
     return -1;
 }
@@ -99,15 +99,15 @@ char sqz_filetail(uint64_t numseqs, uint32_t nblocks, FILE *ofp)
     return 1;
 }
 
-uint8_t sqz_blkdump(sqzblock_t *blk, uint64_t cmpsize, FILE *ofp)
+uint8_t sqz_blkdump(sqzfastx_t *sqz, uint64_t cmpsize, FILE *ofp)
 {
     size_t wbytes = 0;
     //Write uncompressed number of bytes in block
-    wbytes += fwrite(&(blk->blkpos), B64, 1, ofp);
+    wbytes += fwrite(&(sqz->blk->blkpos), B64, 1, ofp);
     //Write compressed number of bytes in block
     wbytes += fwrite(&cmpsize, B64, 1, ofp);
     //Write block
-    wbytes += fwrite(blk->cmpbuff, cmpsize, 1, ofp);
+    wbytes += fwrite(sqz->blk->cmpbuff, cmpsize, 1, ofp);
     if (wbytes != 3) return 0;
     return 1;
 }
@@ -190,11 +190,8 @@ uint8_t sqz_readblksize(sqzblock_t *blk, sqzFile sqzfp, uint8_t libfmt)
         if ( !(blk->cmpbuff) ) goto exit;
         blk->mcmpsize = cmpsize;
     }
-    if ( dcpsize > (blk->mblksize) ) {
-        blk->blkbuff = realloc(blk->blkbuff, dcpsize);
-        if ( !(blk->blkbuff) ) goto exit;
-        blk->mblksize = dcpsize;
-    }
+    if ( dcpsize > (blk->mblksize) )
+        if (sqz_sqzblkrealloc(blk, dcpsize)) goto exit;
     blk->cmpsize = cmpsize;
     blk->blksize = dcpsize;
     if ( (cmpsize != (uint64_t)sqz_gzread(sqzfp, blk->cmpbuff, cmpsize) ) )
@@ -412,6 +409,7 @@ uint8_t sqz_readend(sqzfastx_t *sqz)
 
 void sqz_resetsqz(sqzfastx_t *sqz)
 {
+    sqz_resetblk(sqz->blk);
     sqz->namepos = 0;
     sqz->endflag = 0;
     sqz->blks++;

@@ -235,13 +235,13 @@ uint8_t sqz_readblksize(sqzblock_t *blk, sqzFile sqzfp, uint8_t libfmt);
 /*
   Compress encoded data block
 */
-int64_t sqz_blkcompress(sqzblock_t *blk, int level, uint8_t libfmt);
+int64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt);
 
 
 /*
   Encode data from sqz into blk
 */
-char sqz_fastXencode(sqzfastx_t *sqz, sqzblock_t *blk, uint8_t fqflag);
+char sqz_fastXencode(sqzfastx_t *sqz, uint8_t fqflag);
 
 
 /*
@@ -259,12 +259,12 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
 /*
   Write compressed block to file
 */
-uint8_t sqz_blkdump(sqzblock_t *blk, uint64_t cmpsize, FILE *ofp);
+uint8_t sqz_blkdump(sqzfastx_t *sqz, uint64_t cmpsize, FILE *ofp);
 
 /*
   Set block size member to 0
 */
-void sqz_resetblk(sqzblock_t *blk);
+//void sqz_resetblk(sqzblock_t *blk);
 
 /*
   Returns newblk member

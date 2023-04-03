@@ -243,8 +243,6 @@ static void *sqz_cmprthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
     uint64_t cbytes = 0;
-    sqzblock_t *blk = sqz_sqzblkinit(8UL*1024UL*1024UL);
-    if (!blk) goto exit;
     int id = sqz_getthreadid(sqzthread);
     sqzfastx_t *sqz = sqzthread->sqzqueue[id - 1];
     uint8_t fqflag  = sqzthread->fqflag;
@@ -252,14 +250,13 @@ static void *sqz_cmprthread(void *thread_data)
     //Do some work if there is available data
     while ( sqz_hasdata(sqz) ) {
         //Encode data
-        sqz_fastXencode(sqz, blk, fqflag);
+        sqz_fastXencode(sqz, fqflag);
         //Compress block
-        cbytes = sqz_blkcompress(blk, 9, libfmt);
+        cbytes = sqz_blkcompress(sqz, 9, libfmt);
         //Write compressed block to output file
         pthread_mutex_lock(&(sqzthread->mtx));
-        sqz_blkdump(blk, cbytes, sqzthread->ofp);
+        sqz_blkdump(sqz, cbytes, sqzthread->ofp);
         fflush(sqzthread->ofp);
-        sqz_resetblk(blk);
         sqz_resetsqz(sqz);
         pthread_mutex_unlock(&(sqzthread->mtx));
         if (sqz_readend(sqz))
@@ -267,9 +264,7 @@ static void *sqz_cmprthread(void *thread_data)
         //Thread done, signal reader and go to sleep until new data arrives
         sqz_wakereader(sqzthread);
     }
-    exit:
-        sqz_blkkill(blk);
-        pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
 static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)

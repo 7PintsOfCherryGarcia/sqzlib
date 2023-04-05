@@ -110,7 +110,15 @@ uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize)
 {
     blk->blkbuff = realloc(blk->blkbuff, newsize);
     if ( !(blk->blkbuff) ) return 1;
+    blk->blksize  = newsize;
     blk->mblksize = newsize;
+    blk->cmpbuff  = realloc(blk->cmpbuff, newsize);
+    if ( !(blk->cmpbuff) ) {
+        free(blk->blkbuff);
+        return 1;
+    }
+    blk->cmpsize  = newsize;
+    blk->mcmpsize = newsize;
     return 0;
 }
 

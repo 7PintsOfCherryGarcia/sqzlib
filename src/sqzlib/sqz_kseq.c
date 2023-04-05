@@ -73,16 +73,22 @@ static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
         return ret;
 }
 
-static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
+static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
     uint64_t offset = 0;
-    uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = sqz->size - B64 - 1;
+    uint32_t n      = 0;
     uint8_t *seq = sqz->seq;
+    uint64_t blksize = sqz->blk->blksize;
     while ( (kseq_read(kseq) >= 0) ) {
         l = kseq->seq.l;
+        if ( l/4 > blksize) {
+            sqz_sqzblkrealloc(sqz->blk, l/4);
+            sqz->blk->blksize = l/4;
+            blksize = l/4;
+        }
         bases += l;
         n++;
         if (!sqz_loadname(sqz, kseq)) {
@@ -90,6 +96,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
             goto exit;
         }
         if (l > maxlen) {
+            fprintf(stderr, "EXIT from full buffer\n");
             sqz->endflag = 1;
             sqz->prevlen = l;
             sqz_remeber(sqz, kseq, 0);
@@ -106,6 +113,7 @@ static uint64_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->n += n;
         sqz->bases = bases;
         sqz->offset = offset;
+        fprintf(stderr, "EXITING: %u\n", n);
         return n;
 }
 

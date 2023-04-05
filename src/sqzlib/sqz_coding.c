@@ -254,8 +254,13 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz)
     uint8_t *seq = NULL;
     uint64_t seqlen = 0;
     uint64_t k = 0;
+    uint8_t tmp = 0;
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqb + k );
+        if (!tmp) {
+            fprintf(stderr, "\tfirst in coding loop %lu\n", seqlen);
+            tmp = 1;
+        }
         k += B64;
         memcpy(blkbuff + blkpos, &seqlen, B64);
         blkpos += B64;
@@ -267,9 +272,10 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz)
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
-        fprintf(stderr, "blkpos: %lu\nlen: %lu\n", blkpos, sqz->prevlen);
         memcpy(blkbuff + blkpos, &sqz->prevlen, B64);
         blkpos += B64;
+        fprintf(stderr, "\tLAST SEQ LEN: %lu\n", sqz->prevlen);
+        fprintf(stderr, "\tblkpos: %lu blksize: %lu\n", blkpos, blk->blksize);
         blkpos += sqz_seqencode(sqz->pseq, sqz->prevlen, blkbuff + blkpos);
         memcpy(blkbuff + blkpos, &eblk, 1);
         blkpos++;

@@ -16,6 +16,12 @@
 #define FQS       '+'
 #define NL        '\n'
 
+
+typedef struct {
+    void     *data;
+    uint64_t size;
+} sqzbuff_t;
+
 typedef struct {
     //Code data buffer
     uint8_t   *blkbuff; //Buffer to hold encoded fastX data
@@ -57,10 +63,9 @@ typedef struct {
     uint64_t    n;
     uint64_t    bases;
     uint64_t    blks;
-    //Partially loaded sequence
-    uint8_t     *pseq;
-    uint8_t     *pqlt;
-    uint64_t    psize;
+    //Last sequence loaded
+    void        *lastseq;
+    sqzbuff_t   lseqbuff;
     //Partially decoded sequences
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    prevlen; //Size of sequence currently being read

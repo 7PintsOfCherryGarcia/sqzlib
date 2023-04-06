@@ -30,20 +30,6 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     return 1;
 }
 
-static uint8_t sqz_remeber(sqzfastx_t *sqz, kseq_t *seq, uint8_t fqflag)
-{
-    // TODO Pass sequence and length instead of kseq_t struct
-    if (sqz->psize <= seq->seq.l) {
-        if (fqflag) sqz->pqlt = realloc(sqz->pqlt, seq->seq.l*2);
-        sqz->pseq = realloc(sqz->pseq, seq->seq.l*2);
-        if ( ( fqflag && !(sqz->pqlt) ) || !(sqz->pseq)) return 1;
-        sqz->psize = seq->seq.l*2;
-    }
-    memcpy(sqz->pseq, seq->seq.s, seq->seq.l + 1);
-    if (fqflag) memcpy(sqz->pqlt, seq->qual.s, seq->seq.l + 1);
-    return 0;
-}
-
 static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
 {
     uint8_t ret = 0;
@@ -96,10 +82,9 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
             goto exit;
         }
         if (l > maxlen) {
-            fprintf(stderr, "EXIT from full buffer\n");
             sqz->endflag = 1;
+            sqz->lastseq = kseq;
             sqz->prevlen = l;
-            sqz_remeber(sqz, kseq, 0);
             goto exit;
         }
         memcpy(seq + offset, &l, B64);
@@ -113,7 +98,6 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         sqz->n += n;
         sqz->bases = bases;
         sqz->offset = offset;
-        fprintf(stderr, "EXITING: %u\n", n);
         return n;
 }
 
@@ -136,8 +120,7 @@ static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
         }
         if ( l > maxlen ) {
             sqz->endflag = 1;
-            sqz->prevlen = l;
-            sqz_remeber(sqz, kseq, 1);
+            sqz->lastseq = kseq;
             goto exit;
         }
         memcpy(seq + offset, &l, B64);

@@ -9,7 +9,7 @@ int64_t sqz_zstdcompress(sqzblock_t *blk, int level)
     int64_t ret = 0;
 
     ret = ZSTD_compress(blk->cmpbuff, blk->cmpsize,
-                        blk->blkbuff, blk->blkpos, level);
+                        blk->blkbuff->data, blk->blkbuff->pos, level);
     if (ZSTD_isError(ret)) return -1;
 
     return ret;

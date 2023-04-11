@@ -5,6 +5,28 @@
 
 #include "sqz_data.h"
 
+static sqzbuff_t *sqz_buffinit(uint64_t size)
+{
+    sqzbuff_t *buff = calloc(1, sizeof(sqzbuff_t));
+    if (!buff) return NULL;
+    buff->data = calloc(size, sizeof(uint8_t));
+    if (!buff->data) {
+        free(buff);
+        return NULL;
+    }
+    buff->size = size;
+    buff->pos  = 0;
+    return buff;
+}
+
+sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size)
+{
+    buff->data = realloc(buff->data, size);
+    if (!buff->data) return NULL;
+    buff->size = size;
+    if (buff->pos > size) buff->pos = size - 1;
+    return buff;
+}
 
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
 {
@@ -14,12 +36,12 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqz->namesize   = NAME_SIZE;
     sqz->datflag    = 128U;
     sqz->size       = size;
-    sqz->seq = malloc(size + 1);
+    sqz->seq = calloc(size + 1, sizeof(uint8_t));
+    sqz->namebuffer = sqz_buffinit(NAME_SIZE);
     if (!sqz->seq)  goto exit;
-    sqz->seq[size] = '\0';
-    sqz->namebuffer = malloc(NAME_SIZE);
-    if (!sqz->namebuffer) goto exit;
+    if (!sqz->namebuffer || !sqz->seq ) goto exit;
     if ( !(sqz->blk = sqz_sqzblkinit(size)) ) goto exit;
+    if (!(sqz->lseqbuff = sqz_buffinit(16384UL))) goto exit;
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
@@ -73,13 +95,13 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
     sqzblock_t *blk = malloc(sizeof(sqzblock_t));
     if (!blk) return NULL;
     //Encoding buffer
-    blk->blkbuff = malloc(2*size);
+    blk->blkbuff = sqz_buffinit(size);
     if (!blk->blkbuff) {
         free(blk);
         return NULL;
     }
-    blk->blksize = 2*size;
-    blk->mblksize = 2*size;
+    blk->blksize  = size;
+    blk->mblksize = size;
     blk->blkpos  = 0;
 
     blk->namepos = 0;
@@ -101,7 +123,7 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
 
 uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize)
 {
-    blk->blkbuff = realloc(blk->blkbuff, newsize);
+    blk->blkbuff = sqz_buffrealloc(blk->blkbuff, newsize);
     if ( !(blk->blkbuff) ) return 1;
     blk->blksize  = newsize;
     blk->mblksize = newsize;
@@ -123,7 +145,6 @@ void sqz_blkkill(sqzblock_t *blk)
         free(blk);
     }
 }
-
 
 uint64_t sqz_seqsinblk(sqzblock_t *blk)
 {

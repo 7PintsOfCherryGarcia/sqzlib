@@ -19,12 +19,14 @@
 
 typedef struct {
     void     *data;
-    uint64_t size;
+    uint64_t  size;
+    uint64_t  pos;
 } sqzbuff_t;
 
 typedef struct {
     //Code data buffer
-    uint8_t   *blkbuff; //Buffer to hold encoded fastX data
+    //uint8_t   *blkbuff; //Buffer to hold encoded fastX data
+    sqzbuff_t  *blkbuff;
     uint64_t   blksize; //Size of blkbuff
     uint64_t   mblksize;//Max size of blkbuff
     uint64_t   blkpos;  //Position within blkbuff
@@ -54,7 +56,7 @@ typedef struct {
     uint64_t    offset;
     uint8_t     *seq;
     uint8_t     *qlt;
-    uint8_t     *namebuffer;
+    sqzbuff_t   *namebuffer;
     uint8_t     *readbuffer;
     uint64_t    namesize;
     uint64_t    namepos;
@@ -65,7 +67,7 @@ typedef struct {
     uint64_t    blks;
     //Last sequence loaded
     void        *lastseq;
-    sqzbuff_t   lseqbuff;
+    sqzbuff_t   *lseqbuff;
     //Partially decoded sequences
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    prevlen; //Size of sequence currently being read
@@ -107,3 +109,4 @@ size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
 uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize);
+sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);

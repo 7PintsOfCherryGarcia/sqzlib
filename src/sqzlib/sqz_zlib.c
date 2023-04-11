@@ -71,8 +71,8 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
         return (size_t)ret;
     }
     //Main compression loop
-    strm.avail_in = blk->blkpos;
-    strm.next_in  = blk->blkbuff;
+    strm.avail_in = blk->blkbuff->pos;
+    strm.next_in  = blk->blkbuff->data;
     do {
         strm.avail_out = blk->cmpsize;
         strm.next_out = blk->cmpbuff;

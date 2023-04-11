@@ -30,32 +30,31 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     return 1;
 }
 
-static uint8_t sqz_loadname(sqzfastx_t *sqz, kseq_t *seq)
+static uint8_t sqz_loadname(sqzbuff_t *buff, kseq_t *seq)
 {
     uint8_t ret = 0;
-    uint8_t *namebuffer = sqz->namebuffer;
-    uint64_t pos = sqz->namepos;
+    uint64_t pos = buff->pos;
+    uint8_t *data = (uint8_t *)buff->data;
     //Check namebuffer is large enough
-    if ( (pos + seq->comment.l + seq->name.l) >= sqz->namesize) {
-        namebuffer = realloc(namebuffer, sqz->namesize*2);
-        if (!(namebuffer))
+    if ( (pos + seq->comment.l + seq->name.l) >= buff->size) {
+        buff = sqz_buffrealloc(buff, buff->size<<1);
+        if (!(buff))
             goto exit;
-        sqz->namebuffer = namebuffer;
-        sqz->namesize *= 2;
+        data = (uint8_t *)buff->data;
     }
-    memcpy(namebuffer + pos, seq->name.s, seq->name.l + 1);
+    memcpy(data + pos, seq->name.s, seq->name.l + 1);
     pos += seq->name.l + 1;
     //If comment exists
     if (seq->comment.s) {
         //Substitute terminating null with space
-        namebuffer[pos - 1] = ' ';
+        data[pos - 1] = ' ';
         //Append comment including terminating null
-        memcpy(namebuffer + pos, seq->comment.s, seq->comment.l + 1);
+        memcpy(data + pos, seq->comment.s, seq->comment.l + 1);
         pos += seq->comment.l + 1;
     }
     ret = 1;
     exit:
-        sqz->namepos = pos;
+        buff->pos = pos;
         return ret;
 }
 
@@ -67,21 +66,20 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
     uint64_t maxlen = sqz->size - B64 - 1;
     uint32_t n      = 0;
     uint8_t *seq = sqz->seq;
-    uint64_t blksize = sqz->blk->blksize;
     while ( (kseq_read(kseq) >= 0) ) {
         l = kseq->seq.l;
-        if ( l/4 > blksize) {
-            sqz_sqzblkrealloc(sqz->blk, l/4);
-            sqz->blk->blksize = l/4;
-            blksize = l/4;
-        }
         bases += l;
         n++;
-        if (!sqz_loadname(sqz, kseq)) {
+        if (!sqz_loadname(sqz->namebuffer, kseq)) {
             offset = 0;
             goto exit;
         }
         if (l > maxlen) {
+            if ( l/3 > sqz->lseqbuff->size)
+                if ( !(sqz->lseqbuff = sqz_buffrealloc(sqz->lseqbuff, l/3)) ) {
+                    offset = 0;
+                    goto exit;
+                }
             sqz->endflag = 1;
             sqz->lastseq = kseq;
             sqz->prevlen = l;

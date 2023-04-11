@@ -115,6 +115,7 @@ uint8_t sqz_blkdump(sqzfastx_t *sqz, uint64_t cmpsize, FILE *ofp)
 void sqz_resetblk(sqzblock_t *blk)
 {
     blk->blkpos  = 0;
+    blk->blkbuff->pos = 0;
 }
 
 uint8_t sqz_newblk(sqzblock_t *blk)
@@ -410,6 +411,8 @@ uint8_t sqz_readend(sqzfastx_t *sqz)
 void sqz_resetsqz(sqzfastx_t *sqz)
 {
     sqz_resetblk(sqz->blk);
+    sqz->lseqbuff->pos = 0;
+    sqz->namebuffer->pos = 0;
     sqz->namepos = 0;
     sqz->endflag = 0;
     sqz->blks++;

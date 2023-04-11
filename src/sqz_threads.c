@@ -264,6 +264,7 @@ static void *sqz_cmprthread(void *thread_data)
         //Thread done, signal reader and go to sleep until new data arrives
         sqz_wakereader(sqzthread);
     }
+    fprintf(stderr, "Donesies!!!\n");
     pthread_exit(NULL);
 }
 

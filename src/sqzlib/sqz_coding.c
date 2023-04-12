@@ -238,12 +238,9 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz)
     }
     //Last sequence, loaded into kseq, but not copied into buffer
     if (sqz->endflag) {
-        kseq_t *kseq = sqz->lastseq;
-        blkpos += sqz_64writebuff(blkbuff, kseq->seq.l);
-        //fprintf(stderr, "LS len: %lu size: %lu pos: %lu\n",
-        //        kseq->seq.l, sqz->lseqbuff->size, sqz->lseqbuff->pos);
-        sqz_seqencode((uint8_t *)kseq->seq.s, kseq->seq.l, sqz->lseqbuff);
-        //fprintf(stderr, "\tpos: %lu\n", sqz->lseqbuff->pos);
+        sqzseq_t *sqzseq = sqz->lastseq;
+        blkpos += sqz_64writebuff(blkbuff, sqzseq->l);
+        sqz_seqencode((uint8_t *)sqzseq->s, sqzseq->l, sqz->lseqbuff);
         if ( (sqz->lseqbuff->pos + blkpos) > blk->blksize) {
             sqz_sqzblkrealloc(blk, sqz->lseqbuff->pos + blkpos + 1);
             blkbuff = blk->blkbuff;

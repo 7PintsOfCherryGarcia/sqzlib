@@ -19,6 +19,19 @@ static sqzbuff_t *sqz_buffinit(uint64_t size)
     return buff;
 }
 
+static sqzseq_t *sqz_seqinit(void)
+{
+    sqzseq_t *seq = calloc(1, sizeof(sqzseq_t));
+    if (!seq) return NULL;
+    seq->n = calloc(256, 1);
+    if (!seq->n) {
+        free(seq);
+        return NULL;
+    }
+    seq->nlen = 256;
+    return seq;
+}
+
 sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size)
 {
     buff->data = realloc(buff->data, size);
@@ -38,8 +51,8 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqz->size       = size;
     sqz->seq = calloc(size + 1, sizeof(uint8_t));
     sqz->namebuffer = sqz_buffinit(NAME_SIZE);
-    if (!sqz->seq)  goto exit;
-    if (!sqz->namebuffer || !sqz->seq ) goto exit;
+    sqz->lastseq    = sqz_seqinit();
+    if (!sqz->namebuffer || !sqz->seq || !sqz->lastseq) goto exit;
     if ( !(sqz->blk = sqz_sqzblkinit(size)) ) goto exit;
     if (!(sqz->lseqbuff = sqz_buffinit(16384UL))) goto exit;
     //Get file format if reading an sqz file (lower 3 bits of fmt)

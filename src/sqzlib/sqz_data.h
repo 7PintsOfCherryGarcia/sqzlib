@@ -16,6 +16,13 @@
 #define FQS       '+'
 #define NL        '\n'
 
+typedef struct {
+    char    *n;
+    uint32_t nlen;
+    uint8_t *s;
+    uint8_t *q;
+    uint64_t l;
+} sqzseq_t;
 
 typedef struct {
     void     *data;
@@ -46,7 +53,6 @@ typedef struct {
   reading sequencing data into.
 */
 typedef struct {
-    uint8_t     nthread;
     //flags
     uint8_t     datflag;
     char        endflag; //Sequece has not completely been read into a buffer flag
@@ -66,7 +72,7 @@ typedef struct {
     uint64_t    bases;
     uint64_t    blks;
     //Last sequence loaded
-    void        *lastseq;
+    sqzseq_t    *lastseq;
     sqzbuff_t   *lseqbuff;
     //Partially decoded sequences
     uint64_t    rem;     //Length of sequence remaining to be read
@@ -110,3 +116,4 @@ int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
 uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize);
 sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
+

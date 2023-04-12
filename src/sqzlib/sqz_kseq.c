@@ -58,6 +58,34 @@ static uint8_t sqz_loadname(sqzbuff_t *buff, kseq_t *seq)
         return ret;
 }
 
+static uint8_t sqz_cpyseq(sqzseq_t *seq, kseq_t *kseq)
+{
+    if (!kseq) return 1;
+    if (kseq->seq.l > seq->l) {
+        seq->s = realloc(seq->s, kseq->seq.l + 1);
+        if (!seq->s) return 1;
+        if (kseq->qual.s) {
+            seq->q = realloc(seq->q, kseq->seq.l + 1);
+            if (!seq->q) return 1;
+        }
+    }
+    memcpy(seq->s, kseq->seq.s, kseq->seq.l + 1);
+    if (kseq->qual.s)
+        memcpy(seq->q, kseq->qual.s, kseq->seq.l + 1);
+    seq->l = kseq->seq.l;
+    if ( (kseq->name.l + kseq->comment.l) > seq->nlen ) {
+        seq->n = realloc(seq->n, kseq->name.l + kseq->comment.l + 1);
+        if (!seq->n) return 1;
+    }
+    seq->nlen = kseq->name.l + kseq->comment.l;
+    memcpy(seq->n, kseq->name.s, kseq->name.l + 1);
+    if (kseq->qual.s) {
+        seq->n[kseq->name.l] = ' ';
+        memcpy(seq->n + kseq->name.l, kseq->qual.s, kseq->qual.l + 1);
+    }
+    return 0;
+}
+
 static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
     uint64_t offset = 0;
@@ -81,7 +109,10 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
                     goto exit;
                 }
             sqz->endflag = 1;
-            sqz->lastseq = kseq;
+            if ( sqz_cpyseq(sqz->lastseq, kseq) ) {
+                offset = 0;
+                goto exit;
+            }
             sqz->prevlen = l;
             goto exit;
         }
@@ -165,3 +196,5 @@ uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
     if (fqflag) return sqz_fastqnblock(sqz, seq);
     return sqz_fastanblock(sqz, seq);
 }
+
+

@@ -93,6 +93,9 @@ static void sqz_wakereader(sqzthread_t *sqzthread)
     pthread_mutex_unlock(&(sqzthread->mtx));
 }
 
+//REMOVE
+void setid(sqzfastx_t *sqz, uint8_t i);
+
 static sqzfastx_t **sqz_sqzqueueinit(uint8_t n, uint8_t fmt)
 {
     sqzfastx_t *sqz;
@@ -239,6 +242,9 @@ static void *sqz_decompressor(void *thrdata)
         return NULL;
 }
 
+//remove
+uint8_t getid(sqzfastx_t *sqz);
+
 static void *sqz_cmprthread(void *thread_data)
 {
     sqzthread_t *sqzthread = thread_data;
@@ -264,7 +270,6 @@ static void *sqz_cmprthread(void *thread_data)
         //Thread done, signal reader and go to sleep until new data arrives
         sqz_wakereader(sqzthread);
     }
-    fprintf(stderr, "Donesies!!!\n");
     pthread_exit(NULL);
 }
 

@@ -53,8 +53,8 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
     sqz->namebuffer = sqz_buffinit(NAME_SIZE);
     sqz->lastseq    = sqz_seqinit();
     if (!sqz->namebuffer || !sqz->seq || !sqz->lastseq) goto exit;
-    if ( !(sqz->blk = sqz_sqzblkinit(size)) ) goto exit;
-    if (!(sqz->lseqbuff = sqz_buffinit(16384UL))) goto exit;
+    if ( !(sqz->blk = sqz_sqzblkinit(size)) )           goto exit;
+    if (!(sqz->lseqbuff = sqz_buffinit(16384UL)))       goto exit;
     //Get file format if reading an sqz file (lower 3 bits of fmt)
     switch (fmt & 7) {
         case 0:
@@ -113,24 +113,16 @@ sqzblock_t *sqz_sqzblkinit(uint64_t size)
         free(blk);
         return NULL;
     }
-    blk->blksize  = size;
-    blk->mblksize = size;
-    blk->blkpos  = 0;
-
     blk->namepos = 0;
     blk->prevlen = 0;
     blk->newblk  = 1;
-
     //Compression buffer
-    blk->cmpbuff = malloc(2*size);
+    blk->cmpbuff = sqz_buffinit(size);
     if (!blk->cmpbuff) {
         free(blk->blkbuff);
         free(blk);
         return NULL;
     }
-    blk->cmpsize = 2*size;
-    blk->mcmpsize = 2*size;
-    blk->cmppos  = 0;
     return blk;
 }
 
@@ -138,15 +130,8 @@ uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize)
 {
     blk->blkbuff = sqz_buffrealloc(blk->blkbuff, newsize);
     if ( !(blk->blkbuff) ) return 1;
-    blk->blksize  = newsize;
-    blk->mblksize = newsize;
-    blk->cmpbuff  = realloc(blk->cmpbuff, newsize);
-    if ( !(blk->cmpbuff) ) {
-        free(blk->blkbuff);
-        return 1;
-    }
-    blk->cmpsize  = newsize;
-    blk->mcmpsize = newsize;
+    blk->cmpbuff = sqz_buffrealloc(blk->cmpbuff, newsize);
+    if ( !(blk->cmpbuff) ) return 1;
     return 0;
 }
 
@@ -161,14 +146,15 @@ void sqz_blkkill(sqzblock_t *blk)
 
 uint64_t sqz_seqsinblk(sqzblock_t *blk)
 {
-    uint64_t s = *(uint64_t *)( blk->blkbuff + ( blk->blksize - B64 ) );
-    uint64_t d = blk->blksize - B64 - s;
-    char *names = (char *)(blk->blkbuff + d);
-    uint64_t p = 0;
-    uint64_t n = 0;
-    while (p != s) {
-        n++;
-        p += strlen(names + p) + 1;
-    }
-    return n;
+    return blk->blkbuff->pos;
+    //uint64_t s = *(uint64_t *)( blk->blkbuff + ( blk->blksize - B64 ) );
+    //uint64_t d = blk->blksize - B64 - s;
+    //char *names = (char *)(blk->blkbuff + d);
+    //uint64_t p = 0;
+    //uint64_t n = 0;
+    //while (p != s) {
+    //    n++;
+    //    p += strlen(names + p) + 1;
+    //}
+    //return n;
 }

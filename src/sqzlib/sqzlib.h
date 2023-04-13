@@ -229,7 +229,7 @@ uint64_t sqz_seqsinblk(sqzblock_t *blk);
 /*
   Read a data block into an sqz block structure
 */
-uint8_t sqz_readblksize(sqzblock_t *blk, sqzFile sqzfp, uint8_t libfmt);
+uint8_t sqz_readblksize(sqzFile sqzfp, uint8_t libfmt);
 
 
 /*

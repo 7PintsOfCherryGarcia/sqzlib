@@ -93,9 +93,6 @@ static void sqz_wakereader(sqzthread_t *sqzthread)
     pthread_mutex_unlock(&(sqzthread->mtx));
 }
 
-//REMOVE
-void setid(sqzfastx_t *sqz, uint8_t i);
-
 static sqzfastx_t **sqz_sqzqueueinit(uint8_t n, uint8_t fmt)
 {
     sqzfastx_t *sqz;
@@ -154,11 +151,12 @@ static void *sqz_dcmpthread(void *thread_data)
     uint64_t dsize = 0;
 
     pthread_mutex_lock(&(sqzthread->mtx));
-    int id = sqzthread->threadid++;
+    uint8_t id = sqzthread->threadid++;
     pthread_mutex_unlock(&(sqzthread->mtx));
 
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
+
     uint8_t fqflag = sqz_isfq(sqzfp);
     uint8_t libfmt = sqz_sqzgetcmplib(sqzfp);
     sqzblock_t *blk =  sqz_sqzgetblk(sqzfp);
@@ -179,7 +177,7 @@ static void *sqz_dcmpthread(void *thread_data)
             fprintf(stderr, "[sqz ERROR]: Failed to read number of blocks.\n");
             goto exit;
         }
-        if ( sqz_readblksize(blk, sqzfp, libfmt) ) {
+        if ( sqz_readblksize(sqzfp, libfmt) ) {
             fprintf(stderr, "[sqz ERROR]: Failed to read block %u %u.\n",
                     currentblk, libfmt);
             goto exit;
@@ -241,9 +239,6 @@ static void *sqz_decompressor(void *thrdata)
     exit:
         return NULL;
 }
-
-//remove
-uint8_t getid(sqzfastx_t *sqz);
 
 static void *sqz_cmprthread(void *thread_data)
 {
@@ -388,7 +383,7 @@ uint8_t sqz_decompress(const char *i, const char *o, uint8_t n)
                        &(sqzthread->thatt),
                        sqz_decompressor,
                        (void *)sqzthread)) {
-        fprintf(stderr, "[sqz ERROR]: thread launch error.\n");
+        fprintf(stderr, "[sqz ERROR]: thread failed to launch.\n");
         goto exit;
     }
     if (pthread_join(r, NULL)) {
@@ -411,7 +406,7 @@ uint8_t sqz_compress(const char *i, const char *o, uint8_t lib, uint8_t n)
                        &(sqzthread->thatt),
                        sqz_compressor,
                        (void *)sqzthread)) {
-        fprintf(stderr, "[sqz ERROR]: thread launch error.\n");
+        fprintf(stderr, "[sqz ERROR]: thread failed to launch.\n");
         goto exit;
     }
     if (pthread_join(r, NULL)) {

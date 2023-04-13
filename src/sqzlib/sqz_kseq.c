@@ -94,6 +94,7 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
     uint64_t maxlen = sqz->size - B64 - 1;
     uint32_t n      = 0;
     uint8_t *seq = sqz->seq;
+
     while ( (kseq_read(kseq) >= 0) ) {
         l = kseq->seq.l;
         bases += l;
@@ -119,6 +120,7 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         memcpy(seq + offset, &l, B64);
         offset += B64;
         memcpy(seq + offset, kseq->seq.s, l + 1);
+
         offset += l + 1;
         if ( maxlen <= (l + 1 + B64) ) break;
         maxlen -= (l + 1 + B64);
@@ -130,26 +132,35 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
         return n;
 }
 
-static uint64_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
+static uint32_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
     uint64_t offset = 0;
-    uint64_t n      = 0;
     uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = sqz->size - B64 - 1;
+    uint32_t n      = 0;
     uint8_t  *seq = sqz->seq;
     uint8_t  *qlt = sqz->qlt;
     while ( kseq_read(kseq) >= 0 ) {
         l = kseq->seq.l;
         bases += l;
         n++;
-        if (!sqz_loadname(sqz, kseq)) {
+        if (!sqz_loadname(sqz->namebuffer, kseq)) {
             offset = 0;
             goto exit;
         }
         if ( l > maxlen ) {
+            if (l/3 > sqz->lseqbuff->size)
+                if ( !(sqz->lseqbuff = sqz_buffrealloc(sqz->lseqbuff, l/3)) ) {
+                    offset = 0;
+                    goto exit;
+                }
             sqz->endflag = 1;
-            sqz->lastseq = kseq;
+            if ( sqz_cpyseq(sqz->lastseq, kseq) ) {
+                offset = 0;
+                goto exit;
+            }
+            sqz->prevlen = l;
             goto exit;
         }
         memcpy(seq + offset, &l, B64);

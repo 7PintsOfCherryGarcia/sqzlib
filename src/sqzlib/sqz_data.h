@@ -31,20 +31,13 @@ typedef struct {
 } sqzbuff_t;
 
 typedef struct {
-    //Code data buffer
-    //uint8_t   *blkbuff; //Buffer to hold encoded fastX data
+    //Encoding
     sqzbuff_t  *blkbuff;
-    uint64_t   blksize; //Size of blkbuff
-    uint64_t   mblksize;//Max size of blkbuff
-    uint64_t   blkpos;  //Position within blkbuff
+    //Compression
+    sqzbuff_t  *cmpbuff;
     uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
     uint64_t   prevlen; //How much of current sequence had been decoded
     uint8_t    newblk;  //flag
-    //Compression members
-    uint8_t   *cmpbuff; //Buffer to hold compressed blk data
-    uint64_t   cmpsize;
-    uint64_t   mcmpsize;//Max size of cmpbuff
-    uint64_t   cmppos;
 } sqzblock_t;
 
 /*
@@ -83,7 +76,6 @@ typedef struct sqzFile_s {
     const char  *namestr;
     void        *gzfp;
     sqzfastx_t  *sqz;
-    sqzblock_t  *blk;
     uint64_t    size;
     uint8_t     ff;
     uint8_t     fmt;

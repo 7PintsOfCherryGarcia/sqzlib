@@ -74,16 +74,16 @@ size_t sqz_deflate(sqzblock_t *blk, int level)
     strm.avail_in = blk->blkbuff->pos;
     strm.next_in  = blk->blkbuff->data;
     do {
-        strm.avail_out = blk->cmpsize;
-        strm.next_out = blk->cmpbuff;
+        strm.avail_out = blk->cmpbuff->pos;
+        strm.next_out  = blk->cmpbuff->data;
         ret = deflate(&strm, Z_FINISH);    /* no bad return value */
         if ( ret == Z_STREAM_ERROR ) {
             fprintf(stderr, "[sqzlib ZLIB ERROR]: Deflate error.\n");
             return (size_t)ret;  /* state not clobbered */
         }
         //check there is enough space in buffer
-        have = blk->cmpsize - strm.avail_out;
-        if ( (wbytes + have) > blk->cmpsize) {
+        have = blk->cmpbuff->size - strm.avail_out;
+        if ( (wbytes + have) > blk->blkbuff->size) {
             fprintf(stderr, "[sqzlib ZLIB ERROR]: Compression error.\n");
             ret = Z_ERRNO;
             break;
@@ -113,11 +113,11 @@ uint64_t sqz_inflate(sqzblock_t *blk)
         return (size_t)ret;
     }
     //Main compression loop
-    strm.avail_in = blk->cmpsize;
-    strm.next_in = blk->cmpbuff;
+    strm.avail_in = blk->cmpbuff->pos;
+    strm.next_in =  blk->cmpbuff->data;
     do {
-        strm.avail_out = blk->blksize;
-        strm.next_out  = blk->blkbuff;
+        strm.avail_out = blk->blkbuff->size;
+        strm.next_out  = blk->blkbuff->data;
         ret = inflate(&strm, Z_SYNC_FLUSH);    /* no bad return value */
         switch (ret) {
             case Z_NEED_DICT:
@@ -132,9 +132,8 @@ uint64_t sqz_inflate(sqzblock_t *blk)
                 return (size_t)ret;  /* state not clobbered */
         }
         //check there is enough space in buffer
-        have = blk->blksize - strm.avail_out;
-        //fprintf(stderr, "**\t\tdcp: %lu\n", blk->blksize);
-        if ( (wbytes + have) > blk->blksize) {
+        have = blk->blkbuff->size - strm.avail_out;
+        if ( (wbytes + have) > blk->blkbuff->size) {
             fprintf(stderr,
                     "[sqzlib ZLIB ERROR]: Decompression error %lu.\n", have);
             ret = Z_ERRNO;

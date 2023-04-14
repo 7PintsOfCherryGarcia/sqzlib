@@ -28,7 +28,6 @@ static void sqz_fastxreset(sqzfastx_t *sqz)
     sqz->endflag    = 0;
     sqz->cmpflag    = 0;
     sqz->offset     = 0;
-    sqz->namepos    = 0;
     sqz->n          = 0;
     sqz->bases      = 0;
     sqz->rem        = 0;
@@ -50,11 +49,14 @@ static void sqz_decode(sqzfastx_t *sqz,
     }
 }
 
-int64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt)
+uint64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt)
 {
+    uint64_t cmpbytes = 0;
     switch (libfmt) {
         case 1:
-            return sqz_deflate(sqz->blk, level);
+            if ( !(cmpbytes = sqz_deflate(sqz->blk, level)) )
+                return 0;
+            return cmpbytes;
         case 2:
             return sqz_zstdcompress(sqz->blk, level);
     }
@@ -188,7 +190,6 @@ uint8_t sqz_readblksize(sqzFile sqzfp, uint8_t libfmt)
     uint64_t nelem;
     nelem = sqz_gzread(sqzfp, &dcpsize, B64);
     nelem += sqz_gzread(sqzfp, &cmpsize, B64);
-    fprintf(stderr, "dcp: %lu cmp: %lu\n", dcpsize, cmpsize);
     if ( nelem != 16 ) goto exit;
     if ( cmpsize > cmpbuff->size ) {
         cmpbuff = sqz_buffrealloc(cmpbuff, cmpsize);
@@ -202,15 +203,13 @@ uint8_t sqz_readblksize(sqzFile sqzfp, uint8_t libfmt)
     }
     blk->cmpbuff->pos = cmpsize;
     blk->blkbuff->pos = dcpsize;
+    fprintf(stderr, "BLKREAD - cmpsize: %lu dcpsize: %lu\n", cmpsize, dcpsize);
     if ( (cmpsize != (uint64_t)sqz_gzread(sqzfp, cmpbuff->data, cmpsize) ) )
         goto exit;
-    fprintf(stderr, "Done reading compressed data from file\n");
-    sleep(100);
     if (dcpsize != sqzdecompress(blk, libfmt))
         goto exit;
     blk->newblk = 1;
     ret = 0;
-    sleep(100);
     exit:
         return ret;
 }
@@ -417,7 +416,6 @@ void sqz_resetsqz(sqzfastx_t *sqz)
     sqz_resetblk(sqz->blk);
     sqz->lseqbuff->pos = 0;
     sqz->namebuffer->pos = 0;
-    sqz->namepos = 0;
     sqz->endflag = 0;
     sqz->blks++;
 }

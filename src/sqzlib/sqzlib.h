@@ -235,7 +235,7 @@ uint8_t sqz_readblksize(sqzFile sqzfp, uint8_t libfmt);
 /*
   Compress encoded data block
 */
-int64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt);
+uint64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt);
 
 
 /*

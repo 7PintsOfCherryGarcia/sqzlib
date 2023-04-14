@@ -55,39 +55,30 @@ void sqz_gzdump(sqzFile sqzfp, const char *ofile)
         if (buff) free(buff);
 }
 
-size_t sqz_deflate(sqzblock_t *blk, int level)
+uint64_t sqz_deflate(sqzblock_t *blk, int level)
 {
     int ret;
-    size_t wbytes = 0;
-    size_t have;
+    uint64_t wbytes = 0;
+    uint64_t have;
     z_stream strm;
-    // allocate deflate state
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
     ret = deflateInit(&strm, level);
-    if (ret != Z_OK) {
-        fprintf(stderr, "[sqzlib ZLIB ERROR]: Failed to init stream.\n");
-        return (size_t)ret;
-    }
-    //Main compression loop
+    if (ret != Z_OK)
+        return 0;
     strm.avail_in = blk->blkbuff->pos;
     strm.next_in  = blk->blkbuff->data;
     do {
-        strm.avail_out = blk->cmpbuff->pos;
+        strm.avail_out = blk->cmpbuff->size;
         strm.next_out  = blk->cmpbuff->data;
-        ret = deflate(&strm, Z_FINISH);    /* no bad return value */
-        if ( ret == Z_STREAM_ERROR ) {
-            fprintf(stderr, "[sqzlib ZLIB ERROR]: Deflate error.\n");
-            return (size_t)ret;  /* state not clobbered */
-        }
+        ret = deflate(&strm, Z_FINISH);
+        if ( ret == Z_STREAM_ERROR )
+            return 0;
         //check there is enough space in buffer
         have = blk->cmpbuff->size - strm.avail_out;
-        if ( (wbytes + have) > blk->blkbuff->size) {
-            fprintf(stderr, "[sqzlib ZLIB ERROR]: Compression error.\n");
-            ret = Z_ERRNO;
-            break;
-        }
+        if ( (wbytes + have) > blk->cmpbuff->size)
+            return 0;
         wbytes += have;
     } while (strm.avail_out == 0);
     //Check compression went well

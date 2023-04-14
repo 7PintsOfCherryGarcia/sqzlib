@@ -35,7 +35,8 @@ typedef struct {
     sqzbuff_t  *blkbuff;
     //Compression
     sqzbuff_t  *cmpbuff;
-    uint64_t   namepos; //Position within namebuffer TODO Rethink this memeber
+    //Generic
+    uint32_t   n;  //Generic counter
     uint64_t   prevlen; //How much of current sequence had been decoded
     uint8_t    newblk;  //flag
 } sqzblock_t;
@@ -57,8 +58,6 @@ typedef struct {
     uint8_t     *qlt;
     sqzbuff_t   *namebuffer;
     uint8_t     *readbuffer;
-    uint64_t    namesize;
-    uint64_t    namepos;
     sqzblock_t  *blk;
     //return members
     uint64_t    n;
@@ -95,7 +94,6 @@ void sqz_getformat(sqzFile sqzfp);
 
 
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
-sqzblock_t *sqz_sqzblkinit(uint64_t size);
 void sqz_fastxkill(sqzfastx_t *sqz);
 void sqz_blkkill(sqzblock_t *blk);
 uint64_t sqz_inflate(sqzblock_t *blk);
@@ -106,6 +104,6 @@ uint64_t sqz_fastXdecode(sqzblock_t *blk,
 size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);
-uint8_t sqz_sqzblkrealloc(sqzblock_t *blk, uint64_t newsize);
+uint8_t sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
 sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
 

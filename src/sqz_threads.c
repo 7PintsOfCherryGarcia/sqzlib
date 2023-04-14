@@ -182,8 +182,11 @@ static void *sqz_dcmpthread(void *thread_data)
                     currentblk, libfmt);
             goto exit;
         }
+        fprintf(stderr, "DECODING\n");
         do {
             dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
+            fprintf(stderr, "\tdecoded size: %lu\n", dsize);
+            sleep(1000);
             if ( (fbpos + dsize) >= fbsize) {
                 fbsize *= 2;
                 filebuff = realloc(filebuff, fbsize);

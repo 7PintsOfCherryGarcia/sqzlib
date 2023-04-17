@@ -25,6 +25,7 @@ typedef struct {
     uint8_t *s;
     uint8_t *q;
     uint64_t l;
+    uint64_t maxl;
 } sqzseq_t;
 
 typedef struct {

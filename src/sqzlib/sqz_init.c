@@ -60,7 +60,7 @@ sqzseq_t *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize)
         free(seq);
         return NULL;
     }
-    seq->l = newsize;
+    seq->maxl = newsize;
     return seq;
 }
 

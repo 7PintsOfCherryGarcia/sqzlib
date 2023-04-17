@@ -16,6 +16,9 @@
 #define FQS       '+'
 #define NL        '\n'
 
+#define sqz_fileformat(f) ((f)->fmt >> 3)
+#define sqz_isfastq(f) (((f)->fmt & 3) == 2 ? 1 : 0)
+
 typedef struct {
     char    *n;
     uint32_t nlen;
@@ -36,9 +39,9 @@ typedef struct {
     //Compression
     sqzbuff_t  *cmpbuff;
     //Generic
-    uint32_t   n;  //Generic counter
-    uint64_t   prevlen; //How much of current sequence had been decoded
-    uint8_t    newblk;  //flag
+    uint32_t   n;        //Generic counter
+    uint64_t   datasize; //How much of current sequence had been decoded
+    uint8_t    newblk;   //flag
 } sqzblock_t;
 
 /*
@@ -52,7 +55,7 @@ typedef struct {
     char        endflag; //Sequece has not completely been read into a buffer flag
     char        cmpflag;
     //data members
-    uint64_t    size; //Amount of sequence read.
+    uint64_t    size;
     uint64_t    offset;
     uint8_t     *seq;
     uint8_t     *qlt;
@@ -72,13 +75,12 @@ typedef struct {
 } sqzfastx_t;
 
 typedef struct sqzFile_s {
-    const char  *namestr;
+    const char  *name;
     void        *gzfp;
     sqzfastx_t  *sqz;
     uint64_t    size;
     uint8_t     ff;
     uint8_t     fmt;
-    uint8_t     libfmt;
     uint64_t    filepos;
 } *sqzFile;
 
@@ -97,7 +99,7 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
 void sqz_fastxkill(sqzfastx_t *sqz);
 void sqz_blkkill(sqzblock_t *blk);
 uint64_t sqz_inflate(sqzblock_t *blk);
-uint64_t sqz_fastXdecode(sqzblock_t *blk,
+uint64_t sqz_fastXdecode(sqzfastx_t *sqz,
                          uint8_t *buff,
                          uint64_t buffsize,
                          uint8_t fqflag);
@@ -107,3 +109,4 @@ uint64_t sqz_zstddecompress(sqzblock_t *blk);
 uint8_t sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
 sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
 
+sqzseq_t *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize);

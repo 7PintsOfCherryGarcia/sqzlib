@@ -100,6 +100,16 @@ void sqzclose(sqzFile file);
 */
 
 /*
+  Load block number n from sqz file
+*/
+uint8_t sqz_loadblockn(sqzFile sqzfp, uint32_t n);
+
+/*
+  Decode up to size bytes of data from sqzFile into buffer
+*/
+uint64_t sqz_decode(sqzFile sqzfp, uint8_t *buff, uint64_t size);
+
+/*
   Write an sqz header
 */
 char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp);
@@ -229,7 +239,7 @@ uint64_t sqz_seqsinblk(sqzblock_t *blk);
 /*
   Read a data block into an sqz block structure
 */
-uint8_t sqz_readblksize(sqzFile sqzfp, uint8_t libfmt);
+uint8_t sqz_readblksize(sqzFile sqzfp);
 
 
 /*
@@ -247,7 +257,7 @@ char sqz_fastXencode(sqzfastx_t *sqz, uint8_t fqflag);
 /*
   Decode data in sqz block to memory
 */
-uint64_t sqz_fastXdecode(sqzblock_t *blk,
+uint64_t sqz_fastXdecode(sqzfastx_t *sqz,
                          uint8_t *buff,
                          uint64_t size,
                          uint8_t fqflag);

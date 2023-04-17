@@ -157,8 +157,6 @@ static void *sqz_dcmpthread(void *thread_data)
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
 
-    uint8_t fqflag = sqz_isfq(sqzfp);
-    uint8_t libfmt = sqz_sqzgetcmplib(sqzfp);
     sqzblock_t *blk =  sqz_sqzgetblk(sqzfp);
 
     outbuff = malloc(LOAD_SIZE);
@@ -173,28 +171,23 @@ static void *sqz_dcmpthread(void *thread_data)
     if (!nblk) goto exit;
     uint32_t currentblk = (uint32_t)id - 1;
     while (currentblk < nblk) {
-        if ( sqz_go2blockn(sqzfp, currentblk) ) {
-            fprintf(stderr, "[sqz ERROR]: Failed to read number of blocks.\n");
+        if ( sqz_loadblockn(sqzfp, currentblk) ) {
+            fprintf(stderr, "[sqz ERROR]: Failed to load block %u\n", currentblk);
             goto exit;
         }
-        if ( sqz_readblksize(sqzfp, libfmt) ) {
-            fprintf(stderr, "[sqz ERROR]: Failed to read block %u %u.\n",
-                    currentblk, libfmt);
-            goto exit;
-        }
-        fprintf(stderr, "DECODING\n");
         do {
-            dsize = sqz_fastXdecode(blk, outbuff, LOAD_SIZE, fqflag);
+            dsize = sqz_decode(sqzfp, outbuff, LOAD_SIZE);
             fprintf(stderr, "\tdecoded size: %lu\n", dsize);
-            sleep(1000);
             if ( (fbpos + dsize) >= fbsize) {
-                fbsize *= 2;
+                fbsize <<= 2;
                 filebuff = realloc(filebuff, fbsize);
                 if (!filebuff) goto exit;
             }
             memcpy(filebuff + fbpos, outbuff, dsize);
             fbpos += dsize;
         } while ( sqz_newblk(blk) );
+        fprintf(stderr, "Done!!! about to dump!!\n");
+        sleep(100);
         pthread_mutex_lock(&(sqzthread->mtx));
         fwrite(filebuff, fbpos, 1, sqzthread->ofp);
         fflush(sqzthread->ofp);

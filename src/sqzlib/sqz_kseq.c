@@ -14,6 +14,7 @@ static uint8_t sqz_checksqz(sqzFile sqzfp)
     //Read magic
     sqz_gzread(sqzfp, (void *)&magic, 4);
     if (MAGIC ^ magic) {
+        //Not sqz file
         sqz_gzrewind(sqzfp);
         return 0;
     }
@@ -60,6 +61,7 @@ static uint8_t sqz_loadname(sqzbuff_t *buff, kseq_t *seq)
 
 static uint8_t sqz_cpyseq(sqzseq_t *seq, kseq_t *kseq)
 {
+    //TODO think better the realloc
     if (!kseq) return 1;
     if (kseq->seq.l > seq->l) {
         seq->s = realloc(seq->s, kseq->seq.l + 1);

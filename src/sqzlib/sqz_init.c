@@ -34,7 +34,7 @@ static sqzseq_t *sqz_seqinit(void)
 
 static sqzblock_t *sqz_sqzblkinit(uint64_t size)
 {
-    sqzblock_t *blk = malloc(sizeof(sqzblock_t));
+    sqzblock_t *blk = calloc(1, sizeof(sqzblock_t));
     if (!blk) return NULL;
     //Encoding buffer
     blk->blkbuff = sqz_buffinit(size);
@@ -42,9 +42,6 @@ static sqzblock_t *sqz_sqzblkinit(uint64_t size)
         free(blk);
         return NULL;
     }
-    blk->n       = 0;
-    blk->prevlen = 0;
-    blk->newblk  = 1;
     //Compression buffer
     blk->cmpbuff = sqz_buffinit(size);
     if (!blk->cmpbuff) {
@@ -53,6 +50,18 @@ static sqzblock_t *sqz_sqzblkinit(uint64_t size)
         return NULL;
     }
     return blk;
+}
+
+sqzseq_t *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize)
+{
+    seq->s = realloc(seq->s, newsize + 1);
+    seq->q = realloc(seq->q, newsize + 1);
+    if ( !seq->s || !seq->q ) {
+        free(seq);
+        return NULL;
+    }
+    seq->l = newsize;
+    return seq;
 }
 
 sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size)

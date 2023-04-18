@@ -345,28 +345,6 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
     return 0;
 }
 
-/*
-uint64_t sqz_loadblk(sqzblock_t *blk, uint8_t **b, uint64_t *s, uint8_t fq)
-{
-    uint64_t p = 0;
-    uint64_t d = *s;
-    uint8_t *o = *b;
-    uint64_t w = 0;
-    while (blk->newblk) {
-        p = sqz_fastXdecode(blk, o + w, d - w, fq);
-        if ( (p == d) || (0 == p) ) {
-            d <<= 2;
-            *b = realloc(*b, d);
-            o = *b;
-            if (!b) return 0;
-        }
-        w += p;
-    }
-    *s = d;
-    return w;
-}
-*/
-
 sqzFile sqzopen(const char *filename, const char *mode)
 {
     sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));

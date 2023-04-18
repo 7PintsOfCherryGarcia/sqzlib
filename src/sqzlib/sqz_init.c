@@ -28,7 +28,7 @@ static sqzseq_t *sqz_seqinit(void)
         free(seq);
         return NULL;
     }
-    seq->nlen = 256;
+    seq->nlen = 0;
     return seq;
 }
 
@@ -100,14 +100,12 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
             sqz->qlt[size] = 0;
             break;
         case 5:
-            sqz->readbuffer = malloc(size + 1);
+            sqz->readbuffer = sqz_buffinit(size + 1);
             if (!sqz->readbuffer) goto exit;
-            sqz->readbuffer[size] = 0;
             break;
         case 6:
-            sqz->readbuffer = malloc(size + 1);
+            sqz->readbuffer = sqz_buffinit(size + 1);
             if (!sqz->readbuffer) goto exit;
-            sqz->readbuffer[size] = '\0';
             break;
     }
     ret = 0;

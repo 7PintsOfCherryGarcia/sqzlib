@@ -109,14 +109,15 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
             if ( l/3 > sqz->lseqbuff->size)
                 if ( !(sqz->lseqbuff = sqz_buffrealloc(sqz->lseqbuff, l/3)) ) {
                     offset = 0;
+                    n = 0;
                     goto exit;
                 }
-            sqz->endflag = 1;
             if ( sqz_cpyseq(sqz->lastseq, kseq) ) {
                 offset = 0;
+                n = 0;
                 goto exit;
             }
-            sqz->prevlen = l;
+            sqz->endflag = 1;
             goto exit;
         }
         memcpy(seq + offset, &l, B64);
@@ -162,7 +163,6 @@ static uint32_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
                 offset = 0;
                 goto exit;
             }
-            sqz->prevlen = l;
             goto exit;
         }
         memcpy(seq + offset, &l, B64);

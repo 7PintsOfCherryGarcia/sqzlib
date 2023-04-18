@@ -159,8 +159,8 @@ static void *sqz_dcmpthread(void *thread_data)
 
     sqzblock_t *blk =  sqz_sqzgetblk(sqzfp);
 
-    outbuff = malloc(LOAD_SIZE);
-    if (!outbuff) goto exit;
+    //outbuff = malloc(LOAD_SIZE);
+    //if (!outbuff) goto exit;
 
     filebuff = malloc(LOAD_SIZE);
     if (!filebuff) goto exit;
@@ -176,14 +176,14 @@ static void *sqz_dcmpthread(void *thread_data)
             goto exit;
         }
         do {
-            dsize = sqz_decode(sqzfp, outbuff, LOAD_SIZE);
+            dsize = sqz_decode(sqzfp);
             fprintf(stderr, "\tdecoded size: %lu\n", dsize);
             if ( (fbpos + dsize) >= fbsize) {
                 fbsize <<= 2;
                 filebuff = realloc(filebuff, fbsize);
                 if (!filebuff) goto exit;
             }
-            memcpy(filebuff + fbpos, outbuff, dsize);
+            //memcpy(filebuff + fbpos, outbuff, dsize);
             fbpos += dsize;
         } while ( sqz_newblk(blk) );
         fprintf(stderr, "Done!!! about to dump!!\n");

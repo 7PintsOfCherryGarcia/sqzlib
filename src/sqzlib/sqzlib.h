@@ -107,7 +107,7 @@ uint8_t sqz_loadblockn(sqzFile sqzfp, uint32_t n);
 /*
   Decode up to size bytes of data from sqzFile into buffer
 */
-uint64_t sqz_decode(sqzFile sqzfp, uint8_t *buff, uint64_t size);
+uint64_t sqz_decode(sqzFile sqzfp);
 
 /*
   Write an sqz header

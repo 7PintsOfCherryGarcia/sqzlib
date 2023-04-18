@@ -61,7 +61,7 @@ typedef struct {
     uint8_t     *seq;
     uint8_t     *qlt;
     sqzbuff_t   *namebuffer;
-    uint8_t     *readbuffer;
+    sqzbuff_t   *readbuffer;
     sqzblock_t  *blk;
     //return members
     uint64_t    n;

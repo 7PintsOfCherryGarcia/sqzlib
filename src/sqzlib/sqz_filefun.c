@@ -44,10 +44,10 @@ static void sqz_decode_(sqzfastx_t *sqz,
 {
     switch (fmt) {
     case 2:
-        sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 1);
+        //sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 1);
         break;
     case 1:
-        sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 0);
+        //sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 0);
         break;
     }
 }
@@ -418,4 +418,14 @@ uint8_t sqz_loadblockn(sqzFile sqzfp, uint32_t n)
     ret = 0;
     exit:
         return ret;
+}
+
+uint8_t sqz_emptysqzfp(sqzFile sqzfp, uint8_t *buff)
+{
+    if (!buff) return 1;
+    uint8_t *fpbuff = sqzfp->sqz->readbuffer->data;
+    uint64_t size   = sqzfp->sqz->readbuffer->pos;
+    memcpy(buff, fpbuff, size);
+    sqzfp->sqz->readbuffer->pos = 0;
+    return 0;
 }

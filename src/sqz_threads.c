@@ -145,9 +145,6 @@ static void *sqz_dcmpthread(void *thread_data)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thread_data;
     uint8_t n = sqzthread->nthread;
-
-    uint8_t *outbuff = NULL;
-    uint8_t *filebuff = NULL;
     uint64_t dsize = 0;
 
     pthread_mutex_lock(&(sqzthread->mtx));
@@ -157,16 +154,9 @@ static void *sqz_dcmpthread(void *thread_data)
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
 
-    sqzblock_t *blk =  sqz_sqzgetblk(sqzfp);
-
-    //outbuff = malloc(LOAD_SIZE);
-    //if (!outbuff) goto exit;
-
-    filebuff = malloc(LOAD_SIZE);
+    uint8_t *filebuff = malloc(LOAD_SIZE);
     if (!filebuff) goto exit;
     uint64_t fbsize = LOAD_SIZE;
-    uint64_t fbpos = 0;
-
     uint32_t nblk = sqz_getblocks(sqzfp);
     if (!nblk) goto exit;
     uint32_t currentblk = (uint32_t)id - 1;
@@ -175,29 +165,23 @@ static void *sqz_dcmpthread(void *thread_data)
             fprintf(stderr, "[sqz ERROR]: Failed to load block %u\n", currentblk);
             goto exit;
         }
-        do {
-            dsize = sqz_decode(sqzfp);
-            fprintf(stderr, "\tdecoded size: %lu\n", dsize);
-            if ( (fbpos + dsize) >= fbsize) {
-                fbsize <<= 2;
-                filebuff = realloc(filebuff, fbsize);
-                if (!filebuff) goto exit;
-            }
-            //memcpy(filebuff + fbpos, outbuff, dsize);
-            fbpos += dsize;
-        } while ( sqz_newblk(blk) );
-        fprintf(stderr, "Done!!! about to dump!!\n");
-        sleep(100);
+        dsize = sqz_decode(sqzfp);
+        fprintf(stderr, "\tdecoded size: %lu buffersize: %lu\n", dsize, fbsize);
+        if ( dsize >= fbsize) {
+            filebuff = realloc(filebuff, dsize);
+            if (!filebuff) goto exit;
+            fbsize = dsize;
+        }
+        sqz_emptysqzfp(sqzfp, filebuff);
+
         pthread_mutex_lock(&(sqzthread->mtx));
-        fwrite(filebuff, fbpos, 1, sqzthread->ofp);
+        fwrite(filebuff, dsize, 1, sqzthread->ofp);
         fflush(sqzthread->ofp);
         pthread_mutex_unlock(&(sqzthread->mtx));
-        fbpos = 0;
         currentblk += n;
     }
     exit:
         if(sqzfp) sqzclose(sqzfp);
-        if(outbuff) free(outbuff);
         if (filebuff) free(filebuff);
         pthread_exit(NULL);
 }

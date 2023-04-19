@@ -100,10 +100,6 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
 void sqz_fastxkill(sqzfastx_t *sqz);
 void sqz_blkkill(sqzblock_t *blk);
 uint64_t sqz_inflate(sqzblock_t *blk);
-uint64_t sqz_fastXdecode(sqzfastx_t *sqz,
-                         uint8_t *buff,
-                         uint64_t buffsize,
-                         uint8_t fqflag);
 size_t sqz_deflate(sqzblock_t *blk, int level);
 int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
 uint64_t sqz_zstddecompress(sqzblock_t *blk);

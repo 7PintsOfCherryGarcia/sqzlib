@@ -198,6 +198,11 @@ uint8_t sqz_format(sqzFile sqzfp);
 
 
 /*
+  Move decoded block in sqzFile to buffer
+*/
+uint8_t sqz_emptysqzfp(sqzFile sqzfp, uint8_t *buff);
+
+/*
   ##############################################################################
   sqz structure routines
   ##############################################################################

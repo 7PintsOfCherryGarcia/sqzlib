@@ -282,7 +282,7 @@ static uint8_t sqz_fastaheadblk(sqzfastx_t *sqz)
         sqz_1writebuff(buff, eblk);
         k += seqlen + 1;
     }
-    if (sqz->endflag) {
+    if (sqz->lseqflag) {
         sqzseq_t *sqzseq = sqz->lastseq;
         sqz_64writebuff(buff, sqzseq->l);
         sqz_seqencode((uint8_t *)sqzseq->s, sqzseq->l, sqz->lseqbuff);
@@ -324,7 +324,7 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
         blkpos += sqz_qualencode(qlt, seqlen, buff);
         k += seqlen + 1;
     }
-    if (sqz->endflag) {
+    if (sqz->lseqflag) {
         sqzseq_t *sqzseq = sqz->lastseq;
         blkpos += sqz_64writebuff(buff, sqzseq->l);
         sqz_seqencode((uint8_t *)sqzseq->s, sqzseq->l, sqz->lseqbuff);
@@ -465,16 +465,13 @@ static uint64_t sqz_blkdecode(sqzbuff_t *buff, uint8_t *outbuff, uint64_t blklen
     return outpos;
 }
 
-static uint64_t sqz_seqdecode(sqzbuff_t *buff,
-                              sqzseq_t  *sqzseq,
-                              char      qflag)
+static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, char qflag)
 {
     uint64_t l = sqz_getlength(buff);
     if (l > sqzseq->maxl) {
         sqzseq = sqz_seqrealloc(sqzseq, l);
         if (!sqzseq) return 1;
     }
-
     uint64_t blklen = 0;
     uint64_t bases  = 0;
     uint64_t nnum = 0;
@@ -505,17 +502,15 @@ static uint64_t sqz_seqdecode(sqzbuff_t *buff,
 
 static uint64_t sqz_fastXdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff, uint8_t fqflag)
 {
-    sqzbuff_t *codebuff = sqz->blk->blkbuff;
+    sqzbuff_t *blkbuff = sqz->blk->blkbuff;
     uint64_t  datasize  = sqz->blk->datasize;
     sqzbuff_t *namebuff = sqz->namebuffer;
     sqzseq_t  *sqzseq   = sqz->lastseq;
     uint32_t  n         = 0;
-    uint64_t  decoded   = 0;
-    while ( decoded < datasize ) {
+    while ( blkbuff->pos < datasize ) {
         sqz_go2namen(namebuff, sqzseq, n);
-        if ( sqz_seqdecode(codebuff, sqzseq, fqflag) )
+        if ( sqz_seqdecode(blkbuff, sqzseq, fqflag) )
             goto exit;
-        decoded += codebuff->pos;
         if ( sqz_fasta2buff(sqzseq, outbuff) ) {
             outbuff->pos = 0;
             n = 0;

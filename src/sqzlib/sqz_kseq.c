@@ -91,16 +91,15 @@ static uint8_t sqz_cpyseq(sqzseq_t *seq, kseq_t *kseq)
 static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
 {
     uint64_t offset = 0;
-    uint64_t l;
     uint64_t bases  = 0;
     uint64_t maxlen = sqz->size - B64 - 1;
+    uint64_t l;
     uint32_t n      = 0;
     uint8_t *seq = sqz->seq;
-
     while ( (kseq_read(kseq) >= 0) ) {
+        n++;
         l = kseq->seq.l;
         bases += l;
-        n++;
         if (!sqz_loadname(sqz->namebuffer, kseq)) {
             offset = 0;
             goto exit;
@@ -117,7 +116,7 @@ static uint32_t sqz_fastanblock(sqzfastx_t *sqz, kseq_t *kseq)
                 n = 0;
                 goto exit;
             }
-            sqz->endflag = 1;
+            sqz->lseqflag = 1;
             goto exit;
         }
         memcpy(seq + offset, &l, B64);
@@ -158,7 +157,7 @@ static uint32_t sqz_fastqnblock(sqzfastx_t *sqz, kseq_t *kseq)
                     offset = 0;
                     goto exit;
                 }
-            sqz->endflag = 1;
+            sqz->lseqflag = 1;
             if ( sqz_cpyseq(sqz->lastseq, kseq) ) {
                 offset = 0;
                 goto exit;
@@ -204,7 +203,7 @@ void sqz_getformat(sqzFile sqzfp)
         return;
 }
 
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
+uint32_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
 {
     if (fqflag) return sqz_fastqnblock(sqz, seq);
     return sqz_fastanblock(sqz, seq);

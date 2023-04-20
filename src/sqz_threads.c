@@ -151,11 +151,12 @@ static void *sqz_dcmpthread(void *thread_data)
     uint8_t id = sqzthread->threadid++;
     pthread_mutex_unlock(&(sqzthread->mtx));
 
+    uint8_t *filebuff = NULL;
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "rb");
     if (!sqzfp) goto exit;
-
-    uint8_t *filebuff = malloc(LOAD_SIZE);
+    filebuff = malloc(LOAD_SIZE);
     if (!filebuff) goto exit;
+
     uint64_t fbsize = LOAD_SIZE;
     uint32_t nblk = sqz_getblocks(sqzfp);
     if (!nblk) goto exit;
@@ -166,7 +167,6 @@ static void *sqz_dcmpthread(void *thread_data)
             goto exit;
         }
         dsize = sqz_decode(sqzfp);
-        fprintf(stderr, "\tdecoded size: %lu buffersize: %lu\n", dsize, fbsize);
         if ( dsize >= fbsize) {
             filebuff = realloc(filebuff, dsize);
             if (!filebuff) goto exit;

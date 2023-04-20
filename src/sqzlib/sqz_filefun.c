@@ -28,7 +28,7 @@ static void sqz_blkreset(sqzblock_t *blk)
 static void sqz_fastxreset(sqzfastx_t *sqz)
 {
     sqz_blkreset(sqz->blk);
-    sqz->endflag    = 0;
+    sqz->lseqflag    = 0;
     sqz->cmpflag    = 0;
     sqz->offset     = 0;
     sqz->n          = 0;
@@ -193,9 +193,9 @@ uint8_t sqz_readblksize(sqzFile sqzfp)
         if (!blkbuff) goto exit;
         blk->blkbuff = blkbuff;
     }
-    blk->cmpbuff->pos = cmpsize;
-    blk->blkbuff->pos = dcpsize;
-    fprintf(stderr, "BLKREAD - cmpsize: %lu dcpsize: %lu\n", cmpsize, dcpsize);
+
+    cmpbuff->pos = cmpsize;
+    blkbuff->pos = dcpsize;
     if ( (cmpsize != (uint64_t)sqz_gzread(sqzfp, cmpbuff->data, cmpsize) ) )
         goto exit;
     if (dcpsize != sqzdecompress(blk, sqz_fileformat(sqzfp)))
@@ -211,10 +211,10 @@ uint8_t sqz_readblksize(sqzFile sqzfp)
     }
     names->data = memcpy(names->data, (uint8_t *)blkbuff->data + datasize, namesize);
     names->pos  = namesize;
-    blk->datasize  = blkbuff->pos - B64 - namesize;
+    blk->datasize = blkbuff->pos - B64 - namesize;
     blk->newblk = 1;
-    ret = 0;
     blkbuff->pos = 0;
+    ret = 0;
     exit:
         return ret;
 }
@@ -400,7 +400,7 @@ void sqz_resetsqz(sqzfastx_t *sqz)
     sqz_resetblk(sqz->blk);
     sqz->lseqbuff->pos = 0;
     sqz->namebuffer->pos = 0;
-    sqz->endflag = 0;
+    sqz->lseqflag = 0;
     sqz->blks++;
 }
 

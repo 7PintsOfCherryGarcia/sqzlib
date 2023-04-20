@@ -1,4 +1,3 @@
-
 #define LOAD_SIZE 4UL*1024UL*1024UL
 #define NAME_SIZE 1UL*1024UL*1024UL
 #define B64       8U
@@ -45,16 +44,10 @@ typedef struct {
     uint8_t    newblk;   //flag
 } sqzblock_t;
 
-/*
-  "sqzfastx_t"
-  libsqueezma main data loading structure. Defines the buffers and flags for
-  reading sequencing data into.
-*/
 typedef struct {
     //flags
     uint8_t     datflag;
-    char        endflag; //Sequece has not completely been read into a buffer flag
-    char        cmpflag;
+    uint8_t     cmpflag;
     //data members
     uint64_t    size;
     uint64_t    offset;
@@ -64,12 +57,13 @@ typedef struct {
     sqzbuff_t   *readbuffer;
     sqzblock_t  *blk;
     //return members
-    uint64_t    n;
+    uint32_t    n;
     uint64_t    bases;
-    uint64_t    blks;
+    uint32_t    blks;
     //Last sequence loaded
     sqzseq_t    *lastseq;
     sqzbuff_t   *lseqbuff;
+    uint8_t     lseqflag; //Sequece has not completely been read into a buffer flag
     //Partially decoded sequences
     uint64_t    rem;     //Length of sequence remaining to be read
     uint64_t    prevlen; //Size of sequence currently being read
@@ -86,24 +80,20 @@ typedef struct sqzFile_s {
 } *sqzFile;
 
 
-uint8_t  sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode);
-void sqz_gzclose(sqzFile sqzfp);
-int32_t  sqz_gzread(sqzFile file, void *buff, uint32_t len);
-void     sqz_gzrewind(sqzFile sqzfp);
-uint64_t sqz_gztell(sqzFile sqzfp);
-void     sqz_gzseek(sqzFile sqzfp, uint64_t OFS, uint8_t WH);
-
-void sqz_getformat(sqzFile sqzfp);
-
-
+uint8_t    sqz_gzopen(const char *filename, sqzFile sqzfp, const char *mode);
+void       sqz_gzclose(sqzFile sqzfp);
+int32_t    sqz_gzread(sqzFile file, void *buff, uint32_t len);
+void       sqz_gzrewind(sqzFile sqzfp);
+uint64_t   sqz_gztell(sqzFile sqzfp);
+void       sqz_gzseek(sqzFile sqzfp, uint64_t OFS, uint8_t WH);
+void       sqz_getformat(sqzFile sqzfp);
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
-void sqz_fastxkill(sqzfastx_t *sqz);
-void sqz_blkkill(sqzblock_t *blk);
-uint64_t sqz_inflate(sqzblock_t *blk);
-size_t sqz_deflate(sqzblock_t *blk, int level);
-int64_t sqz_zstdcompress(sqzblock_t *blk, int level);
-uint64_t sqz_zstddecompress(sqzblock_t *blk);
-uint8_t sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
-sqzbuff_t *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
-
-sqzseq_t *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize);
+void       sqz_fastxkill(sqzfastx_t *sqz);
+void       sqz_blkkill(sqzblock_t *blk);
+uint64_t   sqz_inflate(sqzblock_t *blk);
+size_t     sqz_deflate(sqzblock_t *blk, int level);
+int64_t    sqz_zstdcompress(sqzblock_t *blk, int level);
+uint64_t   sqz_zstddecompress(sqzblock_t *blk);
+uint8_t    sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
+sqzbuff_t  *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
+sqzseq_t   *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize);

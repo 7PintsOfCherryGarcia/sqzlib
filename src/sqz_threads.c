@@ -111,6 +111,18 @@ static sqzfastx_t **sqz_sqzqueueinit(uint8_t n, uint8_t fmt)
     return sqzqueue;
 }
 
+static void sqz_sqzqueuekill(sqzfastx_t **sqzqueue, uint8_t n)
+{
+    sqzfastx_t *sqz;
+    if (sqzqueue) {
+        for (uint8_t i = 0; i < n; i++) {
+            sqz = sqzqueue[i];
+            sqz_fastxkill(sqz);
+        }
+        free(sqzqueue);
+    }
+}
+
 static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 {
     pthread_mutex_lock(&(sqzthread->mtx));
@@ -127,11 +139,6 @@ static void sqz_wakeconsumers(sqzthread_t *sqzthread)
 static void sqz_threadkill(sqzthread_t *sqzthread)
 {
     if (sqzthread) {
-        if( sqzthread->sqzqueue )
-            for (int i = 0; i < sqzthread->nthread; i++)
-                if ( sqzthread->sqzqueue[i] )
-                    sqz_fastxkill(sqzthread->sqzqueue[i]);
-        free(sqzthread->sqzqueue);
         pthread_attr_destroy(&(sqzthread->thatt));
         pthread_mutex_destroy(&(sqzthread->mtx));
         pthread_cond_destroy(&(sqzthread->conscond));
@@ -297,6 +304,7 @@ static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)
 static void *sqz_compressor(void *thrdata)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thrdata;
+    uint8_t n = sqzthread->nthread;
     sqzthread->threadid++;
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "r");
     if (!sqzfp) goto exit;
@@ -306,7 +314,6 @@ static void *sqz_compressor(void *thrdata)
         goto exit;
     }
 
-    uint8_t n = sqzthread->nthread;
     sqzthread->sqzqueue = sqz_sqzqueueinit(n, fmt);
     if ( !(sqzthread->sqzqueue) ) goto exit;
     sqzthread->fqflag = sqz_isfq(sqzfp);
@@ -331,6 +338,8 @@ static void *sqz_compressor(void *thrdata)
     sqz_filetail(nseq, b, sqzthread->ofp);
     exit:
         if (sqzfp) sqzclose(sqzfp);
+        if (sqzthread->sqzqueue) sqz_sqzqueuekill(sqzthread->sqzqueue, n);
+        if (sqzthread->ofp) fclose(sqzthread->ofp);
         return NULL;
 }
 

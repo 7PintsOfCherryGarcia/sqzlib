@@ -19,6 +19,15 @@ static sqzbuff_t *sqz_buffinit(uint64_t size)
     return buff;
 }
 
+static void sqz_buffkill(sqzbuff_t *buff)
+{
+    if (buff) {
+        if (buff->data)
+            free(buff->data);
+        free(buff);
+    }
+}
+
 static sqzseq_t *sqz_seqinit(void)
 {
     sqzseq_t *seq = calloc(1, sizeof(sqzseq_t));
@@ -32,17 +41,25 @@ static sqzseq_t *sqz_seqinit(void)
     return seq;
 }
 
+static void sqz_seqkill(sqzseq_t *seq)
+{
+    if (seq) {
+        if (seq->n) free(seq->n);
+        if (seq->s) free(seq->s);
+        if (seq->q) free(seq->q);
+        free(seq);
+    }
+}
+
 static sqzblock_t *sqz_sqzblkinit(uint64_t size)
 {
     sqzblock_t *blk = calloc(1, sizeof(sqzblock_t));
     if (!blk) return NULL;
-    //Encoding buffer
     blk->blkbuff = sqz_buffinit(size);
     if (!blk->blkbuff) {
         free(blk);
         return NULL;
     }
-    //Compression buffer
     blk->cmpbuff = sqz_buffinit(size);
     if (!blk->cmpbuff) {
         free(blk->blkbuff);
@@ -50,6 +67,15 @@ static sqzblock_t *sqz_sqzblkinit(uint64_t size)
         return NULL;
     }
     return blk;
+}
+
+static void sqz_blkkill(sqzblock_t *blk)
+{
+    if (blk) {
+        sqz_buffkill(blk->blkbuff);
+        sqz_buffkill(blk->cmpbuff);
+        free(blk);
+    }
 }
 
 sqzseq_t *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize)
@@ -124,10 +150,15 @@ sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size)
 void sqz_fastxkill(sqzfastx_t *sqz)
 {
     if (sqz) {
-        free(sqz->seq);
-        free(sqz->namebuffer);
-        free(sqz->readbuffer);
-        free(sqz->qlt);
+        if (sqz->seq)
+            free(sqz->seq);
+        if (sqz->qlt)
+            free(sqz->qlt);
+        sqz_buffkill(sqz->namebuffer);
+        sqz_buffkill(sqz->readbuffer);
+        sqz_buffkill(sqz->lseqbuff);
+        sqz_blkkill(sqz->blk);
+        sqz_seqkill(sqz->lastseq);
         free(sqz);
     }
 }
@@ -141,14 +172,7 @@ uint8_t sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize)
     return 0;
 }
 
-void sqz_blkkill(sqzblock_t *blk)
-{
-    if (blk) {
-        free(blk->blkbuff);
-        free(blk->cmpbuff);
-        free(blk);
-    }
-}
+
 
 uint64_t sqz_seqsinblk(sqzblock_t *blk)
 {

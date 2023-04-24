@@ -89,7 +89,6 @@ void       sqz_gzseek(sqzFile sqzfp, uint64_t OFS, uint8_t WH);
 void       sqz_getformat(sqzFile sqzfp);
 sqzfastx_t *sqz_fastxinit(uint8_t fmt, uint64_t size);
 void       sqz_fastxkill(sqzfastx_t *sqz);
-void       sqz_blkkill(sqzblock_t *blk);
 uint64_t   sqz_inflate(sqzblock_t *blk);
 size_t     sqz_deflate(sqzblock_t *blk, int level);
 int64_t    sqz_zstdcompress(sqzblock_t *blk, int level);

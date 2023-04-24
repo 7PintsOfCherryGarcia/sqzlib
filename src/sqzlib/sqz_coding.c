@@ -69,7 +69,7 @@ static void sqz_go2namen(sqzbuff_t *names, sqzseq_t  *seq, uint32_t n)
     memcpy(seq->n, namelist, seq->nlen + 1);
 }
 
-static uint64_t sqz_getlength(sqzbuff_t *buff)
+static inline uint64_t sqz_getlength(sqzbuff_t *buff)
 {
     uint64_t l =  *(uint64_t *)( (uint8_t *)buff->data + buff->pos );
     buff->pos += B64;
@@ -180,7 +180,7 @@ static uint64_t sqz_qualencode(const uint8_t *qlt, uint64_t l, sqzbuff_t *buff)
                 l--;
                 code = code | (q & 224);
                 code = code | c;
-                pos += sqz_1writebuff(buff, code);
+                sqz_1writebuff(buff, code);
                 c = 0;
                 code = 0;
                 q = sqz_8binqual(*(qlt + 1));
@@ -192,7 +192,7 @@ static uint64_t sqz_qualencode(const uint8_t *qlt, uint64_t l, sqzbuff_t *buff)
         //Encode
         code = code | (q & 224);
         code = code | c;
-        pos += sqz_1writebuff(buff, code);
+        sqz_1writebuff(buff, code);
         qlt++;
         l--;
         q = sqz_8binqual(*qlt);
@@ -305,7 +305,6 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
 {
     sqzblock_t *blk = sqz->blk;
     sqzbuff_t  *buff  = blk->blkbuff;
-    uint64_t  blkpos     = 0;
     uint8_t  *seqb       = sqz->seq;
     uint8_t  *qltb       = sqz->qlt;
     uint64_t  sqzsize    = sqz->offset;
@@ -313,36 +312,37 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
     uint8_t  *qlt     = NULL;
     uint64_t  seqlen  = 0;
     uint64_t  k       = 0;
+    fprintf(stderr, "Beginning of block\n");
+    fprintf(stderr, "\tbuff->pos: %lu\n", buff->pos);
+    fprintf(stderr, "\tbuff->size: %lu\n", buff->size);
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqb + k );
         k += B64;
-        blkpos += sqz_64writebuff(buff, seqlen);
+        sqz_64writebuff(buff, seqlen);
         seq  = seqb + k;
         qlt  = qltb + k;
-        blkpos += sqz_seqencode(seq, seqlen, buff);
-        blkpos += sqz_1writebuff(buff, qblk);
-        blkpos += sqz_qualencode(qlt, seqlen, buff);
+        sqz_seqencode(seq, seqlen, buff);
+        sqz_1writebuff(buff, qblk);
+        sqz_qualencode(qlt, seqlen, buff);
         k += seqlen + 1;
     }
     if (sqz->lseqflag) {
         sqzseq_t *sqzseq = sqz->lastseq;
-        blkpos += sqz_64writebuff(buff, sqzseq->l);
+        sqz_64writebuff(buff, sqzseq->l);
         sqz_seqencode((uint8_t *)sqzseq->s, sqzseq->l, sqz->lseqbuff);
         sqz_1writebuff(sqz->lseqbuff, qblk);
         sqz_qualencode((uint8_t *)sqzseq->q, sqzseq->l, sqz->lseqbuff);
-        if ( (sqz->lseqbuff->pos + blkpos) > buff->size) {
-            buff = sqz_buffrealloc(buff, sqz->lseqbuff->pos + blkpos + 1);
-            blk->blkbuff = buff;
-        }
-        blkpos += sqz_appendbuff(buff, sqz->lseqbuff);
-
+        if ( (sqz->lseqbuff->pos + buff->pos) > buff->size)
+            if ( sqz_blkrealloc(blk, sqz->lseqbuff->pos + buff->pos + 1) )
+                return 1;
+        fprintf(stderr, "buff->pos: %lu\n", buff->pos);
+        sqz_appendbuff(buff, sqz->lseqbuff);
     }
-    if ( (buff->pos + sqz->namebuffer->pos) >= buff->size ) {
-        buff = sqz_buffrealloc(buff, buff->pos + sqz->namebuffer->pos + B64);
-        blk->blkbuff = buff;
-    }
-    blkpos += sqz_appendbuff(buff, sqz->namebuffer);
-    blkpos += sqz_64writebuff(buff, sqz->namebuffer->pos);
+    if ( (buff->pos + sqz->namebuffer->pos) >= buff->size )
+        if ( sqz_blkrealloc(blk, buff->pos + sqz->namebuffer->pos + B64) )
+            return 1;
+    sqz_appendbuff(buff, sqz->namebuffer);
+    sqz_64writebuff(buff, sqz->namebuffer->pos);
     sqz->cmpflag = 1;
     return 1;
 }
@@ -363,38 +363,24 @@ static inline uint64_t sqz_blksize(uint64_t blklen)
     return ( (blklen / 32) + ((blklen % 32) > 0) ) * B64;
 }
 
-static uint64_t sqz_qdecode(const uint8_t  *codebuff,
-                            uint8_t  *outbuff,
-                            uint64_t rquals,
-                            uint64_t offset)
+static uint64_t sqz_qdecode(sqzbuff_t *buff,
+                            uint8_t   *qlt,
+                            uint64_t l)
 {
-    uint64_t pos = 0;
+    uint8_t *codebuff = (uint8_t *)buff->data + buff->pos;
     uint64_t nbyte = 0;
     uint8_t  q;
-    uint8_t  prevqn;
-    uint8_t  i = 0;
-    uint8_t  j;
-    //Go to byte of current offset
-    while (pos < offset) {
-        pos += 1 + (*(codebuff + nbyte) & 31);
-        nbyte++;
-    }
-    prevqn = pos - offset;
-    if (prevqn) {
-        q = (*(codebuff - 1) & 224) >> 5;
-        for (i = 0; i < prevqn; i++)
-            *outbuff++ = qual_val_table[q];
-        rquals -= prevqn;
-    }
-    while (rquals) {
+    uint8_t  i, j;
+    while (l) {
         i = 1 + (*(codebuff + nbyte) & 31);
         q = (*(codebuff + nbyte) & 224) >> 5;
         nbyte++;
-        i = i > rquals ? rquals : i;
-        rquals -= i;
+        i = i > l ? l : i;
+        l -= i;
         for (j = 0; j < i; j++)
-            *outbuff++ = qual_val_table[q];
+            *qlt++ = qual_val_table[q];
     }
+    buff->pos += nbyte;
     return nbyte;
 }
 
@@ -465,9 +451,10 @@ static uint64_t sqz_blkdecode(sqzbuff_t *buff, uint8_t *outbuff, uint64_t blklen
     return outpos;
 }
 
-static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, char qflag)
+static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, uint8_t qflag)
 {
     uint64_t l = sqz_getlength(buff);
+    fprintf(stderr, "l: %lu\n", l);
     if (l > sqzseq->maxl) {
         sqzseq = sqz_seqrealloc(sqzseq, l);
         if (!sqzseq) return 1;
@@ -494,7 +481,7 @@ static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, char qflag)
     //Decode quality strings for fastq data
     //TODO deal with this later
     if (qflag)
-        sqz_qdecode((uint8_t *)buff->data, sqzseq->q, l, 0);
+        sqz_qdecode(buff, sqzseq->q, l);
     if (bases != l) return 1;
     sqzseq->l = bases;
     return 0;

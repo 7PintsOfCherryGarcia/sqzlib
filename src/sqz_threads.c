@@ -1,12 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <zlib.h>
 #include <pthread.h>
 
 #include "../sqzlib/sqzlib.h"
-#include "klib/kseq.h"
-KSEQ_INIT(sqzFile, sqz_gzread)
 
 
 typedef struct {
@@ -280,9 +277,7 @@ static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)
 {
     uint32_t ret = 0, b = 0;
     sqzfastx_t **sqzqueue = sqzthread->sqzqueue;
-    kseq_t *seq = kseq_init(sqzfp);
     uint8_t n = sqzthread->nthread, t = 0, i = 0, j = 0;
-    uint8_t fqflag = sqz_isfq(sqzfp);
     //Start consumer pool
     pthread_t *consumer_pool = malloc(n * sizeof(pthread_t));
     if (!consumer_pool) goto exit;
@@ -293,7 +288,7 @@ static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)
                            sqz_cmprthread,
                            (void *)sqzthread))
             goto exit;
-    while (sqz_loadfastX(sqzqueue[t], fqflag, seq)) {
+    while (sqz_loadfastX(sqzqueue[t], sqzfp)) {
         b++;
         t++;
         if (n == t) {
@@ -314,7 +309,7 @@ static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)
     ret = b;
     exit:
         //Wait until done
-        if (seq) kseq_destroy(seq);
+        //if (seq) kseq_destroy(seq);
         for (j = 0; j < i; j++)
             if (pthread_join(consumer_pool[j], NULL))
                 fprintf(stderr, "[sqz ERROR]: Thread error join\n");
@@ -329,6 +324,7 @@ static void *sqz_compressor(void *thrdata)
     sqzthread->threadid++;
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "r");
     if (!sqzfp) goto exit;
+
     uint8_t fmt = sqz_format(sqzfp);
     if (fmt & 4) {
         fprintf(stderr, "[sqz]: File already sqz encoded and compressed\n");

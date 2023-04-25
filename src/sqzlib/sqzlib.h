@@ -268,8 +268,7 @@ uint64_t sqz_fastXdecode(sqzfastx_t *sqz,
                          uint8_t fqflag);
 
 
-uint64_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, void *seq);
-
+uint32_t sqz_loadfastX(sqzfastx_t *sqz, sqzFile sqzfp);
 
 /*
   Write compressed block to file

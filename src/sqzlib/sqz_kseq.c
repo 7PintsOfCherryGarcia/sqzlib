@@ -201,10 +201,11 @@ void sqz_getformat(sqzFile sqzfp)
         return;
 }
 
-uint32_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
+uint32_t sqz_loadfastX(sqzfastx_t *sqz, sqzFile sqzfp)
 {
-    if (fqflag) return sqz_fastqnblock(sqz, seq);
-    return sqz_fastanblock(sqz, seq);
+
+    if (sqz_isfastq(sqzfp)) return sqz_fastqnblock(sqz, sqzfp->kseq);
+    return sqz_fastanblock(sqz, sqzfp->kseq);
 }
 
 void *sqz_kseqinit(sqzFile sqzfp)

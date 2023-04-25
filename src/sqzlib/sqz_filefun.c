@@ -356,11 +356,16 @@ sqzFile sqzopen(const char *filename, const char *mode)
         return NULL;
     }
     sqz_getformat(sqzfp);
+    sqzfp->kseq = sqz_kseqinit(sqzfp);
+    if ( !sqzfp->kseq ) {
+        free(sqzfp);
+        return NULL;
+    }
     //If not sqz format, no need for the rest of members
     if ( !(sqzfp->fmt & 4) ) return sqzfp;
 
     sqzfp->sqz = sqz_fastxinit(sqzfp->fmt, LOAD_SIZE);
-    if (!sqzfp->sqz) {
+    if (!sqzfp->sqz || !sqzfp->kseq) {
         sqz_gzclose(sqzfp);
         free(sqzfp);
         return NULL;

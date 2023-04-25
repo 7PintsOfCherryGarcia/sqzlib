@@ -105,6 +105,32 @@ static uint8_t sqz_fasta2buff(sqzseq_t *seq, sqzbuff_t *buff)
     return 0;
 }
 
+static uint8_t sqz_fastq2buff(sqzseq_t *seq, sqzbuff_t *buff)
+{
+    uint64_t pos  = buff->pos;
+    uint64_t size = buff->size;
+    uint8_t *data = buff->data;
+    if ( (2*seq->l + 6 + seq->nlen) > (size - pos) ) {
+        buff = sqz_buffrealloc(buff, pos + (2*seq->l + 6 + seq->nlen) );
+        data = buff->data;
+        if (!data) return 1;
+    }
+    data[pos++] = FQH;
+    memcpy(data + pos, seq->n, seq->nlen);
+    pos += seq->nlen;
+    data[pos++] = NL;
+    memcpy(data + pos, seq->s, seq->l);
+    pos += seq->l;
+    data[pos++] = NL;
+    data[pos++] = FQS;
+    data[pos++] = NL;
+    memcpy(data + pos, seq->q, seq->l);
+    pos += seq->l;
+    data[pos++] = NL;
+    buff->pos = pos;
+    return 0;
+}
+
 static uint64_t sqz_blkcode(uint64_t *buff, const uint8_t *seq, uint64_t len)
 {
     if (!len) return 0;
@@ -312,9 +338,6 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
     uint8_t  *qlt     = NULL;
     uint64_t  seqlen  = 0;
     uint64_t  k       = 0;
-    fprintf(stderr, "Beginning of block\n");
-    fprintf(stderr, "\tbuff->pos: %lu\n", buff->pos);
-    fprintf(stderr, "\tbuff->size: %lu\n", buff->size);
     while ( k < sqzsize ) {
         seqlen = *(uint64_t *)( seqb + k );
         k += B64;
@@ -335,7 +358,6 @@ static uint8_t sqz_fastqheadblk(sqzfastx_t *sqz)
         if ( (sqz->lseqbuff->pos + buff->pos) > buff->size)
             if ( sqz_blkrealloc(blk, sqz->lseqbuff->pos + buff->pos + 1) )
                 return 1;
-        fprintf(stderr, "buff->pos: %lu\n", buff->pos);
         sqz_appendbuff(buff, sqz->lseqbuff);
     }
     if ( (buff->pos + sqz->namebuffer->pos) >= buff->size )
@@ -454,7 +476,6 @@ static uint64_t sqz_blkdecode(sqzbuff_t *buff, uint8_t *outbuff, uint64_t blklen
 static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, uint8_t qflag)
 {
     uint64_t l = sqz_getlength(buff);
-    fprintf(stderr, "l: %lu\n", l);
     if (l > sqzseq->maxl) {
         sqzseq = sqz_seqrealloc(sqzseq, l);
         if (!sqzseq) return 1;
@@ -475,11 +496,9 @@ static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, uint8_t qflag)
             if (bases == l) buff->pos++;  //Sequence ends in non-ACGT block
             continue;
         }
-        //Flag byte (q or end os seq)
+        //Flag byte (q or end of seq)
         buff->pos++;
     }
-    //Decode quality strings for fastq data
-    //TODO deal with this later
     if (qflag)
         sqz_qdecode(buff, sqzseq->q, l);
     if (bases != l) return 1;
@@ -487,7 +506,7 @@ static uint8_t sqz_seqdecode(sqzbuff_t *buff, sqzseq_t  *sqzseq, uint8_t qflag)
     return 0;
 }
 
-static uint64_t sqz_fastXdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff, uint8_t fqflag)
+static uint64_t sqz_fastAdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
 {
     sqzbuff_t *blkbuff = sqz->blk->blkbuff;
     uint64_t  datasize  = sqz->blk->datasize;
@@ -496,7 +515,7 @@ static uint64_t sqz_fastXdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff, uint8_t fqf
     uint32_t  n         = 0;
     while ( blkbuff->pos < datasize ) {
         sqz_go2namen(namebuff, sqzseq, n);
-        if ( sqz_seqdecode(blkbuff, sqzseq, fqflag) )
+        if ( sqz_seqdecode(blkbuff, sqzseq, 0) )
             goto exit;
         if ( sqz_fasta2buff(sqzseq, outbuff) ) {
             outbuff->pos = 0;
@@ -510,11 +529,35 @@ static uint64_t sqz_fastXdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff, uint8_t fqf
         return outbuff->pos;
 }
 
+static uint64_t sqz_fastQdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
+{
+    sqzbuff_t *blkbuff = sqz->blk->blkbuff;
+    uint64_t  datasize  = sqz->blk->datasize;
+    sqzbuff_t *namebuff = sqz->namebuffer;
+    sqzseq_t  *sqzseq   = sqz->lastseq;
+    uint32_t  n         = 0;
+    while ( blkbuff->pos < datasize ) {
+        sqz_go2namen(namebuff, sqzseq, n);
+        if ( sqz_seqdecode(blkbuff, sqzseq, 1) )
+            goto exit;
+        if ( sqz_fastq2buff(sqzseq, outbuff) ) {
+            outbuff->pos = 0;
+            n = 0;
+            goto exit;
+        }
+        n++;
+    }
+ exit:
+    sqz->n = n;
+    return outbuff->pos;
+}
 
 uint64_t sqz_decode(sqzFile sqzfp)
 {
     sqzbuff_t *buff = sqzfp->sqz->readbuffer;
-    return sqz_fastXdecode(sqzfp->sqz, buff, sqz_isfastq(sqzfp));
+    if (sqz_isfastq(sqzfp))
+        return sqz_fastQdecode(sqzfp->sqz, buff);
+    return sqz_fastAdecode(sqzfp->sqz, buff);
 }
 
 //WARNINGS AVIDING

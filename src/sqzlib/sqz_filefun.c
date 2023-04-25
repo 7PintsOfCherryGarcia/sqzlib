@@ -200,7 +200,6 @@ uint8_t sqz_readblksize(sqzFile sqzfp)
         goto exit;
     if (dcpsize != sqzdecompress(blk, sqz_fileformat(sqzfp)))
         goto exit;
-
     sqzbuff_t *names = sqzfp->sqz->namebuffer;
     uint64_t namesize = sqz_getnamesize(blkbuff->data, blkbuff->pos);
     uint64_t  datasize  = blkbuff->pos - B64 - namesize;
@@ -315,6 +314,8 @@ int64_t sqzread(sqzFile file, void *buff, uint64_t len)
 
 uint32_t sqz_getblocks(sqzFile sqzfp)
 {
+    //TODO change header format to include number of blocks
+    //this is due to gzseek not supporting SEEK_END
     if (!sqzfp) return 0;
     if (!(sqzfp->fmt & 4)) return 0;
     FILE *fp = fopen(sqzfp->name, "r");
@@ -327,7 +328,7 @@ uint32_t sqz_getblocks(sqzFile sqzfp)
 
 uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
 {
-    if ( (n > sqz_getblocks(sqzfp)) ) return 1;
+    if ( (n > sqzfp->nblocks) ) return 1;
     uint64_t blkn = 0;
     uint64_t blks = 0;
     uint64_t blkr = 0;
@@ -366,6 +367,7 @@ sqzFile sqzopen(const char *filename, const char *mode)
     }
     sqzfp->size = sqz_filesize(filename);
     sqzfp->ff = 0;
+    sqzfp->nblocks = sqz_getblocks(sqzfp);
     sqz_gzseek(sqzfp, HEADLEN, SEEK_SET);
     sqzfp->filepos = sqz_gztell(sqzfp);
     return sqzfp;
@@ -391,7 +393,7 @@ void sqz_setlastread(sqzfastx_t *sqz)
 
 uint8_t sqz_readend(sqzfastx_t *sqz)
 {
-    //bit 1 is on if thread had data, but reader has finished
+  //bit 1 is on if thread had data, but reader has finished
     return sqz->datflag & 1;
 }
 
@@ -411,7 +413,6 @@ uint64_t sqz_getn(sqzfastx_t *sqz)
 
 uint8_t sqz_loadblockn(sqzFile sqzfp, uint32_t n)
 {
-    //TODO exit gracefully when requesting wrong block number
     uint8_t ret = 1;
     if ( sqz_go2blockn(sqzfp, n) ) goto exit;
     if ( sqz_readblksize(sqzfp) )  goto exit;

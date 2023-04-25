@@ -207,4 +207,8 @@ uint32_t sqz_loadfastX(sqzfastx_t *sqz, uint8_t fqflag, kseq_t *seq)
     return sqz_fastanblock(sqz, seq);
 }
 
-
+void *sqz_kseqinit(sqzFile sqzfp)
+{
+    kseq_t *seq = kseq_init(sqzfp);
+    return (void *)seq;
+}

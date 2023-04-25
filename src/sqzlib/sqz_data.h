@@ -56,6 +56,7 @@ typedef struct {
     sqzbuff_t   *namebuffer;
     sqzbuff_t   *readbuffer;
     sqzblock_t  *blk;
+    void        *kseq;
     //return members
     uint32_t    n;
     uint64_t    bases;
@@ -74,6 +75,8 @@ typedef struct sqzFile_s {
     void        *gzfp;
     sqzfastx_t  *sqz;
     uint64_t    size;
+    uint32_t    nblocks;
+    //TODO are these necessary??
     uint8_t     ff;
     uint8_t     fmt;
     uint64_t    filepos;

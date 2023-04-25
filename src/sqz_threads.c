@@ -6,7 +6,7 @@
 
 #include "../sqzlib/sqzlib.h"
 #include "klib/kseq.h"
-KSEQ_INIT(sqzFile, sqzread)
+KSEQ_INIT(sqzFile, sqz_gzread)
 
 
 typedef struct {
@@ -93,6 +93,19 @@ static void sqz_wakereader(sqzthread_t *sqzthread)
     pthread_mutex_unlock(&(sqzthread->mtx));
 }
 
+static void sqz_wakeconsumers(sqzthread_t *sqzthread)
+{
+    pthread_mutex_lock(&(sqzthread->mtx));
+    sqzthread->goread = 0;
+    sqzthread->gocons = 1;
+    sqzthread->wakethreadn = 0;
+    pthread_cond_broadcast(&(sqzthread->conscond));
+    sqz_threadwait(&(sqzthread->goread),
+                   &(sqzthread->readcond),
+                   &(sqzthread->mtx));
+    pthread_mutex_unlock(&(sqzthread->mtx));
+}
+
 static sqzfastx_t **sqz_sqzqueueinit(uint8_t n, uint8_t fmt)
 {
     sqzfastx_t *sqz;
@@ -123,17 +136,23 @@ static void sqz_sqzqueuekill(sqzfastx_t **sqzqueue, uint8_t n)
     }
 }
 
-static void sqz_wakeconsumers(sqzthread_t *sqzthread)
+static sqzthread_t *sqz_threadinit(const char *i,
+                                   const char *o,
+                                   uint8_t lib,
+                                   uint8_t n)
 {
-    pthread_mutex_lock(&(sqzthread->mtx));
-    sqzthread->goread = 0;
-    sqzthread->gocons = 1;
-    sqzthread->wakethreadn = 0;
-    pthread_cond_broadcast(&(sqzthread->conscond));
-    sqz_threadwait(&(sqzthread->goread),
-                   &(sqzthread->readcond),
-                   &(sqzthread->mtx));
-    pthread_mutex_unlock(&(sqzthread->mtx));
+    sqzthread_t *sqzthread = calloc(1, sizeof(sqzthread_t));
+    if (!sqzthread) return NULL;
+    sqzthread->ifile   = i;
+    sqzthread->ofile   = o;
+    sqzthread->libfmt  = lib;
+    sqzthread->nthread = n;
+    pthread_mutex_init(&(sqzthread->mtx), NULL);
+    pthread_cond_init(&(sqzthread->conscond), NULL);
+    pthread_cond_init(&(sqzthread->readcond), NULL);
+    pthread_cond_init(&(sqzthread->intraconscond), NULL);
+    pthread_attr_init(&(sqzthread->thatt));
+    return sqzthread;
 }
 
 static void sqz_threadkill(sqzthread_t *sqzthread)
@@ -168,7 +187,9 @@ static void *sqz_dcmpthread(void *thread_data)
     uint32_t nblk = sqz_getblocks(sqzfp);
     if (!nblk) goto exit;
     uint32_t currentblk = (uint32_t)id - 1;
+    uint32_t tmp = 0;
     while (currentblk < nblk) {
+        tmp++;
         if ( sqz_loadblockn(sqzfp, currentblk) ) {
             fprintf(stderr, "[sqz ERROR]: Failed to load block %u\n", currentblk);
             goto exit;
@@ -341,25 +362,6 @@ static void *sqz_compressor(void *thrdata)
         if (sqzthread->sqzqueue) sqz_sqzqueuekill(sqzthread->sqzqueue, n);
         if (sqzthread->ofp) fclose(sqzthread->ofp);
         return NULL;
-}
-
-static sqzthread_t *sqz_threadinit(const char *i,
-                                   const char *o,
-                                   uint8_t lib,
-                                   uint8_t n)
-{
-    sqzthread_t *sqzthread = calloc(1, sizeof(sqzthread_t));
-    if (!sqzthread) return NULL;
-    sqzthread->ifile   = i;
-    sqzthread->ofile   = o;
-    sqzthread->libfmt  = lib;
-    sqzthread->nthread = n;
-    pthread_mutex_init(&(sqzthread->mtx), NULL);
-    pthread_cond_init(&(sqzthread->conscond), NULL);
-    pthread_cond_init(&(sqzthread->readcond), NULL);
-    pthread_cond_init(&(sqzthread->intraconscond), NULL);
-    pthread_attr_init(&(sqzthread->thatt));
-    return sqzthread;
 }
 
 uint8_t sqz_decompress(const char *i, const char *o, uint8_t n)

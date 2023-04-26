@@ -555,9 +555,12 @@ static uint64_t sqz_fastQdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
 uint64_t sqz_decode(sqzFile sqzfp)
 {
     sqzbuff_t *buff = sqzfp->sqz->readbuffer;
-    if (sqz_isfastq(sqzfp))
-        return sqz_fastQdecode(sqzfp->sqz, buff);
-    return sqz_fastAdecode(sqzfp->sqz, buff);
+    if (sqz_isfastq(sqzfp)) {
+        sqzfp->decoded = sqz_fastQdecode(sqzfp->sqz, buff);
+        return sqzfp->decoded;
+    }
+    sqzfp->decoded = sqz_fastAdecode(sqzfp->sqz, buff);
+    return sqzfp->decoded;
 }
 
 //WARNINGS AVIDING

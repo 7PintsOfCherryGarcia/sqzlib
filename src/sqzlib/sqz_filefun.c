@@ -28,28 +28,21 @@ static void sqz_blkreset(sqzblock_t *blk)
 static void sqz_fastxreset(sqzfastx_t *sqz)
 {
     sqz_blkreset(sqz->blk);
-    sqz->lseqflag    = 0;
-    sqz->cmpflag    = 0;
-    sqz->offset     = 0;
-    sqz->n          = 0;
-    sqz->bases      = 0;
-    sqz->rem        = 0;
-    sqz->prevlen    = 0;
+    sqz->lseqflag = 0;
+    sqz->cmpflag  = 0;
+    sqz->offset   = 0;
+    sqz->n        = 0;
+    sqz->bases    = 0;
 }
 
-static void sqz_decode_(sqzfastx_t *sqz,
-                       sqzblock_t *blk,
-                       uint8_t fmt,
-                       uint64_t klibl)
+static uint64_t sqz_datasize(const char *filename)
 {
-    switch (fmt) {
-    case 2:
-        //sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 1);
-        break;
-    case 1:
-        //sqz->offset = sqz_fastXdecode(sqz, sqz->readbuffer, klibl, 0);
-        break;
-    }
+    if (!filename) return 0;
+    FILE *fp = fopen(filename, "r");
+    if ( fseek(fp, 0, SEEK_END) ) return 0;
+    uint64_t s = ftell(fp);
+    fclose(fp);
+    return s - 24;
 }
 
 uint64_t sqz_blkcompress(sqzfastx_t *sqz, int level, uint8_t libfmt)
@@ -81,8 +74,9 @@ void sqzrewind(sqzFile sqzfp)
 {
     sqz_fastxreset(sqzfp->sqz);
     sqz_gzseek(sqzfp, HEADLEN, SEEK_SET);
-    sqzfp->filepos = sqz_gztell(sqzfp);
-    sqzfp->ff = 0;
+    sqzfp->decoded = 0;
+    sqzfp->bloaded = 0;
+    sqzfp->rflag   = 0;
 }
 
 char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp)
@@ -95,7 +89,7 @@ char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp)
     return wbytes;
 }
 
-char sqz_filetail(uint64_t numseqs, uint32_t nblocks, FILE *ofp)
+uint8_t sqz_filetail(uint64_t numseqs, uint32_t nblocks, FILE *ofp)
 {
     if ( 4 != fwrite(zbytes,     1, 4, ofp) ) return 0;
     if ( 1 != fwrite(&numseqs, B64, 1, ofp) ) return 0;
@@ -129,20 +123,10 @@ uint8_t sqz_newblk(sqzblock_t *blk)
     return blk->newblk;
 }
 
-uint64_t sqz_filesize(const char *filename)
-{
-    if (!filename) return 0;
-    FILE *fp = fopen(filename, "r");
-    if ( fseek(fp, 0, SEEK_END) ) return 0;
-    uint64_t s = ftell(fp);
-    fclose(fp);
-    return s - 22;
-}
-
-uint64_t sqz_getfilepos(sqzFile sqzfp)
-{
-    return ( sqzfp->filepos = sqz_gztell(sqzfp) );
-}
+//uint64_t sqz_getfilepos(sqzFile sqzfp)
+//{
+//    return ( sqzfp->filepos = sqz_gztell(sqzfp) );
+//}
 
 uint8_t sqz_isfq(sqzFile sqzfp)
 {
@@ -162,13 +146,6 @@ sqzblock_t *sqz_sqzgetblk(sqzFile sqzfp)
 uint8_t sqz_format(sqzFile sqzfp)
 {
     return sqzfp->fmt;
-}
-
-void sqzclose(sqzFile sqzfp)
-{
-    sqz_gzclose(sqzfp);
-    if (sqzfp->sqz) sqz_fastxkill(sqzfp->sqz);
-    free(sqzfp);
 }
 
 uint8_t sqz_readblksize(sqzFile sqzfp)
@@ -218,100 +195,6 @@ uint8_t sqz_readblksize(sqzFile sqzfp)
         return ret;
 }
 
-int64_t sqzread(sqzFile file, void *buff, uint64_t len)
-{
-    if (!file || !buff) return -1;
-    if ( !(file->fmt & 4) )
-        return sqz_gzread(file, buff, (uint32_t)len);
-    sqzfastx_t *sqz  = file->sqz;
-    sqzblock_t *blk  = sqz->blk;
-    uint8_t     fmt  = file->fmt & 3;
-    uint8_t *outbuff = (uint8_t *)buff;
-    int64_t read     = 0;
-    switch (file->ff & 127) {
-    case 0:
-        {
-        if (!sqz_readblksize(file)) goto error;
-        if ( sqz_gztell(file) == file->size)
-            file->ff |= 128U;
-        sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-        read = sqz->offset > len ? len : sqz->offset;
-        memcpy(outbuff, sqz->readbuffer, read);
-        sqz->rem += read;
-        sqz->offset -= read;
-        if (sqz->offset < len)
-            file->ff = (file->ff & 128) | 2U;
-        else
-            file->ff = (file->ff & 128) | 1U;
-        return read;
-        }
-    case 1: //Data just need to be copied
-        {
-        memcpy(outbuff, sqz->readbuffer + sqz->rem, len);
-        sqz->rem += len;
-        sqz->offset -= len;
-        if (sqz->offset < len)
-            file->ff = (file->ff & 128U) | 2U;
-        return len;
-        }
-    case 2: //Data can be copied but entire buffer can't be filled
-        {
-        ;
-        uint64_t outpos;
-        uint64_t leftover = sqz->offset;
-        memcpy(outbuff, sqz->readbuffer + sqz->rem, sqz->offset);
-        outpos = leftover;
-        if (blk->newblk)
-            sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-        else {
-            if (file->ff & 128U) {
-                file->ff = 3U;
-                return leftover;
-            }
-            else {
-                if (!sqz_readblksize(file))
-                    goto error;
-                if ( sqz_gztell(file) == file->size )
-                    file->ff |= 128U;
-                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-            }
-        }
-        read = sqz->offset > ( len - leftover) ? (len - leftover) : sqz->offset;
-        memcpy(outbuff + outpos, sqz->readbuffer, read);
-        sqz->offset -= read;
-        outpos += read;
-        sqz->rem = read;
-        if (outpos < len) {
-            if (file->ff & 128U) {
-                file->ff = 3U;
-                return outpos;
-            }
-            else {
-                if (!sqz_readblksize(file))
-                    goto error;
-                if (sqz_gztell(file) == file->size)
-                    file->ff |= 128U;
-                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-                read = sqz->offset > (len-outpos) ? (len-outpos) : sqz->offset;
-                memcpy(outbuff + outpos, sqz->readbuffer, read);
-                sqz->offset -= read;
-                sqz->rem = read;
-                outpos += read;
-            }
-        }
-        if (sqz->offset < len)
-            file->ff = (file->ff & 128U) | 2U;
-        else
-            file->ff = (file->ff & 128U) | 1U;
-        return outpos;
-        }
-    case 3:
-        return 0;
-    }
-    error:
-        return -1;
-}
-
 uint32_t sqz_getblocks(sqzFile sqzfp)
 {
     //TODO change header format to include number of blocks
@@ -338,44 +221,12 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
         blkr = sqz_gzread(sqzfp, &blks, B64);
         if (blkr) {
             sqz_gzseek(sqzfp, blks, SEEK_CUR);
-            sqzfp->filepos = sqz_gztell(sqzfp);
+            //sqzfp->filepos = sqz_gztell(sqzfp);
             blkn++;
         }
         else return 1;
     }
     return 0;
-}
-
-sqzFile sqzopen(const char *filename, const char *mode)
-{
-    sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
-    if (!sqzfp) return NULL;
-    sqzfp->name = filename;
-    if ( sqz_gzopen(filename, sqzfp, mode) ) {
-        free(sqzfp);
-        return NULL;
-    }
-    sqz_getformat(sqzfp);
-    sqzfp->kseq = sqz_kseqinit(sqzfp);
-    if ( !sqzfp->kseq ) {
-        free(sqzfp);
-        return NULL;
-    }
-    //If not sqz format, no need for the rest of members
-    if ( !(sqzfp->fmt & 4) ) return sqzfp;
-
-    sqzfp->sqz = sqz_fastxinit(sqzfp->fmt, LOAD_SIZE);
-    if (!sqzfp->sqz || !sqzfp->kseq) {
-        sqz_gzclose(sqzfp);
-        free(sqzfp);
-        return NULL;
-    }
-    sqzfp->size = sqz_filesize(filename);
-    sqzfp->ff = 0;
-    sqzfp->nblocks = sqz_getblocks(sqzfp);
-    sqz_gzseek(sqzfp, HEADLEN, SEEK_SET);
-    sqzfp->filepos = sqz_gztell(sqzfp);
-    return sqzfp;
 }
 
 uint8_t sqz_hasdata(sqzfastx_t *sqz)
@@ -434,4 +285,153 @@ uint8_t sqz_emptysqzfp(sqzFile sqzfp, uint8_t *buff)
     memcpy(buff, fpbuff, size);
     sqzfp->sqz->readbuffer->pos = 0;
     return 0;
+}
+
+uint8_t sqz_sqzfp2buff(sqzFile sqzfp, uint8_t *buff, uint64_t size)
+{
+    if (!buff) return 1;
+    uint8_t *fpbuff = sqzfp->sqz->readbuffer->data;
+    fprintf(stderr, "\tCopied so far: %u\n", sqzfp->bloaded);
+    memcpy(buff + sqzfp->bloaded, fpbuff, size);
+    return 0;
+
+}
+
+sqzFile sqzopen(const char *filename, const char *mode)
+{
+    sqzFile sqzfp = calloc(1, sizeof(struct sqzFile_s));
+    if (!sqzfp) return NULL;
+    sqzfp->name = filename;
+    if ( sqz_gzopen(filename, sqzfp, mode) ) {
+        free(sqzfp);
+        return NULL;
+    }
+    sqz_getformat(sqzfp);
+    sqzfp->kseq = sqz_kseqinit(sqzfp);
+    if ( !sqzfp->kseq ) {
+        free(sqzfp);
+        return NULL;
+    }
+    //If not sqz format, no need for the rest of members
+    if ( !(sqzfp->fmt & 4) ) return sqzfp;
+
+    sqzfp->sqz = sqz_fastxinit(sqzfp->fmt, LOAD_SIZE);
+    if ( !sqzfp->sqz ) {
+        sqz_gzclose(sqzfp);
+        free(sqzfp);
+        return NULL;
+    }
+    sqzfp->dataend = sqz_datasize(filename);
+    sqzfp->nblocks = sqz_getblocks(sqzfp);
+    sqzfp->rflag   = 0;
+    sqzfp->decoded = 0;
+    sqzfp->bloaded = 0;
+    sqz_gzseek(sqzfp, HEADLEN, SEEK_SET);
+    return sqzfp;
+}
+
+int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
+{
+    fprintf(stderr, "Starting read!!!!\n");
+    if (!sqzfp || !buff) return -1;
+    if ( !(sqzfp->fmt & 4) )
+        return sqz_gzread(sqzfp, buff, (uint32_t)len);
+    uint8_t  *outbuff = buff;
+    uint64_t read     = 0;
+    uint64_t tocpy    = 0;
+    fprintf(stderr, "data copied so far: %u\n", sqzfp->bloaded);
+    switch (sqzfp->rflag & 127) {
+    case 0:
+        {
+        if ( sqz_readblksize(sqzfp) ) goto error;
+        if ( sqz_gztell(sqzfp) == sqzfp->dataend)
+            sqzfp->rflag |= 128U;
+        read = (int64_t)sqz_decode(sqzfp);
+        fprintf(stderr, "READ: %ld bytes\n", read);
+        fprintf(stderr, "\tdecoded: %u\n", sqzfp->decoded);
+        tocpy = read > len ? len : read;
+        sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
+        sqzfp->bloaded += tocpy;
+        if ( read < len )
+            sqzfp->rflag = (sqzfp->rflag & 128) | 2U;
+        else
+            sqzfp->rflag = (sqzfp->rflag & 128) | 1U;
+        return (int64_t)tocpy;
+        }
+    case 1: //Data just need to be copied
+        {
+        fprintf(stderr, "Just copy data\n");
+        sleep(100);
+
+        //memcpy(outbuff, sqz->readbuffer + sqz->rem, len);
+        //sqz->rem += len;
+        //sqz->offset -= len;
+        //if (sqz->offset < len)
+        //    file->ff = (file->ff & 128U) | 2U;
+        //return len;
+        }
+    case 2: //Data can be copied but entire buffer can't be filled
+        /*
+        {
+        uint64_t outpos;
+        uint64_t leftover = sqz->offset;
+        memcpy(outbuff, sqz->readbuffer + sqz->rem, sqz->offset);
+        outpos = leftover;
+        if (blk->newblk)
+            sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
+        else {
+            if (file->ff & 128U) {
+                file->ff = 3U;
+                return leftover;
+            }
+            else {
+                if (!sqz_readblksize(file))
+                    goto error;
+                if ( sqz_gztell(file) == file->size )
+                    file->ff |= 128U;
+                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
+            }
+        }
+        read = sqz->offset > ( len - leftover) ? (len - leftover) : sqz->offset;
+        memcpy(outbuff + outpos, sqz->readbuffer, read);
+        sqz->offset -= read;
+        outpos += read;
+        sqz->rem = read;
+        if (outpos < len) {
+            if (file->ff & 128U) {
+                file->ff = 3U;
+                return outpos;
+            }
+            else {
+                if (!sqz_readblksize(file))
+                    goto error;
+                if (sqz_gztell(file) == file->size)
+                    file->ff |= 128U;
+                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
+                read = sqz->offset > (len-outpos) ? (len-outpos) : sqz->offset;
+                memcpy(outbuff + outpos, sqz->readbuffer, read);
+                sqz->offset -= read;
+                sqz->rem = read;
+                outpos += read;
+            }
+        }
+        if (sqz->offset < len)
+            file->ff = (file->ff & 128U) | 2U;
+        else
+            file->ff = (file->ff & 128U) | 1U;
+        return outpos;
+        }
+        */
+    case 3:
+        return 0;
+    }
+    error:
+        return -1;
+}
+
+void sqzclose(sqzFile sqzfp)
+{
+    sqz_gzclose(sqzfp);
+    if (sqzfp->sqz) sqz_fastxkill(sqzfp->sqz);
+    free(sqzfp);
 }

@@ -64,22 +64,19 @@ typedef struct {
     sqzseq_t    *lastseq;
     sqzbuff_t   *lseqbuff;
     uint8_t     lseqflag; //Sequece has not completely been read into a buffer flag
-    //Partially decoded sequences
-    uint64_t    rem;     //Length of sequence remaining to be read
-    uint64_t    prevlen; //Size of sequence currently being read
 } sqzfastx_t;
 
 typedef struct sqzFile_s {
     const char  *name;
     void        *gzfp;
     sqzfastx_t  *sqz;
-    uint64_t    size;
-    uint32_t    nblocks;
     void        *kseq;
-    //TODO are these necessary??
-    uint8_t     ff;
     uint8_t     fmt;
-    uint64_t    filepos;
+    uint64_t    dataend;
+    uint32_t    decoded;
+    uint32_t    bloaded;
+    uint32_t    nblocks;
+    uint8_t     rflag;
 } *sqzFile;
 
 
@@ -100,3 +97,5 @@ uint8_t    sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
 sqzbuff_t  *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
 sqzseq_t   *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize);
 void       *sqz_kseqinit(sqzFile sqzfp);
+uint64_t   sqz_decode(sqzFile sqzfp);
+uint8_t    sqz_sqzfp2buff(sqzFile sqzfp, uint8_t *buff, uint64_t size);

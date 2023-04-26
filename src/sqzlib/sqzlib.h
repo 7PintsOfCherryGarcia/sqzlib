@@ -118,8 +118,7 @@ char sqz_filehead(uint8_t fmt, uint8_t libfmt, FILE *ofp);
 /*
   Write an sqz tail
 */
-char sqz_filetail(uint64_t numseqs, uint64_t numblks, FILE *ofp);
-
+uint8_t sqz_filetail(uint64_t numseqs, uint32_t nblocks, FILE *ofp);
 
 /*
   Get format of a fastX file

@@ -531,7 +531,7 @@ static uint64_t sqz_fastAdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
 
 static uint64_t sqz_fastQdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
 {
-    sqzbuff_t *blkbuff = sqz->blk->blkbuff;
+    sqzbuff_t *blkbuff  = sqz->blk->blkbuff;
     uint64_t  datasize  = sqz->blk->datasize;
     sqzbuff_t *namebuff = sqz->namebuffer;
     sqzseq_t  *sqzseq   = sqz->lastseq;
@@ -555,6 +555,7 @@ static uint64_t sqz_fastQdecode(sqzfastx_t *sqz, sqzbuff_t *outbuff)
 uint64_t sqz_decode(sqzFile sqzfp)
 {
     sqzbuff_t *buff = sqzfp->sqz->readbuffer;
+    sqzfp->bloaded = 0;
     if (sqz_isfastq(sqzfp)) {
         sqzfp->decoded = sqz_fastQdecode(sqzfp->sqz, buff);
         return sqzfp->decoded;

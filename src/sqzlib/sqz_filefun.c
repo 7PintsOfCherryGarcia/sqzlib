@@ -291,8 +291,9 @@ uint8_t sqz_sqzfp2buff(sqzFile sqzfp, uint8_t *buff, uint64_t size)
 {
     if (!buff) return 1;
     uint8_t *fpbuff = sqzfp->sqz->readbuffer->data;
-    fprintf(stderr, "\tCopied so far: %u\n", sqzfp->bloaded);
-    memcpy(buff + sqzfp->bloaded, fpbuff, size);
+    uint32_t l = sqzfp->bloaded;
+    memcpy(buff, fpbuff + l, size);
+    sqzfp->bloaded += size;
     return 0;
 
 }
@@ -332,26 +333,20 @@ sqzFile sqzopen(const char *filename, const char *mode)
 
 int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
 {
-    fprintf(stderr, "Starting read!!!!\n");
     if (!sqzfp || !buff) return -1;
     if ( !(sqzfp->fmt & 4) )
         return sqz_gzread(sqzfp, buff, (uint32_t)len);
     uint8_t  *outbuff = buff;
     uint64_t read     = 0;
     uint64_t tocpy    = 0;
-    fprintf(stderr, "data copied so far: %u\n", sqzfp->bloaded);
-    switch (sqzfp->rflag & 127) {
+    switch (sqzfp->rflag) {
     case 0:
         {
-        if ( sqz_readblksize(sqzfp) ) goto error;
-        if ( sqz_gztell(sqzfp) == sqzfp->dataend)
-            sqzfp->rflag |= 128U;
-        read = (int64_t)sqz_decode(sqzfp);
-        fprintf(stderr, "READ: %ld bytes\n", read);
-        fprintf(stderr, "\tdecoded: %u\n", sqzfp->decoded);
+        if ( sqz_readblksize(sqzfp) )
+            goto error;
+        read = sqz_decode(sqzfp);
         tocpy = read > len ? len : read;
         sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
-        sqzfp->bloaded += tocpy;
         if ( read < len )
             sqzfp->rflag = (sqzfp->rflag & 128) | 2U;
         else
@@ -360,68 +355,23 @@ int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
         }
     case 1: //Data just need to be copied
         {
-        fprintf(stderr, "Just copy data\n");
-        sleep(100);
-
-        //memcpy(outbuff, sqz->readbuffer + sqz->rem, len);
-        //sqz->rem += len;
-        //sqz->offset -= len;
-        //if (sqz->offset < len)
-        //    file->ff = (file->ff & 128U) | 2U;
-        //return len;
+        read = sqzfp->decoded - sqzfp->bloaded;
+        tocpy = read > len ? len : read;
+        sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
+        read = sqzfp->decoded - sqzfp->bloaded;
+        if ( read < len )
+            sqzfp->rflag = (sqzfp->rflag & 128) | 2U;
+        return (int64_t)tocpy;
         }
     case 2: //Data can be copied but entire buffer can't be filled
-        /*
-        {
-        uint64_t outpos;
-        uint64_t leftover = sqz->offset;
-        memcpy(outbuff, sqz->readbuffer + sqz->rem, sqz->offset);
-        outpos = leftover;
-        if (blk->newblk)
-            sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-        else {
-            if (file->ff & 128U) {
-                file->ff = 3U;
-                return leftover;
-            }
-            else {
-                if (!sqz_readblksize(file))
-                    goto error;
-                if ( sqz_gztell(file) == file->size )
-                    file->ff |= 128U;
-                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-            }
-        }
-        read = sqz->offset > ( len - leftover) ? (len - leftover) : sqz->offset;
-        memcpy(outbuff + outpos, sqz->readbuffer, read);
-        sqz->offset -= read;
-        outpos += read;
-        sqz->rem = read;
-        if (outpos < len) {
-            if (file->ff & 128U) {
-                file->ff = 3U;
-                return outpos;
-            }
-            else {
-                if (!sqz_readblksize(file))
-                    goto error;
-                if (sqz_gztell(file) == file->size)
-                    file->ff |= 128U;
-                sqz_decode_(sqz, blk, fmt, LOAD_SIZE);
-                read = sqz->offset > (len-outpos) ? (len-outpos) : sqz->offset;
-                memcpy(outbuff + outpos, sqz->readbuffer, read);
-                sqz->offset -= read;
-                sqz->rem = read;
-                outpos += read;
-            }
-        }
-        if (sqz->offset < len)
-            file->ff = (file->ff & 128U) | 2U;
-        else
-            file->ff = (file->ff & 128U) | 1U;
-        return outpos;
-        }
-        */
+        memset(outbuff, 0, len);
+        tocpy = sqzfp->decoded - sqzfp->bloaded;
+        sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
+        sqzfp->sqz->readbuffer->pos = 0;
+        sqzfp->rflag = (sqzfp->rflag & 128) | 0U;
+        if ( sqz_gztell(sqzfp) == sqzfp->dataend)
+            sqzfp->rflag = 3U;
+        return (int64_t)tocpy;
     case 3:
         return 0;
     }
@@ -432,6 +382,7 @@ int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
 void sqzclose(sqzFile sqzfp)
 {
     sqz_gzclose(sqzfp);
+    sqz_kseqdestroy(sqzfp);
     if (sqzfp->sqz) sqz_fastxkill(sqzfp->sqz);
     free(sqzfp);
 }

@@ -9,7 +9,7 @@ LIBS= -lz -lzstd
 .SUFFIXES:.c .o
 
 
-all:countseqs
+all:countseqs printseqs
 
 countseqsflag:
 	$(info >>>>>Building countseqs<<<<<)
@@ -19,6 +19,8 @@ countseqs:countseqsflag
 	$(info countseqs)
 	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ countseqs.c ../libsqz.a $(LIBS)
 
+printseqs:
+	$(CC) $(CFLAGS) $(INC) $(LIB) -o $@ printseqs.c ../libsqz.a $(LIBS)
 
 clean:
 	rm  -rf countseqs

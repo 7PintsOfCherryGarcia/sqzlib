@@ -213,3 +213,8 @@ void *sqz_kseqinit(sqzFile sqzfp)
     kseq_t *seq = kseq_init(sqzfp);
     return (void *)seq;
 }
+
+void sqz_kseqdestroy(sqzFile sqzfp)
+{
+    kseq_destroy(sqzfp->kseq);
+}

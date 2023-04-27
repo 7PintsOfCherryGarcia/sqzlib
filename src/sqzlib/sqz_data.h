@@ -97,5 +97,6 @@ uint8_t    sqz_blkrealloc(sqzblock_t *blk, uint64_t newsize);
 sqzbuff_t  *sqz_buffrealloc(sqzbuff_t *buff,  uint64_t size);
 sqzseq_t   *sqz_seqrealloc(sqzseq_t *seq, uint64_t newsize);
 void       *sqz_kseqinit(sqzFile sqzfp);
+void       sqz_kseqdestroy(sqzFile sqzfp);
 uint64_t   sqz_decode(sqzFile sqzfp);
 uint8_t    sqz_sqzfp2buff(sqzFile sqzfp, uint8_t *buff, uint64_t size);

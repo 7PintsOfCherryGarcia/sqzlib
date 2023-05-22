@@ -32,7 +32,7 @@ static sqzseq_t *sqz_seqinit(void)
 {
     sqzseq_t *seq = calloc(1, sizeof(sqzseq_t));
     if (!seq) return NULL;
-    seq->n = calloc(256, 1);
+    seq->n = calloc(1024, 1);
     if (!seq->n) {
         free(seq);
         return NULL;

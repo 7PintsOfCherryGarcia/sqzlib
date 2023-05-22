@@ -7,7 +7,8 @@ LIB= -L.
 LIBS= -lz -lzstd -lpthread
 
 SRC=sqzlib/sqz_init.c sqzlib/sqz_kseq.c sqzlib/sqz_coding.c\
-    sqzlib/sqz_zlib.c sqzlib/sqz_zstd.c sqzlib/sqz_filefun.c
+    sqzlib/sqz_zlib.c sqzlib/sqz_zstd.c sqzlib/sqz_filefun.c\
+    sqzlib/sqz_index.c
 
 OBJS=$(SRC:%.c=$(SRCDIR)/%.o)
 OBJSB=$(SRC:%.c=$(SRCDIR)/%B.o)

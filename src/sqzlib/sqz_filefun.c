@@ -123,11 +123,6 @@ uint8_t sqz_newblk(sqzblock_t *blk)
     return blk->newblk;
 }
 
-//uint64_t sqz_getfilepos(sqzFile sqzfp)
-//{
-//    return ( sqzfp->filepos = sqz_gztell(sqzfp) );
-//}
-
 uint8_t sqz_isfq(sqzFile sqzfp)
 {
     return (sqzfp->fmt & 3) == 2 ? 1 : 0;
@@ -185,9 +180,11 @@ uint8_t sqz_readblksize(sqzFile sqzfp)
         if (names->data) goto exit;
         names->size = namesize;
     }
-    names->data = memcpy(names->data, (uint8_t *)blkbuff->data + datasize, namesize);
-    names->pos  = namesize;
-    blk->datasize = blkbuff->pos - B64 - namesize;
+    names->data   = memcpy(names->data,
+                           (uint8_t *)blkbuff->data + datasize,
+                           namesize);
+    names->pos    = namesize;
+    blk->datasize = datasize;
     blk->newblk = 1;
     blkbuff->pos = 0;
     ret = 0;
@@ -221,7 +218,6 @@ uint8_t sqz_go2blockn(sqzFile sqzfp, uint64_t n)
         blkr = sqz_gzread(sqzfp, &blks, B64);
         if (blkr) {
             sqz_gzseek(sqzfp, blks, SEEK_CUR);
-            //sqzfp->filepos = sqz_gztell(sqzfp);
             blkn++;
         }
         else return 1;

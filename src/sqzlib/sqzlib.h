@@ -330,3 +330,10 @@ void sqz_setnodata(sqzfastx_t *sqz);
   Get number of sequences processed by sqzfastx_t object
 */
 uint64_t sqz_getn(sqzfastx_t *sqz);
+
+/*
+################################################################################
+  Index routines
+################################################################################
+*/
+uint8_t sqz_index(sqzFile sqzfp);

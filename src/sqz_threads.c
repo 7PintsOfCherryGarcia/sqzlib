@@ -24,6 +24,7 @@ typedef struct {
     FILE *ofp;
     uint8_t fqflag;
     uint8_t libfmt;
+    uint8_t idx;
 } sqzthread_t;
 
 
@@ -136,7 +137,8 @@ static void sqz_sqzqueuekill(sqzfastx_t **sqzqueue, uint8_t n)
 static sqzthread_t *sqz_threadinit(const char *i,
                                    const char *o,
                                    uint8_t lib,
-                                   uint8_t n)
+                                   uint8_t n,
+                                   uint8_t idx)
 {
     sqzthread_t *sqzthread = calloc(1, sizeof(sqzthread_t));
     if (!sqzthread) return NULL;
@@ -144,6 +146,7 @@ static sqzthread_t *sqz_threadinit(const char *i,
     sqzthread->ofile   = o;
     sqzthread->libfmt  = lib;
     sqzthread->nthread = n;
+    sqzthread->idx     = idx;
     pthread_mutex_init(&(sqzthread->mtx), NULL);
     pthread_cond_init(&(sqzthread->conscond), NULL);
     pthread_cond_init(&(sqzthread->readcond), NULL);
@@ -320,17 +323,21 @@ static uint32_t sqz_cmpreadloop(sqzthread_t *sqzthread, sqzFile sqzfp)
 static void *sqz_compressor(void *thrdata)
 {
     sqzthread_t *sqzthread = (sqzthread_t *)thrdata;
-    uint8_t n = sqzthread->nthread;
+    uint8_t n   = sqzthread->nthread;
+    uint8_t idx = sqzthread->idx;
     sqzthread->threadid++;
     sqzFile sqzfp = sqzopen(sqzthread->ifile, "r");
     if (!sqzfp) goto exit;
-
     uint8_t fmt = sqz_format(sqzfp);
-    if (fmt & 4) {
+    if ( (fmt & 4) && !idx ) {
         fprintf(stderr, "[sqz]: File already sqz encoded and compressed\n");
         goto exit;
     }
-
+    else if ( (fmt & 4) && idx) {
+        fprintf(stderr, "only idx \t\tidx: %u\n", sqzthread->idx);
+        if ( sqz_index(sqzfp) ) fprintf(stderr, "ERROR!!!\n");
+        sleep(100);
+    }
     sqzthread->sqzqueue = sqz_sqzqueueinit(n, fmt);
     if ( !(sqzthread->sqzqueue) ) goto exit;
     sqzthread->fqflag = sqz_isfq(sqzfp);
@@ -346,7 +353,6 @@ static void *sqz_compressor(void *thrdata)
     fflush(sqzthread->ofp);
 
     uint32_t b = sqz_cmpreadloop(sqzthread, sqzfp);
-
     sqzfastx_t **sqzqueue = sqzthread->sqzqueue;
     //Log number of sequences and blocks
     uint64_t nseq = 0;
@@ -363,7 +369,7 @@ static void *sqz_compressor(void *thrdata)
 uint8_t sqz_decompress(const char *i, const char *o, uint8_t n)
 {
     uint8_t ret = 1;
-    sqzthread_t *sqzthread = sqz_threadinit(i, o, 0, n);
+    sqzthread_t *sqzthread = sqz_threadinit(i, o, 0, n, 0);
     if (!sqzthread) goto exit;
     pthread_t r;
     if (pthread_create(&r,
@@ -383,10 +389,15 @@ uint8_t sqz_decompress(const char *i, const char *o, uint8_t n)
         return ret;
 }
 
-uint8_t sqz_compress(const char *i, const char *o, uint8_t lib, uint8_t n)
+uint8_t sqz_compress(const char *i,
+                     const char *o,
+                     uint8_t lib,
+                     uint8_t n,
+                     uint8_t idx)
 {
+    fprintf(stderr, "IDX!!: %u\n", idx);
     uint8_t ret = 1;
-    sqzthread_t *sqzthread = sqz_threadinit(i, o, lib, n);
+    sqzthread_t *sqzthread = sqz_threadinit(i, o, lib, n, idx);
     if (!sqzthread) goto exit;
     pthread_t r;
     if (pthread_create(&r,

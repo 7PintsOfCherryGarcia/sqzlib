@@ -10,17 +10,26 @@ typedef struct  {
     char ofile[256];
     int  nthread;
     char libfmt;
+    int  idx;
 } sqzopts_t;
 
 
-uint8_t sqz_compress(const char *i,const char *o, uint8_t lib, uint8_t nthread);
+uint8_t sqz_compress(const char *i,
+                     const char *o,
+                     uint8_t lib,
+                     uint8_t nthread,
+                     uint8_t idx);
 
 uint8_t sqz_decompress(const char *i, const char *o, uint8_t nthread);
 
 
 char sqz_cmpr(sqzopts_t opts)
 {
-    return sqz_compress(opts.ifile, opts.ofile, opts.libfmt, opts.nthread);
+    return sqz_compress(opts.ifile,
+                        opts.ofile,
+                        opts.libfmt,
+                        opts.nthread,
+                        opts.idx);
 }
 
 
@@ -43,6 +52,7 @@ void sqz_usage()
             "\t\t-l <lib>\tUse <lib> compression library."\
             "\n\t\t\t\t\tDefault: -l zlib\n"\
             "\t\t\t\t\tOptions: zlib, zstd\n");
+    fprintf(stderr, "\t\t-i \t\tAdditionally index file.\n");
     fprintf(stderr, "\t\t-h \t\tThis help message.\n\n");
 }
 
@@ -64,9 +74,10 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
     char dflag  = 0;      //Decompression flag
     char oflag  = 1;      //Output flag
     char *lib   = NULL;   //Compression library to use
-    int nthread = 1;
-    int minargs = 2;
-    while (( elem = getopt(argc, argv, "o:t:l:hd") ) >= 0) {
+    int  idx    = 0;      //Index file flag
+    int  nthread = 1;
+    int  minargs = 2;
+    while (( elem = getopt(argc, argv, "o:t:l:hdi") ) >= 0) {
         switch(elem) {
             case 'd':
                 dflag = 1;
@@ -90,6 +101,9 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
                 ret = 0;
                 sqz_usage();
                 goto exit;
+            case 'i':
+                idx = 1;
+                continue;
             case '?':
                 sqz_usage();
                 ret = 0;
@@ -134,6 +148,7 @@ char sqz_ropts(int argc, char **argv, sqzopts_t *opts)
             ret = 0;
         }
     }
+    opts->idx = idx;
     exit:
         return ret;
 }

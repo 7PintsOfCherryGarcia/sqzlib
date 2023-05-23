@@ -337,34 +337,32 @@ int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
     uint64_t tocpy    = 0;
     switch (sqzfp->rflag) {
     case 0:
-        {
         if ( sqz_readblksize(sqzfp) )
             goto error;
         read = sqz_decode(sqzfp);
         tocpy = read > len ? len : read;
         sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
         if ( read < len )
-            sqzfp->rflag = (sqzfp->rflag & 128) | 2U;
+            sqzfp->rflag = 2U;
         else
-            sqzfp->rflag = (sqzfp->rflag & 128) | 1U;
+            sqzfp->rflag = 1U;
         return (int64_t)tocpy;
-        }
     case 1: //Data just need to be copied
-        {
         read = sqzfp->decoded - sqzfp->bloaded;
         tocpy = read > len ? len : read;
         sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
         read = sqzfp->decoded - sqzfp->bloaded;
         if ( read < len )
-            sqzfp->rflag = (sqzfp->rflag & 128) | 2U;
+            sqzfp->rflag = 2U;
+        if ( len == read )
+            sqzfp->rflag = 0U;
         return (int64_t)tocpy;
-        }
     case 2: //Data can be copied but entire buffer can't be filled
         memset(outbuff, 0, len);
         tocpy = sqzfp->decoded - sqzfp->bloaded;
         sqz_sqzfp2buff(sqzfp, outbuff, tocpy);
         sqzfp->sqz->readbuffer->pos = 0;
-        sqzfp->rflag = (sqzfp->rflag & 128) | 0U;
+        sqzfp->rflag = 0U;
         if ( sqz_gztell(sqzfp) == sqzfp->dataend)
             sqzfp->rflag = 3U;
         return (int64_t)tocpy;
@@ -372,6 +370,7 @@ int64_t sqzread(sqzFile sqzfp, void *buff, uint64_t len)
         return 0;
     }
     error:
+        fprintf(stderr, "ERROR\n");
         return -1;
 }
 

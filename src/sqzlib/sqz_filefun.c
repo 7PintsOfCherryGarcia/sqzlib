@@ -203,6 +203,7 @@ uint32_t sqz_getblocks(sqzFile sqzfp)
     if (fseek(fp, -10, SEEK_END)) return 0;
     uint32_t n;
     if (!fread(&n, B32, 1, fp)) return 0;
+    fclose(fp);
     return n;
 }
 
